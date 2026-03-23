@@ -66,7 +66,7 @@ import { clearAllData } from './lib/db.js'
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="doora-barefield.png" alt="Doora Barefield GAA">
+    <img src="doora-barefield.png" alt="Doora Barefield GAA" class="loading-logo">
   </div>
 
 {:else if !$user}
@@ -74,7 +74,7 @@ import { clearAllData } from './lib/db.js'
 
 {:else if !dataReady}
   <div class="loading-screen">
-    <img src="doora-barefield.png" alt="Doora Barefield GAA">
+    <img src="doora-barefield.png" alt="Doora Barefield GAA" class="loading-logo">
 
     <p style="color:#888; font-size:13px; margin-top:1rem;">Loading your data...</p>
   </div>
@@ -83,7 +83,7 @@ import { clearAllData } from './lib/db.js'
   <div class="app">
     <nav>
       <div class="brand">
-        <img src="doora-barefield.png" alt="Doora Barefield GAA">
+        <img class="brand-logo" src="doora-barefield.png" alt="Doora Barefield GAA">
         Doora Barefield GAA
       </div>
       <div class="tabs">
