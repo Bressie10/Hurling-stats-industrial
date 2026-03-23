@@ -230,7 +230,7 @@
 <div class="screen">
 
   <div class="setup-hero">
-    <img src="doora-barefield.png" alt="Doora Barefield GAA">
+    <img src="doora-barefield.png" alt="Doora Barefield GAA" class="hero-logo">
     <div>
       <h2>New Match</h2>
       <p>Doora Barefield GAA · Minor Hurling</p>
