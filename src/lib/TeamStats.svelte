@@ -401,15 +401,15 @@
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
   .selector-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
-  .field-group label { font-size: 12px; font-weight: 600; color: #555; }
-  .field-group select { padding: 12px 12px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 16px; font-family: inherit; background: white; color: #1a1a1a; width: 100%; min-height: 46px; }
+  .field-group label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .field-group select { padding: 12px 12px; border: 1.5px solid var(--input-border); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--surface); color: var(--text); width: 100%; min-height: 46px; }
   .field-group select:focus { outline: none; border-color: #6B1B2B; }
-  .empty-state { text-align: center; padding: 3rem 1rem; color: #aaa; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-faint); }
   .empty-icon { font-size: 36px; margin-bottom: 0.75rem; }
-  .empty-title { font-size: 16px; font-weight: 600; color: #888; margin-bottom: 4px; }
+  .empty-title { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
   .empty-sub { font-size: 13px; }
   .result-card { background: #1a1a1a; border-radius: 14px; padding: 1.25rem; color: white; }
   .result-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
@@ -424,45 +424,45 @@
   .result-date { font-size: 12px; opacity: 0.6; }
   .result-venue { font-size: 11px; opacity: 0.4; margin-top: 2px; }
   .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .metric { background: #f8f8f8; border-radius: 10px; padding: 0.875rem 1rem; }
-  .metric-label { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-  .metric-val { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-  .metric-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .metric { background: var(--surface-2); border-radius: 10px; padding: 0.875rem 1rem; }
+  .metric-label { font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .metric-val { font-size: 24px; font-weight: 700; color: var(--text); }
+  .metric-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
   .performers-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .performer-card { background: white; border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.875rem 1rem; border-left: 3px solid #6B1B2B; }
-  .performer-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-  .performer-name { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+  .performer-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; border-left: 3px solid #6B1B2B; }
+  .performer-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .performer-name { font-size: 15px; font-weight: 700; color: var(--text); }
   .performer-val { font-size: 13px; color: #6B1B2B; font-weight: 600; margin-top: 2px; }
-  .pitch-section { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem; }
+  .pitch-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
   .pitch-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px; }
-  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); }
   .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-  .filter-pill { padding: 8px 14px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 13px; color: #666; cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 36px; }
+  .filter-pill { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--input-border); background: none; font-size: 13px; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 36px; }
   .filter-pill.active { background: #6B1B2B; color: white; border-color: #6B1B2B; font-weight: 600; }
   .period-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.75rem; }
-  .period-pill { padding: 7px 12px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 12px; color: #666; cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 34px; }
-  .period-pill.active { background: #1a1a1a; color: white; border-color: #1a1a1a; font-weight: 600; }
+  .period-pill { padding: 7px 12px; border-radius: 20px; border: 1px solid var(--input-border); background: none; font-size: 12px; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 34px; }
+  .period-pill.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
   .pitch-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
   .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   .pitch-svg { width: 100%; height: auto; display: block; border-radius: 6px; }
-  .pitch-count { font-size: 11px; color: #aaa; text-align: right; margin-top: 6px; }
-  .stat-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f5f5f5; }
+  .pitch-count { font-size: 11px; color: var(--text-faint); text-align: right; margin-top: 6px; }
+  .stat-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--divider-faint); }
   .stat-row:last-child { border-bottom: none; }
-  .stat-label { font-size: 13px; color: #333; min-width: 130px; }
-  .stat-bar-wrap { flex: 1; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
+  .stat-label { font-size: 13px; color: var(--text-2); min-width: 130px; }
+  .stat-bar-wrap { flex: 1; height: 6px; background: var(--divider); border-radius: 3px; overflow: hidden; }
   .stat-bar { height: 100%; background: #6B1B2B; border-radius: 3px; }
-  .stat-val { font-size: 13px; font-weight: 700; color: #1a1a1a; min-width: 24px; text-align: right; }
+  .stat-val { font-size: 13px; font-weight: 700; color: var(--text); min-width: 24px; text-align: right; }
   .table-wrap { width: 100%; overflow-x: auto; }
   .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 360px; }
-  .stats-table thead { background: #f8f8f8; }
-  .stats-table th { padding: 8px 10px; font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; border-bottom: 1px solid #f0f0f0; }
+  .stats-table thead { background: var(--surface-2); }
+  .stats-table th { padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; text-align: center; border-bottom: 1px solid var(--divider); }
   .th-left { text-align: left; padding-left: 1rem; }
-  .stats-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #f5f5f5; }
+  .stats-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--divider-faint); color: var(--text); }
   .stats-table tr:last-child td { border-bottom: none; }
   .td-left { text-align: left; padding-left: 1rem; font-weight: 600; white-space: nowrap; }
   .num-badge { display: inline-block; font-size: 11px; background: #6B1B2B; color: white; border-radius: 4px; padding: 1px 5px; font-weight: 600; margin-right: 4px; }
-  .notes-text { font-size: 14px; color: #555; line-height: 1.6; }
+  .notes-text { font-size: 14px; color: var(--text-2); line-height: 1.6; }
   .tooltip { position: fixed; background: #1a1a1a; color: white; padding: 6px 10px; border-radius: 6px; font-size: 12px; pointer-events: none; z-index: 300; white-space: nowrap; }
   @media (min-width: 600px) { .metrics-grid { grid-template-columns: repeat(4, 1fr); } }
   @media (max-width: 480px) { .result-score { font-size: 22px; } .performers-row { grid-template-columns: 1fr; } }

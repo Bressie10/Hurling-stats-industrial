@@ -235,15 +235,15 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: white;
-    border: 1px solid #fca5a5;
+    background: var(--surface);
+    border: 1px solid #fca5a5; /* danger zone — keep red */
     border-radius: 12px;
     padding: 1rem 1.25rem;
     margin-top: 8px;
     flex-wrap: wrap;
   }
-  .danger-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
-  .danger-sub { font-size: 12px; color: #888; }
+  .danger-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .danger-sub { font-size: 12px; color: var(--text-muted); }
   .danger-btn {
     padding: 8px 18px;
     border-radius: 8px;
@@ -259,7 +259,7 @@
   }
   .danger-btn:hover { background: #e53935; color: white; }
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
 
   /* HEADER */
   .page-header {
@@ -269,8 +269,8 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .page-header h2 { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-  .page-header p { font-size: 13px; color: #888; max-width: 500px; }
+  .page-header h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .page-header p { font-size: 13px; color: var(--text-muted); max-width: 500px; }
 
   .save-btn {
     padding: 9px 20px;
@@ -293,12 +293,12 @@
     display: flex;
     gap: 12px;
     align-items: flex-start;
-    background: #fdf5f6;
-    border: 1px solid #f0d0d5;
+    background: rgba(107,27,43,0.06);
+    border: 1px solid rgba(107,27,43,0.18);
     border-radius: 10px;
     padding: 0.875rem 1rem;
     font-size: 13px;
-    color: #555;
+    color: var(--text-2);
     line-height: 1.5;
   }
   .info-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
@@ -315,9 +315,9 @@
     font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: #aaa;
+    color: var(--text-faint);
   }
-  .section-hint { font-size: 12px; color: #ccc; }
+  .section-hint { font-size: 12px; color: var(--text-faint); }
 
   /* SQUAD TABLE */
   .squad-card { padding: 0; overflow: hidden; }
@@ -326,10 +326,10 @@
     grid-template-columns: 52px 1fr 100px 40px;
     gap: 8px;
     padding: 8px 14px;
-    background: #f8f8f8;
+    background: var(--surface-2);
     font-size: 11px;
     font-weight: 600;
-    color: #aaa;
+    color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -339,42 +339,42 @@
     gap: 8px;
     align-items: center;
     padding: 7px 14px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid var(--divider);
     transition: background 0.1s;
   }
-  .squad-row:hover { background: #fafafa; }
-  .squad-row.is-sub { background: #fdfdfd; }
+  .squad-row:hover { background: var(--surface-2); }
+  .squad-row.is-sub { background: var(--surface-3); }
 
   .input-num {
     width: 100%;
     padding: 9px 4px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--input-border);
     border-radius: 6px;
     font-size: 16px;
     font-family: inherit;
     text-align: center;
-    background: white;
+    background: var(--surface);
     min-height: 40px;
   }
   .input-name {
     width: 100%;
     padding: 9px 10px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--input-border);
     border-radius: 6px;
     font-size: 16px;
     font-family: inherit;
-    background: white;
+    background: var(--surface);
     min-height: 40px;
   }
   .input-pos {
     width: 100%;
     padding: 9px 6px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--input-border);
     border-radius: 6px;
     font-size: 15px;
     font-family: inherit;
-    background: white;
-    color: #1a1a1a;
+    background: var(--surface);
+    color: var(--text);
     min-height: 40px;
   }
   .input-num:focus, .input-name:focus, .input-pos:focus {
@@ -385,7 +385,7 @@
   .delete-btn {
     background: none;
     border: none;
-    color: #ddd;
+    color: var(--text-faint);
     font-size: 18px;
     cursor: pointer;
     padding: 6px;
@@ -396,12 +396,12 @@
     min-width: 36px;
     min-height: 36px;
   }
-  .delete-btn:hover { color: #e53935; background: #fff0f0; }
+  .delete-btn:hover { color: #e53935; background: rgba(229,57,53,0.08); }
 
   .empty-section {
     padding: 1.5rem;
     text-align: center;
-    color: #ccc;
+    color: var(--text-faint);
     font-size: 13px;
   }
 
@@ -413,10 +413,10 @@
     gap: 8px;
     width: 100%;
     padding: 12px;
-    border: 2px dashed #e0e0e0;
+    border: 2px dashed var(--input-border);
     border-radius: 10px;
     background: none;
-    color: #aaa;
+    color: var(--text-faint);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -436,12 +436,12 @@
   }
   .summary-item {
     text-align: center;
-    background: #f8f8f8;
+    background: var(--surface-2);
     border-radius: 8px;
     padding: 0.75rem 0.5rem;
   }
   .summary-val { font-size: 22px; font-weight: 700; color: #6B1B2B; }
-  .summary-label { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .summary-label { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 
   /* SAVE BOTTOM */
   .save-btn-full {
@@ -463,7 +463,7 @@
   .loading {
     text-align: center;
     padding: 3rem;
-    color: #aaa;
+    color: var(--text-faint);
     font-size: 14px;
   }
 

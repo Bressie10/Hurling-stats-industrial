@@ -12,7 +12,16 @@ import { clearAllData } from './lib/db.js'
   import Auth from './lib/Auth.svelte'
   import { user, authLoading, signOut } from './lib/auth-store.js'
   import { syncToSupabase, syncFromSupabase } from './lib/sync.js'
+  import { settingsStore } from './lib/settings-store.js'
   import { onMount } from 'svelte'
+
+  $: {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', $settingsStore.darkMode ? 'dark' : 'light')
+    }
+  }
+
+  const LAST_USER_KEY = 'doora_last_user_id'
 
   let activePage = 'match'
   let syncing = false
@@ -21,14 +30,23 @@ import { clearAllData } from './lib/db.js'
   let lastUserId = null
 
   onMount(async () => {
-    // Wait for auth to resolve
     const unsubscribe = user.subscribe(async (u) => {
       if (u && u.id !== lastUserId) {
         dataReady = false
         lastUserId = u.id
-        await clearAllData()
-        await syncFromSupabase(u.id)
-        dataReady = true
+
+        const previousUserId = localStorage.getItem(LAST_USER_KEY)
+
+        if (previousUserId === u.id) {
+          // Same user returning — local IndexedDB already has their data, nothing to clear
+          dataReady = true
+        } else {
+          // Different user or first login on this device — clear local data and pull from cloud
+          localStorage.setItem(LAST_USER_KEY, u.id)
+          await clearAllData()
+          await syncFromSupabase(u.id)
+          dataReady = true
+        }
       }
       if (!u) {
         lastUserId = null
@@ -57,6 +75,7 @@ import { clearAllData } from './lib/db.js'
       'Are you sure you want to sign out?'
     )
     if (!confirmed) return
+    localStorage.removeItem(LAST_USER_KEY)
     await signOut()
     activePage = 'match'
     dataReady = false
@@ -138,7 +157,7 @@ import { clearAllData } from './lib/db.js'
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f8f6;
+    background: var(--bg);
   }
   .loading-logo {
     width: 80px;
@@ -152,8 +171,8 @@ import { clearAllData } from './lib/db.js'
   nav {
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #e5e5e5;
-    background: #fff;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -167,7 +186,7 @@ import { clearAllData } from './lib/db.js'
     padding: 0 16px;
     font-weight: 600;
     font-size: 14px;
-    border-right: 1px solid #e5e5e5;
+    border-right: 1px solid var(--border);
     height: 52px;
     white-space: nowrap;
     flex-shrink: 0;
@@ -181,14 +200,14 @@ import { clearAllData } from './lib/db.js'
     border: none;
     background: none;
     font-size: 13px;
-    color: #888;
+    color: var(--text-muted);
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: all 0.15s;
     white-space: nowrap;
     font-family: inherit;
   }
-  .tabs button:hover { color: #333; background: #f9f9f9; }
+  .tabs button:hover { color: var(--text); background: var(--surface-2); }
   .tabs button.active { color: #6B1B2B; font-weight: 600; border-bottom: 2px solid #6B1B2B; }
 
   .nav-actions {
@@ -197,7 +216,7 @@ import { clearAllData } from './lib/db.js'
     gap: 8px;
     padding: 0 12px;
     flex-shrink: 0;
-    border-left: 1px solid #e5e5e5;
+    border-left: 1px solid var(--border);
   }
   .sync-btn {
     padding: 6px 12px;
@@ -217,9 +236,9 @@ import { clearAllData } from './lib/db.js'
   .signout-btn {
     padding: 6px 12px;
     border-radius: 7px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--input-border);
     background: none;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     cursor: pointer;
     font-family: inherit;
@@ -261,7 +280,7 @@ import { clearAllData } from './lib/db.js'
       flex: none;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
-      border-top: 1px solid #e5e5e5;
+      border-top: 1px solid var(--border);
       scrollbar-width: none;
     }
     .tabs::-webkit-scrollbar { display: none; }

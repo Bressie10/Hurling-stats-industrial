@@ -1,0 +1,24 @@
+{
+  "name": "Doora Barefield GAA",
+  "short_name": "DB Stats",
+  "description": "Hurling match statistics tracker for Doora Barefield GAA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f8f6",
+  "theme_color": "#6B1B2B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "doora-barefield.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "doora-barefield.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

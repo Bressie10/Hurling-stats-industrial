@@ -1,6 +1,16 @@
 import { supabase } from './supabase.js'
 import { loadMatches, loadSquad, saveMatch, saveSquad } from './db.js'
 
+let _autoSyncTimer = null
+
+export function scheduleAutoSync(userId) {
+  if (!userId) return
+  clearTimeout(_autoSyncTimer)
+  _autoSyncTimer = setTimeout(() => {
+    syncToSupabase(userId).catch(e => console.warn('Auto-sync failed:', e))
+  }, 10000)
+}
+
 export async function syncToSupabase(userId) {
   try {
     const [matches, squad] = await Promise.all([loadMatches(), loadSquad()])
@@ -68,7 +78,7 @@ export async function syncFromSupabase(userId) {
       }
     }
 
-    if (squadRes.data) {
+    if (squadRes.data && squadRes.data.length > 0) {
       await saveSquad(squadRes.data.map(p => ({
         id: p.id,
         name: p.name,

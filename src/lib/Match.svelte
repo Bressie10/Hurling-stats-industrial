@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte'
   import { saveSquad, loadSquad, saveMatch, saveDraftMatch, loadDraftMatch, clearDraftMatch } from './db.js'
+  import { user } from './auth-store.js'
+  import { scheduleAutoSync } from './sync.js'
 
   let screen = 'setup'
   let players = []
@@ -27,7 +29,7 @@
       players = defaultSquad.map(p => ({ ...p }))
     }
 
-    // Auto-resume draft without asking
+    // Check for in-progress draft
     const draft = await loadDraftMatch()
     if (draft && draft.opposition && !draft._saved) {
       opposition = draft.opposition
@@ -42,12 +44,31 @@
       subs_log = draft.subs_log || []
       timerSeconds = draft.timerSeconds || 0
       if (draft.players?.length > 0) players = draft.players
-      screen = 'match'
-      // Auto-start timer
-      timerInterval = setInterval(() => { timerSeconds++; saveDraft() }, 1000)
-      timerRunning = true
+      screen = 'recover'
     }
   })
+
+  function resumeMatch() {
+    screen = 'match'
+    timerInterval = setInterval(() => { timerSeconds++; saveDraft() }, 1000)
+    timerRunning = true
+  }
+
+  async function discardDraft() {
+    await clearDraftMatch()
+    opposition = ''
+    venue = ''
+    matchDate = new Date().toISOString().split('T')[0]
+    stats = {}
+    events = []
+    subs_log = []
+    matchScore = { home: { goals: 0, points: 0 }, away: { goals: 0, points: 0 } }
+    notes = ''
+    customStats = []
+    timerSeconds = 0
+    period = '1st Half'
+    screen = 'setup'
+  }
 
   async function startMatch() {
     if (!opposition.trim()) { alert('Please enter the opposition team name.'); return }
@@ -70,6 +91,26 @@
   let showAddStat = false
 
   $: allStats = [...defaultStats, ...customStats]
+
+  $: lastEventLabel = (() => {
+    if (events.length === 0) return null
+    const last = events[events.length - 1]
+    const player = players.find(p => p.id === last.playerId)
+    return `${last.stat} — ${player?.name || '#' + player?.number}`
+  })()
+
+  function undoLastStat() {
+    if (events.length === 0) return
+    const last = events[events.length - 1]
+    events = events.slice(0, -1)
+    if (stats[last.playerId]?.[last.stat] > 0) stats[last.playerId][last.stat]--
+    if (last.stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
+    if (last.stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
+    stats = stats
+    matchScore = matchScore
+    saveDraft()
+    scheduleAutoSync($user?.id)
+  }
 
   function addCustomStat() {
     const trimmed = newCustomStat.trim()
@@ -124,6 +165,7 @@
     pendingLog = null
     showPitchPicker = false
     saveDraft()
+    scheduleAutoSync($user?.id)
   }
 
   function decrement(playerId, stat) {
@@ -134,6 +176,7 @@
     stats = stats
     matchScore = matchScore
     saveDraft()
+    scheduleAutoSync($user?.id)
   }
 
   function formatScore(s) { return `${s.goals}-${String(s.points).padStart(2, '0')}` }
@@ -210,6 +253,7 @@
     showSubModal = false
     subOff = null
     saveDraft()
+    scheduleAutoSync($user?.id)
   }
 
   // ── TIMER ────────────────────────────────────
@@ -225,6 +269,61 @@
   function resetTimer() { clearInterval(timerInterval); timerRunning = false; timerSeconds = 0; saveDraft() }
   function formatTime(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}` }
 </script>
+
+{#if screen === 'recover'}
+<div class="screen">
+
+  <div class="recover-wrap">
+    <div class="recover-card">
+      <div class="recover-header">
+        <img src="doora-barefield.png" alt="Doora Barefield GAA" class="recover-logo">
+        <div class="recover-badge">Match in Progress</div>
+        <h2 class="recover-title">Resume where you left off?</h2>
+        <p class="recover-sub">The app closed during a match. Your data was saved automatically.</p>
+      </div>
+
+      <div class="recover-match-info">
+        <div class="recover-fixture">
+          <span class="recover-team">Doora Barefield</span>
+          <span class="recover-vs">vs</span>
+          <span class="recover-team">{opposition}</span>
+        </div>
+        <div class="recover-meta">
+          {matchDate}{venue ? ' · ' + venue : ''}
+        </div>
+      </div>
+
+      <div class="recover-stats-row">
+        <div class="recover-stat">
+          <div class="recover-stat-val">{formatScore(matchScore.home)}</div>
+          <div class="recover-stat-label">DB Score</div>
+        </div>
+        <div class="recover-stat-divider"></div>
+        <div class="recover-stat">
+          <div class="recover-stat-val">{formatScore(matchScore.away)}</div>
+          <div class="recover-stat-label">{opposition.slice(0,8)} Score</div>
+        </div>
+        <div class="recover-stat-divider"></div>
+        <div class="recover-stat">
+          <div class="recover-stat-val">{events.length}</div>
+          <div class="recover-stat-label">Events logged</div>
+        </div>
+        <div class="recover-stat-divider"></div>
+        <div class="recover-stat">
+          <div class="recover-stat-val">{formatTime(timerSeconds)}</div>
+          <div class="recover-stat-label">Time elapsed</div>
+        </div>
+      </div>
+
+      <div class="recover-actions">
+        <button class="recover-resume-btn" on:click={resumeMatch}>Resume Match</button>
+        <button class="recover-discard-btn" on:click={discardDraft}>Discard & Start New</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{/if}
 
 {#if screen === 'setup'}
 <div class="screen">
@@ -342,6 +441,12 @@
     </div>
     <button class="sub-btn" on:click={openSubModal}>⇄ Sub</button>
   </div>
+
+  {#if lastEventLabel}
+    <div class="undo-row">
+      <button class="undo-btn" on:click={undoLastStat}>Undo: {lastEventLabel}</button>
+    </div>
+  {/if}
 
   {#if mode === 'quick'}
     <div class="section-label">Tap a stat — then pick the player</div>
@@ -569,17 +674,113 @@
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+
+  /* ── RECOVERY SCREEN ── */
+  .recover-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 1rem 0;
+  }
+  .recover-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem 1.75rem;
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  .recover-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+  .recover-logo { width: 56px; height: 56px; object-fit: contain; }
+  .recover-badge {
+    display: inline-block;
+    background: rgba(224,160,32,0.12);
+    color: #9a6000;
+    border: 1px solid #e0a020;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 4px 12px;
+    text-transform: uppercase;
+  }
+  .recover-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
+  .recover-sub { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  .recover-match-info {
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .recover-fixture { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .recover-team { font-size: 15px; font-weight: 700; color: var(--text); }
+  .recover-vs { font-size: 12px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; }
+  .recover-meta { font-size: 13px; color: var(--text-muted); }
+
+  .recover-stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(107,27,43,0.08);
+    border: 1px solid rgba(107,27,43,0.2);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .recover-stat { text-align: center; flex: 1; }
+  .recover-stat-val { font-size: 18px; font-weight: 700; color: #6B1B2B; }
+  .recover-stat-label { font-size: 10px; color: var(--text-faint); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .recover-stat-divider { width: 1px; height: 36px; background: #e8c0c8; flex-shrink: 0; }
+
+  .recover-actions { display: flex; flex-direction: column; gap: 10px; }
+  .recover-resume-btn {
+    width: 100%;
+    padding: 15px;
+    background: #6B1B2B;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+  }
+  .recover-resume-btn:hover { background: #551522; }
+  .recover-discard-btn {
+    width: 100%;
+    padding: 12px;
+    background: none;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .recover-discard-btn:hover { border-color: #e53935; color: #e53935; }
+
   .setup-hero { display: flex; align-items: center; gap: 16px; padding: 0.5rem 0; }
   .hero-logo { width: 64px; height: 64px; object-fit: contain; }
-  .setup-hero h2 { font-size: 24px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
-  .setup-hero p { font-size: 13px; color: #888; }
-  .setup-card { background: white; border: 1px solid #e5e5e5; border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 14px; }
-  .setup-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #aaa; }
+  .setup-hero h2 { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .setup-hero p { font-size: 13px; color: var(--text-muted); }
+  .setup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 14px; }
+  .setup-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
   .field-group { display: flex; flex-direction: column; gap: 6px; }
-  .field-group label { font-size: 13px; font-weight: 600; color: #444; }
-  .field-group input { padding: 13px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 16px; font-family: inherit; width: 100%; background: #fafafa; transition: all 0.15s; min-height: 46px; }
-  .field-group input:focus { outline: none; border-color: #6B1B2B; background: white; box-shadow: 0 0 0 3px rgba(107,27,43,0.08); }
+  .field-group label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .field-group input { padding: 13px 14px; border: 1.5px solid var(--input-border); border-radius: 10px; font-size: 16px; font-family: inherit; width: 100%; background: var(--surface-3); transition: all 0.15s; min-height: 46px; }
+  .field-group input:focus { outline: none; border-color: #6B1B2B; background: var(--surface); box-shadow: 0 0 0 3px rgba(107,27,43,0.08); }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .squad-preview-card { background: #6B1B2B; border-radius: 14px; padding: 1.25rem; color: white; }
   .squad-preview-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; opacity: 0.85; margin-bottom: 1rem; }
@@ -590,94 +791,102 @@
   .squad-stat-label { font-size: 12px; opacity: 0.7; margin-top: 4px; }
   .squad-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.2); }
   .squad-preview-hint { font-size: 12px; opacity: 0.6; text-align: center; }
-  .start-btn { width: 100%; padding: 16px; background: #1a1a1a; color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: background 0.15s; }
-  .start-btn:hover { background: #333; }
+  .start-btn { width: 100%; padding: 16px; background: var(--text); color: var(--bg); border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: background 0.15s; }
+  .start-btn:hover { opacity: 0.85; }
   .start-arrow { font-size: 20px; }
   .match-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .match-title { font-size: 17px; font-weight: 700; color: #1a1a1a; }
-  .vs { font-weight: 400; color: #888; margin: 0 6px; }
-  .match-meta { font-size: 12px; color: #888; margin-top: 2px; }
-  .scoreboard { display: flex; align-items: center; gap: 10px; background: #f3f3f3; border-radius: 10px; padding: 8px 16px; }
+  .match-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .vs { font-weight: 400; color: var(--text-muted); margin: 0 6px; }
+  .match-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .scoreboard { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 10px; padding: 8px 16px; }
   .score-block { text-align: center; }
-  .score-label { font-size: 10px; color: #888; font-weight: 600; letter-spacing: 0.05em; }
-  .score-val { font-size: 22px; font-weight: 700; color: #1a1a1a; }
-  .score-divider { font-size: 22px; color: #ccc; }
+  .score-label { font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; }
+  .score-val { font-size: 22px; font-weight: 700; color: var(--text); }
+  .score-divider { font-size: 22px; color: var(--text-faint); }
   .opp-btns { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
-  .opp-btn { padding: 6px 10px; font-size: 12px; font-weight: 600; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; color: #555; font-family: inherit; min-height: 36px; min-width: 36px; }
+  .opp-btn { padding: 6px 10px; font-size: 12px; font-weight: 600; border: 1px solid var(--input-border); border-radius: 6px; background: var(--surface); cursor: pointer; color: var(--text-2); font-family: inherit; min-height: 36px; min-width: 36px; }
   .opp-btn:hover { border-color: #6B1B2B; color: #6B1B2B; }
   .timer-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .timer-left { display: flex; align-items: center; gap: 10px; }
-  .timer-display { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: #1a1a1a; min-width: 80px; }
+  .timer-display { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); min-width: 80px; }
   .timer-display.running { color: #6B1B2B; }
   .timer-btns { display: flex; gap: 6px; }
-  .timer-btn { padding: 10px 16px; border-radius: 8px; border: 1.5px solid #ddd; background: none; color: #555; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 44px; }
+  .timer-btn { padding: 10px 16px; border-radius: 8px; border: 1.5px solid var(--input-border); background: none; color: var(--text-2); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 44px; }
   .timer-btn.primary { background: #6B1B2B; border-color: #6B1B2B; color: white; }
   .period-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-  .period-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #ddd; background: none; font-size: 13px; color: #666; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 40px; }
+  .period-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--input-border); background: none; font-size: 13px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 40px; }
   .period-btn.active { background: #6B1B2B; color: white; border-color: #6B1B2B; font-weight: 600; }
+  .undo-row { display: flex; justify-content: flex-end; }
+  .undo-btn {
+    padding: 8px 16px; border-radius: 8px;
+    border: 1.5px solid #e0a020; background: rgba(224,160,32,0.1); color: #9a6000;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    min-height: 40px; transition: all 0.15s; white-space: nowrap;
+  }
+  .undo-btn:hover { background: #e0a020; color: white; }
   .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .mode-toggle { display: flex; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-  .mode-toggle button { padding: 10px 20px; border: none; background: none; font-size: 14px; color: #666; cursor: pointer; font-family: inherit; min-height: 44px; }
+  .mode-toggle { display: flex; border: 1px solid var(--input-border); border-radius: 8px; overflow: hidden; }
+  .mode-toggle button { padding: 10px 20px; border: none; background: none; font-size: 14px; color: var(--text-muted); cursor: pointer; font-family: inherit; min-height: 44px; }
   .mode-toggle button.active { background: #6B1B2B; color: white; font-weight: 600; }
   .sub-btn { padding: 10px 18px; border-radius: 8px; border: 1.5px solid #6B1B2B; background: none; color: #6B1B2B; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 44px; }
   .sub-btn:hover { background: #6B1B2B; color: white; }
-  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; margin-bottom: 6px; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-  .stat-btn { position: relative; padding: 18px 12px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: white; font-size: 15px; font-weight: 600; color: #1a1a1a; cursor: pointer; transition: all 0.15s; text-align: center; font-family: inherit; min-height: 64px; }
-  .stat-btn:hover { border-color: #6B1B2B; color: #6B1B2B; background: #fdf5f6; }
+  .stat-btn { position: relative; padding: 18px 12px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--surface); font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center; font-family: inherit; min-height: 64px; }
+  .stat-btn:hover { border-color: #6B1B2B; color: #6B1B2B; background: rgba(107,27,43,0.08); }
   .stat-btn:active { transform: scale(0.97); }
-  .stat-btn.dashed { border-style: dashed; color: #aaa; font-weight: 400; }
+  .stat-btn.dashed { border-style: dashed; color: var(--text-faint); font-weight: 400; }
   .stat-btn.dashed:hover { color: #6B1B2B; border-color: #6B1B2B; }
-  .custom-tag { display: block; font-size: 10px; font-weight: 400; color: #aaa; margin-top: 4px; }
+  .custom-tag { display: block; font-size: 10px; font-weight: 400; color: var(--text-faint); margin-top: 4px; }
   .add-stat-input { display: flex; align-items: center; gap: 6px; padding: 10px 12px; }
-  .add-stat-input input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; min-width: 0; }
+  .add-stat-input input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; min-width: 0; background: transparent; color: var(--text); }
   .confirm-btn { padding: 4px 10px; background: #6B1B2B; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .cancel-small { background: none; border: none; color: #aaa; font-size: 14px; cursor: pointer; padding: 2px 4px; }
+  .cancel-small { background: none; border: none; color: var(--text-faint); font-size: 14px; cursor: pointer; padding: 2px 4px; }
   .custom-stat-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
-  .custom-stat-btn { padding: 7px 16px; border-radius: 8px; border: 1.5px dashed #6B1B2B; background: #fdf5f6; color: #6B1B2B; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .custom-stat-btn { padding: 7px 16px; border-radius: 8px; border: 1.5px dashed #6B1B2B; background: rgba(107,27,43,0.06); color: #6B1B2B; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
   .custom-stat-btn:hover { background: #6B1B2B; color: white; }
-  .custom-stat-input-wrap { display: flex; align-items: center; gap: 8px; background: white; border: 1.5px solid #6B1B2B; border-radius: 8px; padding: 6px 10px; width: 100%; max-width: 320px; }
+  .custom-stat-input-wrap { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1.5px solid #6B1B2B; border-radius: 8px; padding: 6px 10px; width: 100%; max-width: 320px; }
   .custom-stat-input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; min-width: 0; background: transparent; }
-  .table-wrap { width: 100%; overflow-x: auto; border: 1px solid #e5e5e5; border-radius: 10px; }
+  .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
   .player-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 340px; }
-  .player-table thead { background: #f8f8f8; }
-  .player-table th { padding: 8px 6px; font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; border-bottom: 1px solid #f0f0f0; }
+  .player-table thead { background: var(--surface-2); }
+  .player-table th { padding: 8px 6px; font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; text-align: center; border-bottom: 1px solid var(--divider); }
   .th-player { text-align: left; padding-left: 12px; }
-  .player-table td { padding: 6px; border-bottom: 1px solid #f5f5f5; text-align: center; }
+  .player-table td { padding: 6px; border-bottom: 1px solid var(--divider-faint); text-align: center; }
   .player-table tr:last-child td { border-bottom: none; }
   .td-player { text-align: left; padding-left: 12px; white-space: nowrap; font-weight: 500; }
   .num-badge { display: inline-block; font-size: 11px; background: #6B1B2B; color: white; border-radius: 4px; padding: 1px 5px; font-weight: 600; margin-right: 4px; }
-  .num-badge.sub { background: #aaa; }
+  .num-badge.sub { background: var(--text-muted); }
   .counter { display: flex; align-items: center; justify-content: center; gap: 4px; }
-  .mini-dec, .mini-inc { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #ddd; background: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; font-family: inherit; flex-shrink: 0; }
+  .mini-dec, .mini-inc { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--input-border); background: var(--surface); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; font-family: inherit; flex-shrink: 0; }
   .mini-inc { border-color: #6B1B2B; color: #6B1B2B; }
   .mini-val { font-size: 14px; font-weight: 600; min-width: 20px; text-align: center; }
-  .sub-log-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .sub-log-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--divider); font-size: 13px; }
   .sub-log-row:last-child { border-bottom: none; }
   .sub-time { font-weight: 700; color: #6B1B2B; min-width: 44px; }
-  .sub-detail { flex: 1; color: #333; }
-  .sub-period { font-size: 11px; color: #aaa; }
+  .sub-detail { flex: 1; color: var(--text); }
+  .sub-period { font-size: 11px; color: var(--text-faint); }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 200; }
-  .modal { background: white; border-radius: 20px 20px 0 0; padding: 1.5rem; width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; }
-  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 1rem; color: #1a1a1a; }
-  .modal-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; margin: 0.75rem 0 0.5rem; }
+  .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 1.5rem; width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+  .modal-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin: 0.75rem 0 0.5rem; }
   .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-  .player-btn { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: white; cursor: pointer; transition: all 0.15s; gap: 4px; font-family: inherit; min-height: 64px; }
-  .player-btn:active { transform: scale(0.96); border-color: #6B1B2B; background: #fdf5f6; }
+  .player-btn { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--surface); cursor: pointer; transition: all 0.15s; gap: 4px; font-family: inherit; min-height: 64px; }
+  .player-btn:active { transform: scale(0.96); border-color: #6B1B2B; background: rgba(107,27,43,0.08); }
   .player-btn.sub { opacity: 0.7; }
-  .player-num { font-size: 11px; color: #888; }
-  .player-name { font-size: 13px; font-weight: 600; color: #1a1a1a; text-align: center; }
-  .cancel-btn { width: 100%; margin-top: 1rem; padding: 15px; border-radius: 10px; border: 1px solid #ddd; background: none; font-size: 16px; color: #888; cursor: pointer; font-family: inherit; min-height: 50px; }
-  .optional-tag { font-size: 12px; font-weight: 400; color: #aaa; margin-left: 6px; }
+  .player-num { font-size: 11px; color: var(--text-muted); }
+  .player-name { font-size: 13px; font-weight: 600; color: var(--text); text-align: center; }
+  .cancel-btn { width: 100%; margin-top: 1rem; padding: 15px; border-radius: 10px; border: 1px solid var(--input-border); background: none; font-size: 16px; color: var(--text-muted); cursor: pointer; font-family: inherit; min-height: 50px; }
+  .optional-tag { font-size: 12px; font-weight: 400; color: var(--text-faint); margin-left: 6px; }
   .pitch-wrap { margin: 0.75rem 0; border-radius: 8px; overflow: hidden; cursor: crosshair; }
   .pitch-svg { width: 100%; height: auto; display: block; }
-  .ghost-btn { width: 100%; padding: 10px; border: 1.5px dashed #ddd; border-radius: 8px; background: none; color: #aaa; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .ghost-btn { width: 100%; padding: 10px; border: 1.5px dashed var(--input-border); border-radius: 8px; background: none; color: var(--text-faint); font-size: 13px; cursor: pointer; font-family: inherit; }
   .ghost-btn:hover { border-color: #6B1B2B; color: #6B1B2B; }
   .notes-section { margin-top: 4px; }
-  textarea { width: 100%; min-height: 80px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: #1a1a1a; resize: vertical; background: white; }
+  textarea { width: 100%; min-height: 80px; border: 1px solid var(--input-border); border-radius: 8px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: var(--text); resize: vertical; background: var(--surface); }
   textarea:focus { outline: none; border-color: #6B1B2B; }
-  .finish-btn { width: 100%; padding: 15px; background: #1a1a1a; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit; }
-  .finish-btn:hover { background: #333; }
+  .finish-btn { width: 100%; padding: 15px; background: var(--text); color: var(--bg); border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit; }
+  .finish-btn:hover { opacity: 0.85; }
   @media (max-width: 480px) {
     .match-header { flex-direction: column; align-items: flex-start; }
     .scoreboard { width: 100%; justify-content: center; }

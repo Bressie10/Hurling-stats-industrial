@@ -6,6 +6,7 @@ const defaults = {
   teamName: 'Doora Barefield',
   ageGroup: 'Minor',
   periodLength: 30,
+  darkMode: false,
   defaultStats: ['Point', 'Goal', 'Wide', 'Tackle', 'Block', 'Turnover Won', 'Turnover Lost', 'Free Won']
 }
 

@@ -147,8 +147,20 @@ Each logged stat produces an event object:
 - Pitch green: `#2d7a2d`
 - All component styles are scoped — no global CSS classes except reset in `app.css`
 
+### Dark mode
+CSS custom properties defined in `app.css` under `:root` (light) and `[data-theme="dark"]`. Never hardcode `white`, `#f8f8f8`, `#1a1a1a`, `#555`, `#888`, `#aaa` in component styles — use the variables instead:
+- Backgrounds: `var(--bg)`, `var(--surface)`, `var(--surface-2)`, `var(--surface-3)`
+- Borders: `var(--border)`, `var(--input-border)`, `var(--divider)`, `var(--divider-faint)`
+- Text: `var(--text)`, `var(--text-2)`, `var(--text-muted)`, `var(--text-faint)`
+- Brand maroon `#6B1B2B` and semantic colours (green/red) are kept as hex — they don't change between themes
+
 ### Auto-save (draft)
-`saveDraft()` is called on every stat tap, sub, score change, and timer tick. It writes the full match state to IndexedDB as `id: 'draft'`. On app load, if a draft exists it auto-resumes and starts the timer automatically — no prompt.
+`saveDraft()` is called on every stat tap, sub, score change, and timer tick. It writes the full match state to IndexedDB as `id: 'draft'`. IndexedDB persists across tab/browser close, reload, navigation, and offline — data is only cleared by explicit user action.
+
+On app load, if a draft exists `Match.svelte` sets `screen = 'recover'` and shows a professional recovery card. The card displays the opposition, date/venue, live score, event count, and time elapsed. The coach must explicitly tap **Resume Match** (starts timer) or **Discard & Start New** (clears draft, goes to setup). The timer does NOT auto-start — the coach is always in control.
+
+### Logo paths
+All logo references use the public-folder relative path `doora-barefield.png` (not `/src/assets/doora-barefield.png`). This applies to `Auth.svelte`, `App.svelte`, and the recovery card in `Match.svelte`.
 
 ---
 
@@ -160,6 +172,8 @@ Each logged stat produces an event object:
 - **Player identity by name** — if you switch back to ID-based lookup, cross-match stat aggregation breaks
 - **`dataReady` gate in `App.svelte`** — components must not mount until sync is complete or they load stale data
 - **`saveDraft()` on every state change** — removing any of these calls means match data can be lost if the app closes
+- **`screen = 'recover'` on draft load** — do not change this back to auto-resume; the recovery card gives the coach explicit control and prevents accidental data loss
+- **Logo path `doora-barefield.png`** — always use this public-folder path, never `/src/assets/doora-barefield.png`
 
 ---
 
@@ -181,12 +195,17 @@ Each logged stat produces an event object:
 - [x] Team Targets — set goals per stat, track progress, trend
 - [x] Supabase auth + sync — multi-account, per-coach data isolation
 - [x] Draft auto-save — match survives app close / device off
+- [x] Professional draft recovery card — coach explicitly resumes or discards (no auto-resume, no browser popup)
+- [x] Logo path standardised — all references use `doora-barefield.png` (public folder)
+
+### Done (continued)
+- [x] PWA offline install — `manifest.json` + `sw.js` (cache-first for assets, network-first for Supabase), registered in `index.html`
+- [x] PDF match report export — `window.print()` + `@media print` CSS in `History.svelte`; nav and UI chrome hidden, print-only header shown
+- [x] Dark mode — CSS custom properties in `app.css` (`:root` light defaults, `[data-theme="dark"]` overrides), toggle in Settings.svelte, `data-theme` attribute driven by `settingsStore.darkMode` in `App.svelte`; all components updated
+- [x] Auto-sync to Supabase — `scheduleAutoSync()` debounced 10s after stat logged, undo, sub, or decrement; NOT called on timer ticks
 
 ### Still To Build
-- [ ] PWA offline install (service worker + manifest)
-- [ ] PDF match report export
-- [ ] Dark mode
-- [ ] Supabase real-time sync (auto-push on stat tap, not manual)
+- [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
 
 ### Key Goals
 - Works fully offline at any GAA ground — no internet required during a match

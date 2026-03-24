@@ -34,7 +34,7 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <img src="/src/assets/doora-barefield.png" alt="Doora Barefield" class="auth-logo" />
+      <img src="doora-barefield.png" alt="Doora Barefield" class="auth-logo" />
       <h1>Doora Barefield</h1>
       <p>Hurling Stats</p>
     </div>
@@ -103,12 +103,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f8f6;
+    background: var(--bg);
     padding: 1rem;
   }
   .auth-card {
-    background: white;
-    border: 1px solid #e5e5e5;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 16px;
     padding: 2rem;
     width: 100%;
@@ -119,12 +119,12 @@
   }
   .auth-header { text-align: center; }
   .auth-logo { width: 64px; height: 64px; object-fit: contain; margin-bottom: 12px; }
-  .auth-header h1 { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-  .auth-header p { font-size: 13px; color: #888; }
+  .auth-header h1 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .auth-header p { font-size: 13px; color: var(--text-muted); }
 
   .mode-toggle {
     display: flex;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--input-border);
     border-radius: 10px;
     overflow: hidden;
   }
@@ -134,7 +134,7 @@
     border: none;
     background: none;
     font-size: 14px;
-    color: #888;
+    color: var(--text-muted);
     cursor: pointer;
     font-family: inherit;
     transition: all 0.15s;
@@ -147,20 +147,20 @@
   }
 
   .field-group { display: flex; flex-direction: column; gap: 6px; }
-  .field-group label { font-size: 12px; font-weight: 600; color: #555; }
+  .field-group label { font-size: 12px; font-weight: 600; color: var(--text-2); }
   .field-group input {
     padding: 13px 14px;
-    border: 1.5px solid #e0e0e0;
+    border: 1.5px solid var(--input-border);
     border-radius: 10px;
     font-size: 16px;
     font-family: inherit;
-    background: #fafafa;
+    background: var(--surface-3);
     transition: all 0.15s;
   }
   .field-group input:focus {
     outline: none;
     border-color: #6B1B2B;
-    background: white;
+    background: var(--surface);
     box-shadow: 0 0 0 3px rgba(107,27,43,0.08);
   }
 
@@ -198,7 +198,7 @@
   .auth-hint {
     text-align: center;
     font-size: 13px;
-    color: #888;
+    color: var(--text-muted);
   }
   .link-btn {
     background: none;

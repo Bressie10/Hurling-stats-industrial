@@ -228,25 +228,25 @@
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
 
   .field-group { display: flex; flex-direction: column; gap: 4px; }
-  .field-group label { font-size: 12px; font-weight: 600; color: #555; }
+  .field-group label { font-size: 12px; font-weight: 600; color: var(--text-2); }
   .field-group select {
     padding: 12px 12px;
-    border: 1.5px solid #e0e0e0;
+    border: 1.5px solid var(--input-border);
     border-radius: 10px;
     font-size: 16px;
     font-family: inherit;
-    background: white;
-    color: #1a1a1a;
+    background: var(--surface);
+    color: var(--text);
     width: 100%;
     min-height: 46px;
   }
   .field-group select:focus { outline: none; border-color: #6B1B2B; }
 
   .empty-state { text-align: center; padding: 3rem 1rem; }
-  .empty-icon { width: 48px; height: 48px; margin: 0 auto 1rem; color: #ddd; }
+  .empty-icon { width: 48px; height: 48px; margin: 0 auto 1rem; color: var(--text-faint); }
   .empty-icon svg { width: 100%; height: 100%; }
-  .empty-title { font-size: 16px; font-weight: 600; color: #888; margin-bottom: 4px; }
-  .empty-sub { font-size: 13px; color: #aaa; }
+  .empty-title { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+  .empty-sub { font-size: 13px; color: var(--text-faint); }
 
   .summary-card {
     background: #1a1a1a;
@@ -267,8 +267,8 @@
   .stat-pill {
     flex: 1;
     min-width: 56px;
-    background: white;
-    border: 1px solid #e5e5e5;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0.75rem 0.5rem;
     text-align: center;
@@ -291,9 +291,9 @@
   .stat-pill-icon.red { background: #fce8e8; color: #c62828; }
   .stat-pill-icon.blue { background: #e3f0fb; color: #1565c0; }
   .stat-pill-icon.maroon { background: #fdf0f2; color: #6B1B2B; }
-  .stat-pill-icon.gray { background: #f5f5f5; color: #666; }
-  .stat-pill-val { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1; }
-  .stat-pill-label { font-size: 11px; color: #aaa; }
+  .stat-pill-icon.gray { background: var(--surface-2); color: var(--text-muted); }
+  .stat-pill-val { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-pill-label { font-size: 11px; color: var(--text-faint); }
 
   .period-group { }
   .period-label {
@@ -317,7 +317,7 @@
   .timeline-time {
     font-size: 11px;
     font-weight: 600;
-    color: #aaa;
+    color: var(--text-faint);
     text-align: right;
     padding-top: 12px;
     font-variant-numeric: tabular-nums;
@@ -334,7 +334,7 @@
     border-radius: 50%;
     margin-top: 10px;
     flex-shrink: 0;
-    border: 2px solid white;
+    border: 2px solid var(--bg);
   }
   .timeline-dot.green { background: #2d7a2d; box-shadow: 0 0 0 1px #2d7a2d; }
   .timeline-dot.red { background: #e53935; box-shadow: 0 0 0 1px #e53935; }
@@ -346,7 +346,7 @@
     width: 2px;
     flex: 1;
     min-height: 12px;
-    background: #f0f0f0;
+    background: var(--divider);
     margin: 2px 0;
   }
 
@@ -355,11 +355,11 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: white;
-    border: 1px solid #e5e5e5;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 10px 12px;
-    border-left: 3px solid #ddd;
+    border-left: 3px solid var(--border);
   }
   .event-card.green { border-left-color: #2d7a2d; }
   .event-card.red { border-left-color: #e53935; }
@@ -383,12 +383,12 @@
   .event-icon-wrap.red { background: #fce8e8; color: #c62828; }
   .event-icon-wrap.blue { background: #e3f0fb; color: #1565c0; }
   .event-icon-wrap.amber { background: #fff3e0; color: #f57c00; }
-  .event-icon-wrap.gray { background: #f5f5f5; color: #666; }
+  .event-icon-wrap.gray { background: var(--surface-2); color: var(--text-muted); }
   .event-icon-wrap.maroon { background: #fdf0f2; color: #6B1B2B; }
 
   .event-info { flex: 1; min-width: 0; }
-  .event-stat { font-size: 13px; font-weight: 700; color: #1a1a1a; }
-  .event-player { font-size: 12px; color: #888; margin-top: 1px; }
+  .event-stat { font-size: 13px; font-weight: 700; color: var(--text); }
+  .event-player { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
 
   .event-badge {
     font-size: 11px;

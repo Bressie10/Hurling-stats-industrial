@@ -161,6 +161,25 @@
     {/if}
   </div>
 
+  <!-- APPEARANCE -->
+  <div class="card">
+    <div class="card-title">Appearance</div>
+    <div class="appearance-row">
+      <div>
+        <div class="appearance-label">Dark mode</div>
+        <div class="appearance-sub">Easier on the eyes in low light</div>
+      </div>
+      <button
+        class="dark-toggle"
+        class:on={settings.darkMode}
+        on:click={() => { settings.darkMode = !settings.darkMode; saveSettings() }}
+        aria-label="Toggle dark mode"
+      >
+        <span class="dark-toggle-thumb"></span>
+      </button>
+    </div>
+  </div>
+
   <!-- DATA EXPORT -->
   <div class="card">
     <div class="card-title">Data backup</div>
@@ -209,29 +228,29 @@
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 12px; }
 
   .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
-  .page-header h2 { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-  .page-header p { font-size: 13px; color: #888; }
+  .page-header h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .page-header p { font-size: 13px; color: var(--text-muted); }
 
-  .card-title { font-size: 13px; font-weight: 700; color: #1a1a1a; }
-  .card-sub { font-size: 13px; color: #888; line-height: 1.5; margin-top: -4px; }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .card-sub { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-top: -4px; }
 
   .field-group { display: flex; flex-direction: column; gap: 6px; }
-  .field-group label { font-size: 12px; font-weight: 600; color: #555; }
+  .field-group label { font-size: 12px; font-weight: 600; color: var(--text-2); }
   .field-group input {
     padding: 13px 14px;
-    border: 1.5px solid #e0e0e0;
+    border: 1.5px solid var(--input-border);
     border-radius: 10px;
     font-size: 16px;
     font-family: inherit;
-    background: #fafafa;
+    background: var(--surface-3);
     transition: all 0.15s;
     min-height: 46px;
   }
-  .field-group input:focus { outline: none; border-color: #6B1B2B; background: white; box-shadow: 0 0 0 3px rgba(107,27,43,0.08); }
-  .field-hint { font-size: 12px; color: #aaa; line-height: 1.4; }
+  .field-group input:focus { outline: none; border-color: #6B1B2B; background: var(--surface); box-shadow: 0 0 0 3px rgba(107,27,43,0.08); }
+  .field-hint { font-size: 12px; color: var(--text-faint); line-height: 1.4; }
 
   .period-row { display: flex; align-items: center; gap: 12px; }
   .period-row input[type="range"] { flex: 1; accent-color: #6B1B2B; }
@@ -244,24 +263,24 @@
     gap: 8px;
     padding: 11px 12px;
     border-radius: 8px;
-    border: 1.5px solid #e0e0e0;
-    background: white;
+    border: 1.5px solid var(--input-border);
+    background: var(--surface);
     font-size: 14px;
     font-weight: 500;
-    color: #888;
+    color: var(--text-muted);
     cursor: pointer;
     font-family: inherit;
     transition: all 0.15s;
     text-align: left;
     min-height: 44px;
   }
-  .stat-toggle.active { border-color: #6B1B2B; color: #1a1a1a; background: #fdf5f6; }
+  .stat-toggle.active { border-color: #6B1B2B; color: var(--text); background: rgba(107,27,43,0.08); }
   .toggle-check {
     width: 18px;
     height: 18px;
     border-radius: 4px;
-    border: 1.5px solid #ddd;
-    background: white;
+    border: 1.5px solid var(--input-border);
+    background: var(--surface);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -275,14 +294,14 @@
   .add-stat-row input {
     flex: 1;
     padding: 11px 12px;
-    border: 1.5px solid #e0e0e0;
+    border: 1.5px solid var(--input-border);
     border-radius: 8px;
     font-size: 16px;
     font-family: inherit;
-    background: #fafafa;
+    background: var(--surface-3);
     min-height: 44px;
   }
-  .add-stat-row input:focus { outline: none; border-color: #6B1B2B; background: white; }
+  .add-stat-row input:focus { outline: none; border-color: #6B1B2B; background: var(--surface); }
   .add-stat-btn {
     padding: 11px 16px;
     border-radius: 8px;
@@ -296,11 +315,11 @@
     min-height: 44px;
   }
 
-  .custom-stats-list { border-top: 1px solid #f0f0f0; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-  .custom-stat-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #333; padding: 4px 0; }
+  .custom-stats-list { border-top: 1px solid var(--divider); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .custom-stat-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text); padding: 4px 0; }
   .remove-btn { background: none; border: none; color: #e53935; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
-  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); }
 
   .export-btn {
     display: flex;
@@ -322,10 +341,10 @@
   .export-btn.success { background: #e6f4ea; border-color: #2d7a2d; color: #2d7a2d; }
 
   .about-card { gap: 0; }
-  .about-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .about-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--divider-faint); font-size: 13px; }
   .about-row:last-child { border-bottom: none; }
-  .about-label { color: #aaa; }
-  .about-val { font-weight: 500; color: #1a1a1a; text-align: right; }
+  .about-label { color: var(--text-faint); }
+  .about-val { font-weight: 500; color: var(--text); text-align: right; }
 
   .save-btn {
     padding: 11px 20px;
@@ -359,6 +378,24 @@
   }
   .save-btn-full.saved { background: #2d7a2d; }
   .save-btn-full:hover { background: #551522; }
+
+  .appearance-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .appearance-label { font-size: 14px; font-weight: 600; color: var(--text); }
+  .appearance-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .dark-toggle {
+    position: relative; width: 48px; height: 28px; border-radius: 14px;
+    border: none; background: #ddd; cursor: pointer; transition: background 0.2s;
+    flex-shrink: 0; padding: 0;
+  }
+  .dark-toggle.on { background: #6B1B2B; }
+  .dark-toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: white; transition: transform 0.2s;
+    display: block;
+  }
+  .dark-toggle.on .dark-toggle-thumb { transform: translateX(20px); }
 
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }

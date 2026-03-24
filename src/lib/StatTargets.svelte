@@ -282,11 +282,11 @@
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
 
   .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
-  .page-header h2 { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-  .page-header p { font-size: 13px; color: #888; }
+  .page-header h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .page-header p { font-size: 13px; color: var(--text-muted); }
 
   .summary-card {
     background: #1a1a1a; border-radius: 14px; padding: 1.25rem;
@@ -298,36 +298,36 @@
   .summary-label { font-size: 11px; opacity: 0.5; margin-top: 2px; }
   .summary-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.15); }
 
-  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); }
 
   .targets-header {
     display: grid;
     grid-template-columns: 1fr 80px 80px 90px 70px;
     padding: 8px 1rem;
-    background: #f8f8f8;
-    font-size: 11px; font-weight: 600; color: #aaa;
+    background: var(--surface-2);
+    font-size: 11px; font-weight: 600; color: var(--text-faint);
     text-transform: uppercase; letter-spacing: 0.05em;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--divider);
   }
   .target-row {
     display: grid;
     grid-template-columns: 1fr 80px 80px 90px 70px;
     align-items: center;
     padding: 9px 1rem;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--divider-faint);
     gap: 4px;
   }
   .target-row:last-child { border-bottom: none; }
   .target-stat-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .target-stat { font-size: 13px; font-weight: 500; color: #1a1a1a; }
-  .lower-badge { font-size: 10px; color: #aaa; background: #f5f5f5; padding: 1px 6px; border-radius: 4px; }
-  .remove-custom { background: none; border: none; color: #ddd; font-size: 12px; cursor: pointer; padding: 2px; }
+  .target-stat { font-size: 13px; font-weight: 500; color: var(--text); }
+  .lower-badge { font-size: 10px; color: var(--text-faint); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
+  .remove-custom { background: none; border: none; color: var(--text-faint); font-size: 12px; cursor: pointer; padding: 2px; }
   .remove-custom:hover { color: #e53935; }
-  .target-data { font-size: 13px; color: #888; }
+  .target-data { font-size: 13px; color: var(--text-muted); }
   .target-input {
     width: 64px; padding: 8px 6px;
-    border: 1.5px solid #e0e0e0; border-radius: 6px;
-    font-size: 16px; font-family: inherit; text-align: center; background: white;
+    border: 1.5px solid var(--input-border); border-radius: 6px;
+    font-size: 16px; font-family: inherit; text-align: center; background: var(--surface); color: var(--text);
     min-height: 38px;
   }
   .target-input:focus { outline: none; border-color: #6B1B2B; }
@@ -339,28 +339,28 @@
 
   .progress-row { margin-bottom: 12px; }
   .progress-row:last-child { margin-bottom: 0; }
-  .progress-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 6px; }
-  .progress-nums { font-weight: 600; color: #888; }
-  .progress-bar-wrap { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+  .progress-nums { font-weight: 600; color: var(--text-muted); }
+  .progress-bar-wrap { height: 8px; background: var(--divider); border-radius: 4px; overflow: hidden; }
   .progress-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; background: #c62828; }
   .progress-bar.met { background: #2d7a2d; }
   .progress-bar.close { background: #e65100; }
   .progress-bar.below { background: #c62828; }
 
-  .trend-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
+  .trend-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--divider-faint); }
   .trend-row:last-child { border-bottom: none; }
-  .trend-label { font-size: 13px; color: #333; }
+  .trend-label { font-size: 13px; color: var(--text-2); }
   .trend-indicator { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 6px; }
   .trend-indicator svg { width: 14px; height: 14px; }
   .trend-indicator.up { background: #e6f4ea; color: #2d7a2d; }
   .trend-indicator.down { background: #fce8e8; color: #c62828; }
-  .trend-indicator.stable { background: #f5f5f5; color: #888; }
+  .trend-indicator.stable { background: var(--surface-2); color: var(--text-muted); }
 
   .add-stat-btn { padding: 8px 14px; border-radius: 6px; border: 1.5px dashed #6B1B2B; background: none; color: #6B1B2B; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 38px; }
   .add-stat-wrap { display: flex; align-items: center; gap: 6px; }
-  .add-stat-wrap input { padding: 8px 10px; border: 1.5px solid #6B1B2B; border-radius: 6px; font-size: 16px; font-family: inherit; outline: none; width: 150px; min-height: 38px; }
+  .add-stat-wrap input { padding: 8px 10px; border: 1.5px solid #6B1B2B; border-radius: 6px; font-size: 16px; font-family: inherit; outline: none; width: 150px; min-height: 38px; background: var(--surface); color: var(--text); }
   .confirm-btn { padding: 8px 12px; background: #6B1B2B; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 38px; }
-  .cancel-small { background: none; border: none; color: #aaa; font-size: 18px; cursor: pointer; padding: 4px 8px; min-height: 38px; }
+  .cancel-small { background: none; border: none; color: var(--text-faint); font-size: 18px; cursor: pointer; padding: 4px 8px; min-height: 38px; }
 
   .save-btn { padding: 11px 20px; background: #6B1B2B; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; flex-shrink: 0; min-height: 44px; }
   .save-btn.saved { background: #2d7a2d; }

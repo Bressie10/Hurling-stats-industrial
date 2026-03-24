@@ -19,6 +19,7 @@ export async function getDB() {
 export async function saveSquad(players) {
   const db = await getDB()
   const tx = db.transaction('squad', 'readwrite')
+  await tx.store.clear()
   await Promise.all(players.map(p => tx.store.put(p)))
   await tx.done
 }
