@@ -323,7 +323,7 @@
   .squad-card { padding: 0; overflow: hidden; }
   .squad-col-labels {
     display: grid;
-    grid-template-columns: 52px 1fr 100px 32px;
+    grid-template-columns: 52px 1fr 100px 40px;
     gap: 8px;
     padding: 8px 14px;
     background: #f8f8f8;
@@ -335,7 +335,7 @@
   }
   .squad-row {
     display: grid;
-    grid-template-columns: 52px 1fr 100px 32px;
+    grid-template-columns: 52px 1fr 100px 40px;
     gap: 8px;
     align-items: center;
     padding: 7px 14px;
@@ -347,32 +347,35 @@
 
   .input-num {
     width: 100%;
-    padding: 7px 4px;
+    padding: 9px 4px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     text-align: center;
     background: white;
+    min-height: 40px;
   }
   .input-name {
     width: 100%;
-    padding: 7px 10px;
+    padding: 9px 10px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     background: white;
+    min-height: 40px;
   }
   .input-pos {
     width: 100%;
-    padding: 7px 6px;
+    padding: 9px 6px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 15px;
     font-family: inherit;
     background: white;
     color: #1a1a1a;
+    min-height: 40px;
   }
   .input-num:focus, .input-name:focus, .input-pos:focus {
     outline: none;
@@ -383,13 +386,15 @@
     background: none;
     border: none;
     color: #ddd;
-    font-size: 15px;
+    font-size: 18px;
     cursor: pointer;
-    padding: 4px;
+    padding: 6px;
     border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
   }
   .delete-btn:hover { color: #e53935; background: #fff0f0; }
 
@@ -465,7 +470,7 @@
   /* RESPONSIVE */
   @media (max-width: 480px) {
     .squad-col-labels,
-    .squad-row { grid-template-columns: 46px 1fr 80px 28px; gap: 6px; padding: 6px 10px; }
+    .squad-row { grid-template-columns: 44px 1fr 76px 40px; gap: 6px; padding: 8px 10px; }
     .summary-grid { grid-template-columns: repeat(2, 1fr); }
     .page-header { flex-direction: column; }
     .save-btn { width: 100%; text-align: center; }

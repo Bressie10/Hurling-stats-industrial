@@ -578,7 +578,7 @@
   .setup-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #aaa; }
   .field-group { display: flex; flex-direction: column; gap: 6px; }
   .field-group label { font-size: 13px; font-weight: 600; color: #444; }
-  .field-group input { padding: 12px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 15px; font-family: inherit; width: 100%; background: #fafafa; transition: all 0.15s; }
+  .field-group input { padding: 13px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 16px; font-family: inherit; width: 100%; background: #fafafa; transition: all 0.15s; min-height: 46px; }
   .field-group input:focus { outline: none; border-color: #6B1B2B; background: white; box-shadow: 0 0 0 3px rgba(107,27,43,0.08); }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .squad-preview-card { background: #6B1B2B; border-radius: 14px; padding: 1.25rem; color: white; }
@@ -602,28 +602,28 @@
   .score-label { font-size: 10px; color: #888; font-weight: 600; letter-spacing: 0.05em; }
   .score-val { font-size: 22px; font-weight: 700; color: #1a1a1a; }
   .score-divider { font-size: 22px; color: #ccc; }
-  .opp-btns { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
-  .opp-btn { padding: 2px 6px; font-size: 10px; font-weight: 600; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; color: #555; font-family: inherit; }
+  .opp-btns { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+  .opp-btn { padding: 6px 10px; font-size: 12px; font-weight: 600; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; color: #555; font-family: inherit; min-height: 36px; min-width: 36px; }
   .opp-btn:hover { border-color: #6B1B2B; color: #6B1B2B; }
   .timer-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .timer-left { display: flex; align-items: center; gap: 10px; }
   .timer-display { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: #1a1a1a; min-width: 80px; }
   .timer-display.running { color: #6B1B2B; }
   .timer-btns { display: flex; gap: 6px; }
-  .timer-btn { padding: 7px 14px; border-radius: 8px; border: 1.5px solid #ddd; background: none; color: #555; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .timer-btn { padding: 10px 16px; border-radius: 8px; border: 1.5px solid #ddd; background: none; color: #555; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 44px; }
   .timer-btn.primary { background: #6B1B2B; border-color: #6B1B2B; color: white; }
   .period-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-  .period-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid #ddd; background: none; font-size: 12px; color: #666; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .period-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #ddd; background: none; font-size: 13px; color: #666; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 40px; }
   .period-btn.active { background: #6B1B2B; color: white; border-color: #6B1B2B; font-weight: 600; }
   .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .mode-toggle { display: flex; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-  .mode-toggle button { padding: 8px 20px; border: none; background: none; font-size: 13px; color: #666; cursor: pointer; font-family: inherit; }
+  .mode-toggle button { padding: 10px 20px; border: none; background: none; font-size: 14px; color: #666; cursor: pointer; font-family: inherit; min-height: 44px; }
   .mode-toggle button.active { background: #6B1B2B; color: white; font-weight: 600; }
-  .sub-btn { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #6B1B2B; background: none; color: #6B1B2B; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .sub-btn { padding: 10px 18px; border-radius: 8px; border: 1.5px solid #6B1B2B; background: none; color: #6B1B2B; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 44px; }
   .sub-btn:hover { background: #6B1B2B; color: white; }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; margin-bottom: 6px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-  .stat-btn { position: relative; padding: 20px 12px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: white; font-size: 14px; font-weight: 600; color: #1a1a1a; cursor: pointer; transition: all 0.15s; text-align: center; font-family: inherit; }
+  .stat-btn { position: relative; padding: 18px 12px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: white; font-size: 15px; font-weight: 600; color: #1a1a1a; cursor: pointer; transition: all 0.15s; text-align: center; font-family: inherit; min-height: 64px; }
   .stat-btn:hover { border-color: #6B1B2B; color: #6B1B2B; background: #fdf5f6; }
   .stat-btn:active { transform: scale(0.97); }
   .stat-btn.dashed { border-style: dashed; color: #aaa; font-weight: 400; }
@@ -649,7 +649,7 @@
   .num-badge { display: inline-block; font-size: 11px; background: #6B1B2B; color: white; border-radius: 4px; padding: 1px 5px; font-weight: 600; margin-right: 4px; }
   .num-badge.sub { background: #aaa; }
   .counter { display: flex; align-items: center; justify-content: center; gap: 4px; }
-  .mini-dec, .mini-inc { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #ddd; background: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; font-family: inherit; }
+  .mini-dec, .mini-inc { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #ddd; background: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; font-family: inherit; flex-shrink: 0; }
   .mini-inc { border-color: #6B1B2B; color: #6B1B2B; }
   .mini-val { font-size: 14px; font-weight: 600; min-width: 20px; text-align: center; }
   .sub-log-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
@@ -662,32 +662,37 @@
   .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 1rem; color: #1a1a1a; }
   .modal-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; margin: 0.75rem 0 0.5rem; }
   .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-  .player-btn { display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: white; cursor: pointer; transition: all 0.15s; gap: 4px; font-family: inherit; }
+  .player-btn { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: white; cursor: pointer; transition: all 0.15s; gap: 4px; font-family: inherit; min-height: 64px; }
   .player-btn:active { transform: scale(0.96); border-color: #6B1B2B; background: #fdf5f6; }
   .player-btn.sub { opacity: 0.7; }
   .player-num { font-size: 11px; color: #888; }
   .player-name { font-size: 13px; font-weight: 600; color: #1a1a1a; text-align: center; }
-  .cancel-btn { width: 100%; margin-top: 1rem; padding: 13px; border-radius: 10px; border: 1px solid #ddd; background: none; font-size: 15px; color: #888; cursor: pointer; font-family: inherit; }
+  .cancel-btn { width: 100%; margin-top: 1rem; padding: 15px; border-radius: 10px; border: 1px solid #ddd; background: none; font-size: 16px; color: #888; cursor: pointer; font-family: inherit; min-height: 50px; }
   .optional-tag { font-size: 12px; font-weight: 400; color: #aaa; margin-left: 6px; }
   .pitch-wrap { margin: 0.75rem 0; border-radius: 8px; overflow: hidden; cursor: crosshair; }
   .pitch-svg { width: 100%; height: auto; display: block; }
   .ghost-btn { width: 100%; padding: 10px; border: 1.5px dashed #ddd; border-radius: 8px; background: none; color: #aaa; font-size: 13px; cursor: pointer; font-family: inherit; }
   .ghost-btn:hover { border-color: #6B1B2B; color: #6B1B2B; }
   .notes-section { margin-top: 4px; }
-  textarea { width: 100%; min-height: 80px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: #1a1a1a; resize: vertical; background: white; }
+  textarea { width: 100%; min-height: 80px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: #1a1a1a; resize: vertical; background: white; }
   textarea:focus { outline: none; border-color: #6B1B2B; }
   .finish-btn { width: 100%; padding: 15px; background: #1a1a1a; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit; }
   .finish-btn:hover { background: #333; }
   @media (max-width: 480px) {
     .match-header { flex-direction: column; align-items: flex-start; }
     .scoreboard { width: 100%; justify-content: center; }
+    .score-val { font-size: 26px; }
     .timer-card { flex-direction: column; align-items: flex-start; gap: 10px; }
     .period-pills { width: 100%; }
-    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-btn { padding: 16px 8px; font-size: 14px; min-height: 60px; }
     .field-row { grid-template-columns: 1fr; }
     .mode-row { flex-wrap: wrap; }
     .mode-toggle { flex: 1; }
     .mode-toggle button { flex: 1; }
+    .player-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+    .modal { padding: 1.25rem; padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); }
+    .mini-val { font-size: 15px; min-width: 22px; }
   }
   @media (min-width: 481px) and (max-width: 768px) {
     .stat-grid { grid-template-columns: repeat(3, 1fr); }

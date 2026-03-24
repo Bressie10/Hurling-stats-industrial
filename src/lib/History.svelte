@@ -342,10 +342,10 @@
   .season-label { font-size: 11px; opacity: 0.5; margin-top: 2px; }
 
   .search-row { display: flex; flex-direction: column; gap: 8px; }
-  .search-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 14px; font-family: inherit; background: white; color: #1a1a1a; }
+  .search-input { width: 100%; padding: 13px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 16px; font-family: inherit; background: white; color: #1a1a1a; min-height: 46px; }
   .search-input:focus { outline: none; border-color: #6B1B2B; }
-  .filter-pills { display: flex; gap: 6px; }
-  .filter-pill { padding: 6px 16px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 13px; color: #666; cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.15s; }
+  .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-pill { padding: 8px 16px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 13px; color: #666; cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.15s; min-height: 38px; }
   .filter-pill.active { background: #6B1B2B; color: white; border-color: #6B1B2B; }
 
   .match-card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1rem 1.25rem; cursor: pointer; position: relative; transition: all 0.15s; }

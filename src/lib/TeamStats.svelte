@@ -405,7 +405,7 @@
   .selector-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
   .field-group label { font-size: 12px; font-weight: 600; color: #555; }
-  .field-group select { padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 14px; font-family: inherit; background: white; color: #1a1a1a; width: 100%; }
+  .field-group select { padding: 12px 12px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 16px; font-family: inherit; background: white; color: #1a1a1a; width: 100%; min-height: 46px; }
   .field-group select:focus { outline: none; border-color: #6B1B2B; }
   .empty-state { text-align: center; padding: 3rem 1rem; color: #aaa; }
   .empty-icon { font-size: 36px; margin-bottom: 0.75rem; }
@@ -437,10 +437,10 @@
   .pitch-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px; }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #aaa; }
   .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-  .filter-pill { padding: 5px 12px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 12px; color: #666; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .filter-pill { padding: 8px 14px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 13px; color: #666; cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 36px; }
   .filter-pill.active { background: #6B1B2B; color: white; border-color: #6B1B2B; font-weight: 600; }
   .period-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.75rem; }
-  .period-pill { padding: 4px 10px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 11px; color: #666; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .period-pill { padding: 7px 12px; border-radius: 20px; border: 1px solid #e0e0e0; background: none; font-size: 12px; color: #666; cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 34px; }
   .period-pill.active { background: #1a1a1a; color: white; border-color: #1a1a1a; font-weight: 600; }
   .pitch-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666; }

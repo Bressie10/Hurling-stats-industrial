@@ -84,7 +84,7 @@ import { clearAllData } from './lib/db.js'
     <nav>
       <div class="brand">
         <img class="brand-logo" src="doora-barefield.png" alt="Doora Barefield GAA">
-        Doora Barefield GAA
+        <span class="brand-name">Doora Barefield GAA</span>
       </div>
       <div class="tabs">
         <button class:active={activePage === 'match'} on:click={() => activePage = 'match'}>Match</button>
@@ -233,11 +233,45 @@ import { clearAllData } from './lib/db.js'
     max-width: 900px;
     width: 100%;
     margin: 0 auto;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
-  @media (max-width: 480px) {
-    .tabs button { padding: 0 12px; font-size: 12px; }
-    .nav-actions { padding: 0 8px; gap: 6px; }
-    .sync-btn, .signout-btn { font-size: 11px; padding: 5px 8px; }
+  /* Mobile: two-row nav — brand+actions on top, tabs scrolling below */
+  @media (max-width: 640px) {
+    nav {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+    .brand {
+      flex: 1;
+      border-right: none;
+      height: 48px;
+    }
+    .brand-name { display: none; }
+    .nav-actions {
+      border-left: none;
+      order: 2;
+      padding: 0 10px;
+      height: 48px;
+      align-items: center;
+    }
+    .tabs {
+      order: 3;
+      width: 100%;
+      flex: none;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-top: 1px solid #e5e5e5;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs button {
+      height: 44px;
+      padding: 0 14px;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .sync-btn, .signout-btn { font-size: 12px; padding: 6px 10px; }
+    main { padding: 12px 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   }
 </style>

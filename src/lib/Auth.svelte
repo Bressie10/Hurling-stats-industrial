@@ -130,14 +130,15 @@
   }
   .mode-toggle button {
     flex: 1;
-    padding: 9px;
+    padding: 12px 9px;
     border: none;
     background: none;
-    font-size: 13px;
+    font-size: 14px;
     color: #888;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.15s;
+    min-height: 44px;
   }
   .mode-toggle button.active {
     background: #6B1B2B;
@@ -148,10 +149,10 @@
   .field-group { display: flex; flex-direction: column; gap: 6px; }
   .field-group label { font-size: 12px; font-weight: 600; color: #555; }
   .field-group input {
-    padding: 11px 14px;
+    padding: 13px 14px;
     border: 1.5px solid #e0e0e0;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 16px;
     font-family: inherit;
     background: #fafafa;
     transition: all 0.15s;
@@ -179,16 +180,17 @@
 
   .submit-btn {
     width: 100%;
-    padding: 13px;
+    padding: 15px;
     background: #6B1B2B;
     color: white;
     border: none;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
     transition: background 0.15s;
+    min-height: 50px;
   }
   .submit-btn:hover { background: #551522; }
   .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }

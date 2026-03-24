@@ -325,9 +325,10 @@
   .remove-custom:hover { color: #e53935; }
   .target-data { font-size: 13px; color: #888; }
   .target-input {
-    width: 60px; padding: 5px 8px;
+    width: 64px; padding: 8px 6px;
     border: 1.5px solid #e0e0e0; border-radius: 6px;
-    font-size: 14px; font-family: inherit; text-align: center; background: white;
+    font-size: 16px; font-family: inherit; text-align: center; background: white;
+    min-height: 38px;
   }
   .target-input:focus { outline: none; border-color: #6B1B2B; }
 
@@ -355,13 +356,13 @@
   .trend-indicator.down { background: #fce8e8; color: #c62828; }
   .trend-indicator.stable { background: #f5f5f5; color: #888; }
 
-  .add-stat-btn { padding: 5px 12px; border-radius: 6px; border: 1.5px dashed #6B1B2B; background: none; color: #6B1B2B; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .add-stat-btn { padding: 8px 14px; border-radius: 6px; border: 1.5px dashed #6B1B2B; background: none; color: #6B1B2B; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 38px; }
   .add-stat-wrap { display: flex; align-items: center; gap: 6px; }
-  .add-stat-wrap input { padding: 5px 8px; border: 1.5px solid #6B1B2B; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; width: 140px; }
-  .confirm-btn { padding: 4px 10px; background: #6B1B2B; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .cancel-small { background: none; border: none; color: #aaa; font-size: 14px; cursor: pointer; }
+  .add-stat-wrap input { padding: 8px 10px; border: 1.5px solid #6B1B2B; border-radius: 6px; font-size: 16px; font-family: inherit; outline: none; width: 150px; min-height: 38px; }
+  .confirm-btn { padding: 8px 12px; background: #6B1B2B; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 38px; }
+  .cancel-small { background: none; border: none; color: #aaa; font-size: 18px; cursor: pointer; padding: 4px 8px; min-height: 38px; }
 
-  .save-btn { padding: 9px 20px; background: #6B1B2B; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; flex-shrink: 0; }
+  .save-btn { padding: 11px 20px; background: #6B1B2B; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; flex-shrink: 0; min-height: 44px; }
   .save-btn.saved { background: #2d7a2d; }
   .save-btn:hover { background: #551522; }
   .save-btn-full { width: 100%; padding: 15px; background: #6B1B2B; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s; }

@@ -388,29 +388,31 @@
   .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
   .field-group label { font-size: 12px; font-weight: 600; color: #555; }
   .field-group select {
-    padding: 10px 12px;
+    padding: 12px 12px;
     border: 1.5px solid #e0e0e0;
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     background: white;
     color: #1a1a1a;
     width: 100%;
+    min-height: 46px;
   }
   .field-group select:focus { outline: none; border-color: #6B1B2B; }
 
   .compare-btn {
-    padding: 10px 16px;
+    padding: 12px 16px;
     border-radius: 10px;
     border: 1.5px solid #6B1B2B;
     background: none;
     color: #6B1B2B;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     width: 100%;
     font-family: inherit;
     transition: all 0.15s;
+    min-height: 46px;
   }
   .compare-btn.active { background: #6B1B2B; color: white; }
 

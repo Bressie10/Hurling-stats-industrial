@@ -221,13 +221,14 @@
   .field-group { display: flex; flex-direction: column; gap: 6px; }
   .field-group label { font-size: 12px; font-weight: 600; color: #555; }
   .field-group input {
-    padding: 11px 14px;
+    padding: 13px 14px;
     border: 1.5px solid #e0e0e0;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 16px;
     font-family: inherit;
     background: #fafafa;
     transition: all 0.15s;
+    min-height: 46px;
   }
   .field-group input:focus { outline: none; border-color: #6B1B2B; background: white; box-shadow: 0 0 0 3px rgba(107,27,43,0.08); }
   .field-hint { font-size: 12px; color: #aaa; line-height: 1.4; }
@@ -241,17 +242,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 12px;
+    padding: 11px 12px;
     border-radius: 8px;
     border: 1.5px solid #e0e0e0;
     background: white;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: #888;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.15s;
     text-align: left;
+    min-height: 44px;
   }
   .stat-toggle.active { border-color: #6B1B2B; color: #1a1a1a; background: #fdf5f6; }
   .toggle-check {
@@ -272,24 +274,26 @@
   .add-stat-row { display: flex; gap: 8px; margin-top: 4px; }
   .add-stat-row input {
     flex: 1;
-    padding: 9px 12px;
+    padding: 11px 12px;
     border: 1.5px solid #e0e0e0;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 16px;
     font-family: inherit;
     background: #fafafa;
+    min-height: 44px;
   }
   .add-stat-row input:focus { outline: none; border-color: #6B1B2B; background: white; }
   .add-stat-btn {
-    padding: 9px 16px;
+    padding: 11px 16px;
     border-radius: 8px;
     border: none;
     background: #6B1B2B;
     color: white;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
+    min-height: 44px;
   }
 
   .custom-stats-list { border-top: 1px solid #f0f0f0; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -324,7 +328,7 @@
   .about-val { font-weight: 500; color: #1a1a1a; text-align: right; }
 
   .save-btn {
-    padding: 9px 20px;
+    padding: 11px 20px;
     background: #6B1B2B;
     color: white;
     border: none;
@@ -335,6 +339,7 @@
     font-family: inherit;
     transition: background 0.2s;
     flex-shrink: 0;
+    min-height: 44px;
   }
   .save-btn.saved { background: #2d7a2d; }
   .save-btn:hover { background: #551522; }
