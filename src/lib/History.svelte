@@ -229,8 +229,18 @@
           if (!map[k]) map[k] = { name: k, won: 0, lost: 0 }
           if (p.outcome === 'won') map[k].won++; else map[k].lost++
         })
-        return Object.values(map).sort((a,b) => (b.won+b.lost)-(a.won+a.lost))
+        return Object.values(map).sort((a,b) => b.won - a.won)
       })()}
+      {@const byOppPlayer = (() => {
+        const map = {}
+        selectedMatch.puckouts.filter(p => p.outcome === 'lost' && p.oppPlayer).forEach(p => {
+          const k = '#' + p.oppPlayer
+          if (!map[k]) map[k] = { num: k, count: 0 }
+          map[k].count++
+        })
+        return Object.values(map).sort((a,b) => b.count - a.count)
+      })()}
+      {@const topPuckoutPlayer = byPlayer.find(r => r.won > 0) ?? null}
       <div class="card">
         <div class="section-label" style="margin-bottom:10px">Puckout stats</div>
         <div class="po-summary-row">
@@ -243,6 +253,14 @@
           <div class="po-stat"><div class="po-val">{Math.round((wins/total)*100)}%</div><div class="po-label">Win rate</div></div>
         </div>
         {#if byPlayer.length > 0}
+          {#if topPuckoutPlayer}
+            <div class="h-standout-row">
+              <span class="h-standout-label">Best</span>
+              <span class="h-standout-name">{topPuckoutPlayer.name}</span>
+              <span class="h-standout-val">{topPuckoutPlayer.won}W / {topPuckoutPlayer.lost}L</span>
+            </div>
+          {/if}
+          <div class="po-sub-label">By our player</div>
           <div class="po-breakdown">
             {#each byPlayer as row}
               <div class="po-row">
@@ -250,7 +268,26 @@
                 <span class="po-badges">
                   <span class="won-badge">{row.won}W</span>
                   <span class="lost-badge">{row.lost}L</span>
+                  <span class="po-pct">{Math.round(row.won/(row.won+row.lost)*100)}%</span>
                 </span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+        {#if byOppPlayer.length > 0}
+          <div class="po-sub-label" style="margin-top:10px">Opposition winners (lost puckouts)</div>
+          {#if byOppPlayer[0]}
+            <div class="h-standout-row danger">
+              <span class="h-standout-label">Most wins</span>
+              <span class="h-standout-name">{byOppPlayer[0].num}</span>
+              <span class="h-standout-val">{byOppPlayer[0].count} puckout{byOppPlayer[0].count > 1 ? 's' : ''} won</span>
+            </div>
+          {/if}
+          <div class="po-breakdown">
+            {#each byOppPlayer as row}
+              <div class="po-row">
+                <span class="po-name">{row.num}</span>
+                <span class="po-badges"><span class="lost-badge">{row.count} won vs us</span></span>
               </div>
             {/each}
           </div>
@@ -269,8 +306,28 @@
         })
         return Object.values(map).sort((a,b) => (b.goals*3+b.points)-(a.goals*3+a.points))
       })()}
+      {@const byOppScorer = (() => {
+        const map = {}
+        selectedMatch.oppScores.filter(s => s.oppPlayerNum).forEach(s => {
+          const k = '#' + s.oppPlayerNum
+          if (!map[k]) map[k] = { num: k, goals: 0, points: 0, markers: [] }
+          if (s.type === 'goal') map[k].goals++; else map[k].points++
+          if (s.marker && !map[k].markers.includes(s.marker)) map[k].markers.push(s.marker)
+        })
+        return Object.values(map).sort((a,b) => (b.goals*3+b.points)-(a.goals*3+a.points))
+      })()}
       <div class="card">
-        <div class="section-label" style="margin-bottom:10px">Scores conceded by marker</div>
+        <div class="section-label" style="margin-bottom:10px">Scores conceded</div>
+        {#if byMarker[0]}
+          <div class="h-standout-row danger">
+            <span class="h-standout-label">Most exposed</span>
+            <span class="h-standout-name">{byMarker[0].marker}</span>
+            <span class="h-standout-val">
+              {byMarker[0].goals > 0 ? byMarker[0].goals + 'G ' : ''}{byMarker[0].points > 0 ? byMarker[0].points + 'P' : ''}
+            </span>
+          </div>
+        {/if}
+        <div class="po-sub-label">By our marker</div>
         {#each byMarker as row}
           <div class="marker-row">
             <span class="marker-name">{row.marker}</span>
@@ -283,6 +340,29 @@
             </span>
           </div>
         {/each}
+        {#if byOppScorer.length > 0}
+          <div class="po-sub-label" style="margin-top:10px">By opposition player</div>
+          {#if byOppScorer[0]}
+            <div class="h-standout-row danger">
+              <span class="h-standout-label">Most dangerous</span>
+              <span class="h-standout-name">{byOppScorer[0].num}</span>
+              <span class="h-standout-val">
+                {byOppScorer[0].goals > 0 ? byOppScorer[0].goals + 'G ' : ''}{byOppScorer[0].points > 0 ? byOppScorer[0].points + 'P' : ''}
+                {byOppScorer[0].markers.length > 0 ? '(on ' + byOppScorer[0].markers.join(', ') + ')' : ''}
+              </span>
+            </div>
+          {/if}
+          {#each byOppScorer as row}
+            <div class="marker-row">
+              <span class="marker-name">{row.num}</span>
+              <span class="marker-tally">
+                {#if row.goals > 0}<span class="conceded-goal">{row.goals}G</span>{/if}
+                {#if row.points > 0}<span class="conceded-point">{row.points}P</span>{/if}
+              </span>
+              <span class="marker-opp">{row.markers.length > 0 ? 'on ' + row.markers.join(', ') : ''}</span>
+            </div>
+          {/each}
+        {/if}
       </div>
     {/if}
 
@@ -564,6 +644,30 @@
   .po-badges { display: flex; gap: 4px; }
   .won-badge { background: rgba(45,122,45,0.12); color: #2d7a2d; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
   .lost-badge { background: rgba(229,57,53,0.12); color: #e53935; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+  .po-pct { font-size: 12px; color: var(--text-faint); padding: 2px 4px; }
+  .po-sub-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin: 10px 0 6px; }
+
+  /* ── STANDOUT / BIGGEST WINNER ── */
+  .h-standout-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: rgba(107,27,43,0.06);
+    border: 1px solid rgba(107,27,43,0.15);
+    border-left: 3px solid #6B1B2B;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .h-standout-row.danger {
+    background: rgba(229,57,53,0.05);
+    border-color: rgba(229,57,53,0.18);
+    border-left-color: #e53935;
+  }
+  .h-standout-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); flex-shrink: 0; }
+  .h-standout-name { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .h-standout-val { font-size: 13px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
 
   /* ── CONCEDED BY MARKER ── */
   .marker-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--divider-faint); font-size: 13px; }

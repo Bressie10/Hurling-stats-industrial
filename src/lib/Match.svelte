@@ -548,6 +548,43 @@
     })
     return Object.values(map).sort((a, b) => (b.goals * 3 + b.points) - (a.goals * 3 + a.points))
   })()
+
+  // ── OPPOSITION PUCKOUT WINNERS ─────────────────
+  // Groups lost puckouts by the opposition player number who won them
+  $: htPuckoutByOppPlayer = (() => {
+    if (!halftimeSnapshot?.puckouts) return []
+    const map = {}
+    halftimeSnapshot.puckouts.filter(p => p.outcome === 'lost' && p.oppPlayer).forEach(p => {
+      const k = '#' + p.oppPlayer
+      if (!map[k]) map[k] = { num: k, count: 0 }
+      map[k].count++
+    })
+    return Object.values(map).sort((a, b) => b.count - a.count)
+  })()
+
+  // ── BIGGEST WINNERS PER SECTION ───────────────
+  $: htBestPuckoutPlayer = (() => {
+    if (!htPuckoutsByPlayer.length) return null
+    return htPuckoutsByPlayer.reduce((best, p) => p.won > (best?.won ?? -1) ? p : best, null)
+  })()
+
+  $: htBestOppPuckoutWinner = htPuckoutByOppPlayer[0] ?? null
+
+  $: htBiggestConcededOppPlayer = (() => {
+    if (!htConcededByOppPlayer.length) return null
+    return htConcededByOppPlayer[0]
+  })()
+
+  $: htTopHalfScorer = (() => {
+    if (!halftimeSnapshot) return null
+    let best = null, max = 0
+    ;(halftimeSnapshot.players || []).filter(p => p.name?.trim()).forEach(p => {
+      const s = halftimeSnapshot.stats?.[p.id] || {}
+      const pts = (s['Goal'] || 0) * 3 + (s['Point'] || 0)
+      if (pts > max) { max = pts; best = { name: p.name, goals: s['Goal'] || 0, points: s['Point'] || 0, pts } }
+    })
+    return best
+  })()
 </script>
 
 {#if screen === 'setup'}
@@ -1010,7 +1047,9 @@
           </svg>
         </div>
 
-        <div class="modal-section-label">Opposition player number (optional)</div>
+        <div class="modal-section-label">
+          {puckoutOutcome === 'lost' ? 'Which opposition player won it?' : 'Opposition player number'} (optional)
+        </div>
         <input
           class="modal-input"
           bind:value={puckoutOppPlayer}
@@ -1114,6 +1153,13 @@
       </button>
       {#if openSections.puckouts}
         <div class="accordion-body">
+          {#if htBestPuckoutPlayer}
+            <div class="standout-row">
+              <span class="standout-label">Best</span>
+              <span class="standout-name">{htBestPuckoutPlayer.name}</span>
+              <span class="standout-val">{htBestPuckoutPlayer.won}W / {htBestPuckoutPlayer.lost}L</span>
+            </div>
+          {/if}
           <!-- Overall stats row -->
           <div class="ht-stats-row">
             <div class="ht-stat-block"><div class="ht-stat-val green">{htWins}</div><div class="ht-stat-label">Won</div></div>
@@ -1192,7 +1238,7 @@
 
           <!-- By player -->
           {#if htPuckoutsByPlayer.length > 0}
-            <div class="ht-sub-label" style="margin-top:12px">By player</div>
+            <div class="ht-sub-label" style="margin-top:12px">By our player</div>
             {#each htPuckoutsByPlayer as row}
               {@const pct = Math.round(row.won/(row.won+row.lost)*100)}
               <div class="ht-zone-row">
@@ -1203,6 +1249,26 @@
                   <span class="ht-zone-pct" class:green={pct>=60} class:amber={pct>=40&&pct<60} class:red={pct<40}>{pct}%</span>
                 </span>
                 <div class="ht-zone-bar"><div class="ht-zone-bar-fill" style="width:{pct}%; background:{pct>=60?'#2d7a2d':pct>=40?'#e0a020':'#e53935'}"></div></div>
+              </div>
+            {/each}
+          {/if}
+
+          <!-- Opposition players who won puckouts -->
+          {#if htPuckoutByOppPlayer.length > 0}
+            <div class="ht-sub-label" style="margin-top:12px">Opposition winners (lost puckouts)</div>
+            {#if htBestOppPuckoutWinner}
+              <div class="standout-row danger">
+                <span class="standout-label">Most wins</span>
+                <span class="standout-name">{htBestOppPuckoutWinner.num}</span>
+                <span class="standout-val">{htBestOppPuckoutWinner.count} puckout{htBestOppPuckoutWinner.count > 1 ? 's' : ''} won</span>
+              </div>
+            {/if}
+            {#each htPuckoutByOppPlayer as row}
+              <div class="ht-zone-row">
+                <span class="ht-zone-name">{row.num}</span>
+                <span class="ht-zone-data">
+                  <span class="lost-badge">{row.count} won vs us</span>
+                </span>
               </div>
             {/each}
           {/if}
@@ -1229,6 +1295,15 @@
       </button>
       {#if openSections.conceded}
         <div class="accordion-body">
+          {#if htBiggestConcededOppPlayer}
+            <div class="standout-row danger">
+              <span class="standout-label">Most dangerous</span>
+              <span class="standout-name">{htBiggestConcededOppPlayer.num}</span>
+              <span class="standout-val">
+                {htBiggestConcededOppPlayer.goals > 0 ? htBiggestConcededOppPlayer.goals + 'G ' : ''}{htBiggestConcededOppPlayer.points > 0 ? htBiggestConcededOppPlayer.points + 'P' : ''}
+              </span>
+            </div>
+          {/if}
           <div class="ht-stats-row">
             <div class="ht-stat-block"><div class="ht-stat-val red">{htGoals}</div><div class="ht-stat-label">Goals</div></div>
             <div class="ht-stat-divider"></div>
@@ -1281,7 +1356,17 @@
         <span class="accordion-chevron">{openSections.players ? '▲' : '▼'}</span>
       </button>
       {#if openSections.players}
-        <div class="accordion-body" style="padding:0; overflow:hidden;">
+        <div class="accordion-body" style="overflow:hidden;">
+          {#if htTopHalfScorer}
+            <div class="standout-row" style="margin-bottom:12px">
+              <span class="standout-label">Top scorer</span>
+              <span class="standout-name">{htTopHalfScorer.name}</span>
+              <span class="standout-val">
+                {htTopHalfScorer.goals > 0 ? htTopHalfScorer.goals + 'G ' : ''}{htTopHalfScorer.points > 0 ? htTopHalfScorer.points + 'P' : ''}
+                ({htTopHalfScorer.pts} pts)
+              </span>
+            </div>
+          {/if}
           <div class="table-wrap">
             <table class="player-table">
               <thead>
@@ -1864,6 +1949,28 @@
 
   /* ── HALFTIME SUB-LABEL ── */
   .ht-sub-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
+
+  /* ── STANDOUT / BIGGEST WINNER CALLOUT ── */
+  .standout-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(107,27,43,0.06);
+    border: 1px solid rgba(107,27,43,0.15);
+    border-left: 3px solid #6B1B2B;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .standout-row.danger {
+    background: rgba(229,57,53,0.06);
+    border-color: rgba(229,57,53,0.2);
+    border-left-color: #e53935;
+  }
+  .standout-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); flex-shrink: 0; }
+  .standout-name { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .standout-val { font-size: 13px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
 
   /* ── HALFTIME STAT VALUE COLORS ── */
   .ht-stat-val.amber { color: #9a6000; }
