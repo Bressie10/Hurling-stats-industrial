@@ -1,11 +1,12 @@
 <script>
   import { onMount } from 'svelte'
-  import { loadMatches } from './db.js'
+  import { loadMatches, loadSquad } from './db.js'
   import { Chart, registerables } from 'chart.js'
 
   Chart.register(...registerables)
 
   let matches = []
+  let squadNames = new Set()
   let selectedPlayerName = null
   let compareMode = false
   let matchA = null
@@ -14,8 +15,9 @@
   let canvas
 
   onMount(async () => {
-    matches = await loadMatches()
-    matches.sort((a, b) => new Date(b.date) - new Date(a.date))
+    const [loadedMatches, squad] = await Promise.all([loadMatches(), loadSquad()])
+    matches = loadedMatches.sort((a, b) => new Date(b.date) - new Date(a.date))
+    squadNames = new Set((squad || []).map(p => p.name?.trim()).filter(Boolean))
   })
 
   $: allPlayers = (() => {
@@ -27,9 +29,9 @@
         if (!map[name]) map[name] = { ...p }
       })
     })
-    return Object.values(map).sort((a, b) =>
-      (a.name || '').localeCompare(b.name || '')
-    )
+    return Object.values(map)
+      .filter(p => squadNames.has(p.name?.trim()))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   })()
 
   $: selectedPlayer = allPlayers.find(p => p.name === selectedPlayerName) || null

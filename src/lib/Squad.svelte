@@ -5,6 +5,8 @@
   let players = []
   let nextId = 21
   let saved = false
+  let saving = false
+  let saveError = false
   let loading = true
 
   const positions = ['GK', 'FB', 'HB', 'MF', 'HF', 'FF', 'Sub']
@@ -50,9 +52,19 @@
   }
 
   async function handleSave() {
-    await saveSquad(players)
-    saved = true
-    setTimeout(() => saved = false, 3000)
+    if (saving) return
+    saving = true
+    saveError = false
+    try {
+      await saveSquad(players)
+      saved = true
+      setTimeout(() => { saved = false }, 3000)
+    } catch (e) {
+      saveError = true
+      setTimeout(() => { saveError = false }, 4000)
+    } finally {
+      saving = false
+    }
   }
 
   $: starters = players.filter(p => p.position !== 'Sub')
@@ -67,8 +79,8 @@
       <h2>Squad Management</h2>
       <p>Your saved squad loads automatically every time you set up a new match. Update it here anytime.</p>
     </div>
-    <button class="save-btn" class:saved on:click={handleSave}>
-      {saved ? '✓ Saved' : 'Save Squad'}
+    <button class="save-btn" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
+      {saving ? 'Saving…' : saved ? '✓ Saved' : saveError ? '✗ Failed — tap to retry' : 'Save Squad'}
     </button>
   </div>
 
@@ -204,8 +216,8 @@
     </div>
 
     <!-- SAVE BUTTON BOTTOM -->
-    <button class="save-btn-full" class:saved on:click={handleSave}>
-      {saved ? '✓ Squad Saved!' : 'Save Squad'}
+    <button class="save-btn-full" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
+      {saving ? 'Saving…' : saved ? '✓ Squad Saved!' : saveError ? '✗ Save failed — tap to retry' : 'Save Squad'}
     </button>
 
   {/if}
@@ -286,7 +298,9 @@
     flex-shrink: 0;
   }
   .save-btn.saved { background: #2d7a2d; }
-  .save-btn:hover { background: #551522; }
+  .save-btn.error { background: #c0392b; }
+  .save-btn:hover:not(:disabled) { background: #551522; }
+  .save-btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
   /* INFO CARD */
   .info-card {
@@ -458,7 +472,9 @@
     font-family: inherit;
   }
   .save-btn-full.saved { background: #2d7a2d; }
-  .save-btn-full:hover { background: #551522; }
+  .save-btn-full.error { background: #c0392b; }
+  .save-btn-full:hover:not(:disabled) { background: #551522; }
+  .save-btn-full:disabled { opacity: 0.7; cursor: not-allowed; }
 
   .loading {
     text-align: center;

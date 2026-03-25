@@ -17,10 +17,11 @@ export async function getDB() {
 }
 
 export async function saveSquad(players) {
+  // Fire all ops without mid-transaction awaits — keeps transaction open until tx.done
   const db = await getDB()
   const tx = db.transaction('squad', 'readwrite')
-  await tx.store.clear()
-  await Promise.all(players.map(p => tx.store.put(p)))
+  tx.store.clear()
+  players.forEach(p => tx.store.put(p))
   await tx.done
 }
 
@@ -30,8 +31,18 @@ export async function loadSquad() {
 }
 
 export async function saveMatch(match) {
-  const db = await getDB()
-  await db.put('matches', match)
+  let lastErr
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const db = await getDB()
+      await db.put('matches', match)
+      return
+    } catch (e) {
+      lastErr = e
+      await new Promise(r => setTimeout(r, 150 * (attempt + 1)))
+    }
+  }
+  throw lastErr
 }
 
 export async function loadMatches() {
@@ -46,8 +57,18 @@ export async function clearAllData() {
   await db.clear('matches')
 }
 export async function saveDraftMatch(match) {
-  const db = await getDB()
-  await db.put('matches', { ...match, id: 'draft', isDraft: true })
+  let lastErr
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const db = await getDB()
+      await db.put('matches', { ...match, id: 'draft', isDraft: true })
+      return
+    } catch (e) {
+      lastErr = e
+      await new Promise(r => setTimeout(r, 100 * (attempt + 1)))
+    }
+  }
+  console.warn('saveDraftMatch failed after 3 attempts:', lastErr)
 }
 
 export async function loadDraftMatch() {

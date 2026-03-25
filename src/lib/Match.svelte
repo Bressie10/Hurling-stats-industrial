@@ -95,7 +95,12 @@
         timerSeconds = draft.timerSeconds || 0
       }
 
-      screen = draft.halftimeSnapshot && !draft.timerStartedAt ? 'match' : 'match'
+      // If we were on the halftime screen when the app closed, restore it
+      if (draft.screen === 'halftime' && draft.halftimeSnapshot) {
+        screen = 'halftime'
+      } else {
+        screen = 'match'
+      }
     }
   })
 
@@ -255,7 +260,8 @@
         oppScores,
         halftimeSnapshot,
         timerSeconds,
-        timerStartedAt: timerRunning ? timerStartedAt : null
+        timerStartedAt: timerRunning ? timerStartedAt : null,
+        screen: screen === 'halftime' ? 'halftime' : 'match'
       })
     } catch (e) {
       console.warn('Draft save failed:', e)
@@ -484,6 +490,53 @@
     return Object.values(map).sort((a, b) => (b.won + b.lost) - (a.won + a.lost))
   })()
 
+  // ── HALFTIME DROPDOWNS ────────────────────────
+  let openSections = { puckouts: true, conceded: true, players: false, subs: false }
+  function toggleSection(k) { openSections[k] = !openSections[k]; openSections = openSections }
+
+  let htPuckoutZoneFilter = null  // null = all, or a zone key
+
+  $: htPuckoutByZone = (() => {
+    if (!halftimeSnapshot?.puckouts) return {}
+    const map = {}
+    halftimeSnapshot.puckouts.forEach(p => {
+      const z = p.section || 'no-zone'
+      if (!map[z]) map[z] = { won: 0, lost: 0 }
+      if (p.outcome === 'won') map[z].won++; else map[z].lost++
+    })
+    return map
+  })()
+
+  $: htPuckoutZoneRows = Object.entries(htPuckoutByZone)
+    .filter(([k]) => k !== 'no-zone')
+    .map(([key, d]) => ({
+      key, label: formatZoneLabel(key),
+      won: d.won, lost: d.lost, total: d.won + d.lost,
+      winPct: Math.round((d.won / (d.won + d.lost)) * 100)
+    }))
+    .sort((a, b) => b.total - a.total)
+
+  function htZoneColor(zkey) {
+    const d = htPuckoutByZone[zkey]
+    if (!d) return 'rgba(255,255,255,0.05)'
+    const rate = d.won / (d.won + d.lost)
+    if (rate >= 0.67) return 'rgba(45,122,45,0.65)'
+    if (rate >= 0.4) return 'rgba(224,160,32,0.55)'
+    return 'rgba(200,50,50,0.6)'
+  }
+
+  $: htConcededByOppPlayer = (() => {
+    if (!halftimeSnapshot?.oppScores) return []
+    const map = {}
+    halftimeSnapshot.oppScores.forEach(s => {
+      const k = s.oppPlayerNum ? '#' + s.oppPlayerNum : 'Unknown'
+      if (!map[k]) map[k] = { num: k, goals: 0, points: 0, markers: [] }
+      if (s.type === 'goal') map[k].goals++; else map[k].points++
+      if (s.marker && !map[k].markers.includes(s.marker)) map[k].markers.push(s.marker)
+    })
+    return Object.values(map).sort((a, b) => (b.goals * 3 + b.points) - (a.goals * 3 + a.points))
+  })()
+
   $: allConcededByMarker = (() => {
     const map = {}
     oppScores.forEach(s => {
@@ -616,10 +669,6 @@
       <button class="sub-btn" on:click={openSubModal}>⇄ Sub</button>
     </div>
   </div>
-
-  {#if period === '1st Half'}
-    <button class="halftime-btn" on:click={endFirstHalf}>End 1st Half — View Halftime Stats</button>
-  {/if}
 
   {#if puckoutTotal > 0}
     <div class="puckout-summary-bar">
@@ -877,6 +926,9 @@
 
   <div class="finish-row">
     <button class="finish-btn" disabled={finishing} on:click={finishMatch}>{finishing ? 'Saving…' : 'End Match & Save'}</button>
+    {#if period === '1st Half'}
+      <button class="halftime-btn" on:click={endFirstHalf}>End 1st Half &amp; View Halftime Stats</button>
+    {/if}
     <button class="cancel-match-btn" on:click={cancelMatch}>Cancel Match</button>
   </div>
 
@@ -1021,147 +1073,265 @@
 </div>
 {/if}
 
-<!-- HALFTIME SCREEN -->
+<!-- HALFTIME SCREEN — persists across navigation and app close -->
 {#if screen === 'halftime'}
 <div class="screen">
-  <div class="ht-header">
-    <div class="ht-badge">Half Time</div>
-    <h2 class="ht-title">DB <span class="vs">vs</span> {opposition}</h2>
-    <div class="ht-meta">{matchDate}{venue ? ' · ' + venue : ''}</div>
-  </div>
 
-  {#if $settingsStore.halftimeStats?.showScore !== false}
-    <div class="card ht-score-card">
-      <div class="ht-score-row">
-        <div class="ht-score-team">
-          <div class="ht-team-name">Doora Barefield</div>
-          <div class="ht-score">{halftimeSnapshot ? formatScore(halftimeSnapshot.score.home) : '—'}</div>
-        </div>
-        <div class="ht-score-divider">–</div>
-        <div class="ht-score-team right">
-          <div class="ht-team-name">{opposition}</div>
-          <div class="ht-score">{halftimeSnapshot ? formatScore(halftimeSnapshot.score.away) : '—'}</div>
-        </div>
+  <!-- Sticky score bar -->
+  <div class="ht-score-bar">
+    <div class="ht-badge">Half Time</div>
+    <div class="ht-score-bar-fixture">
+      <div class="ht-score-bar-team">
+        <div class="ht-score-bar-name">Doora Barefield</div>
+        <div class="ht-score-bar-val">{halftimeSnapshot ? formatScore(halftimeSnapshot.score.home) : '—'}</div>
+      </div>
+      <div class="ht-score-bar-sep">–</div>
+      <div class="ht-score-bar-team">
+        <div class="ht-score-bar-name">{opposition}</div>
+        <div class="ht-score-bar-val">{halftimeSnapshot ? formatScore(halftimeSnapshot.score.away) : '—'}</div>
       </div>
     </div>
-  {/if}
+    <div class="ht-score-bar-meta">{matchDate}{venue ? ' · ' + venue : ''}</div>
+  </div>
 
+  <!-- ── PUCKOUTS accordion ── -->
   {#if $settingsStore.halftimeStats?.showPuckouts !== false && halftimeSnapshot?.puckouts?.length > 0}
     {@const htWins = halftimeSnapshot.puckouts.filter(p => p.outcome === 'won').length}
     {@const htTotal = halftimeSnapshot.puckouts.length}
-    <div class="card">
-      <div class="section-label" style="margin-bottom:10px">Puckouts</div>
-      <div class="ht-stats-row">
-        <div class="ht-stat-block">
-          <div class="ht-stat-val green">{htWins}</div>
-          <div class="ht-stat-label">Won</div>
+    {@const htLosses = htTotal - htWins}
+    {@const htWinPct = Math.round((htWins / htTotal) * 100)}
+    <div class="accordion-card">
+      <button class="accordion-header" on:click={() => toggleSection('puckouts')}>
+        <div class="accordion-title">
+          <span class="accordion-name">Puckouts</span>
+          <span class="accordion-summary">
+            <span class="badge-won">{htWins}W</span>
+            <span class="badge-lost">{htLosses}L</span>
+            <span class="badge-pct" class:pct-green={htWinPct>=60} class:pct-amber={htWinPct>=40&&htWinPct<60} class:pct-red={htWinPct<40}>{htWinPct}%</span>
+          </span>
         </div>
-        <div class="ht-stat-divider"></div>
-        <div class="ht-stat-block">
-          <div class="ht-stat-val red">{htTotal - htWins}</div>
-          <div class="ht-stat-label">Lost</div>
-        </div>
-        <div class="ht-stat-divider"></div>
-        <div class="ht-stat-block">
-          <div class="ht-stat-val">{htTotal}</div>
-          <div class="ht-stat-label">Total</div>
-        </div>
-        <div class="ht-stat-divider"></div>
-        <div class="ht-stat-block">
-          <div class="ht-stat-val">{Math.round((htWins/htTotal)*100)}%</div>
-          <div class="ht-stat-label">Win rate</div>
-        </div>
-      </div>
-      {#if htPuckoutsByPlayer.length > 0}
-        <div class="ht-breakdown">
-          <div class="ht-breakdown-title">By player</div>
-          {#each htPuckoutsByPlayer as row}
-            <div class="ht-breakdown-row">
-              <span class="ht-breakdown-name">{row.name}</span>
-              <span class="ht-breakdown-vals">
-                <span class="won-badge">{row.won}W</span>
-                <span class="lost-badge">{row.lost}L</span>
-              </span>
+        <span class="accordion-chevron">{openSections.puckouts ? '▲' : '▼'}</span>
+      </button>
+      {#if openSections.puckouts}
+        <div class="accordion-body">
+          <!-- Overall stats row -->
+          <div class="ht-stats-row">
+            <div class="ht-stat-block"><div class="ht-stat-val green">{htWins}</div><div class="ht-stat-label">Won</div></div>
+            <div class="ht-stat-divider"></div>
+            <div class="ht-stat-block"><div class="ht-stat-val red">{htLosses}</div><div class="ht-stat-label">Lost</div></div>
+            <div class="ht-stat-divider"></div>
+            <div class="ht-stat-block"><div class="ht-stat-val">{htTotal}</div><div class="ht-stat-label">Total</div></div>
+            <div class="ht-stat-divider"></div>
+            <div class="ht-stat-block">
+              <div class="ht-stat-val" class:green={htWinPct>=60} class:amber={htWinPct>=40&&htWinPct<60} class:red={htWinPct<40}>{htWinPct}%</div>
+              <div class="ht-stat-label">Win Rate</div>
             </div>
-          {/each}
+          </div>
+
+          <!-- Zone heatmap pitch (tap to filter) -->
+          {#if halftimeSnapshot.puckouts.some(p => p.section)}
+            <div class="ht-sub-label" style="margin-top:12px">Zone heatmap — tap to filter</div>
+            <div class="puckout-pitch-wrap">
+              <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
+                <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
+                {#each puckoutRows as row}
+                  {#each puckoutCols as col}
+                    {@const zkey = col.key + '-' + row.key}
+                    {@const zd = htPuckoutByZone[zkey]}
+                    <rect
+                      x={col.x} y={row.y} width={col.w} height={row.h}
+                      fill={htPuckoutZoneFilter === zkey ? 'rgba(255,255,255,0.45)' : htZoneColor(zkey)}
+                      stroke={htPuckoutZoneFilter === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
+                      stroke-width={htPuckoutZoneFilter === zkey ? '2.5' : '0.5'}
+                      style="cursor:pointer"
+                      on:click={() => htPuckoutZoneFilter = htPuckoutZoneFilter === zkey ? null : zkey}
+                    />
+                    {#if zd}
+                      <text x={col.x+col.w/2} y={row.y+row.h/2-4} text-anchor="middle" fill="white" font-size="7.5" font-weight="bold" style="pointer-events:none">{zd.won}W {zd.lost}L</text>
+                      <text x={col.x+col.w/2} y={row.y+row.h/2+7} text-anchor="middle" fill="white" font-size="7" opacity="0.9" style="pointer-events:none">{Math.round(zd.won/(zd.won+zd.lost)*100)}%</text>
+                    {:else}
+                      <text x={col.x+col.w/2} y={row.y+row.h/2+2.5} text-anchor="middle" fill="white" font-size="6.5" opacity="0.35" style="pointer-events:none">{col.label}</text>
+                    {/if}
+                  {/each}
+                {/each}
+                {#each [62,120,180,238] as dx}<line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>{/each}
+                <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
+                <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
+                <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+                <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+                <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">DB END</text>
+                <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">OPP END</text>
+              </svg>
+            </div>
+            {#if htPuckoutZoneFilter}
+              {@const zf = htPuckoutByZone[htPuckoutZoneFilter] || {won:0,lost:0}}
+              {@const zt = zf.won + zf.lost}
+              <div class="zone-filter-result">
+                <span class="zone-filter-name">{formatZoneLabel(htPuckoutZoneFilter)}</span>
+                <span class="zone-filter-stats">{zf.won}W / {zf.lost}L — {zt > 0 ? Math.round(zf.won/zt*100) : 0}%</span>
+                <button class="zone-filter-clear" on:click={() => htPuckoutZoneFilter = null}>All zones</button>
+              </div>
+            {/if}
+          {/if}
+
+          <!-- Zone breakdown table -->
+          {#if htPuckoutZoneRows.length > 0}
+            <div class="ht-sub-label" style="margin-top:12px">By zone</div>
+            {#each (htPuckoutZoneFilter ? htPuckoutZoneRows.filter(r => r.key === htPuckoutZoneFilter) : htPuckoutZoneRows) as row}
+              <div class="ht-zone-row">
+                <span class="ht-zone-name">{row.label}</span>
+                <span class="ht-zone-data">
+                  <span class="won-badge">{row.won}W</span>
+                  <span class="lost-badge">{row.lost}L</span>
+                  <span class="ht-zone-pct" class:green={row.winPct>=60} class:amber={row.winPct>=40&&row.winPct<60} class:red={row.winPct<40}>{row.winPct}%</span>
+                </span>
+                <div class="ht-zone-bar"><div class="ht-zone-bar-fill" style="width:{row.winPct}%; background:{row.winPct>=60?'#2d7a2d':row.winPct>=40?'#e0a020':'#e53935'}"></div></div>
+              </div>
+            {/each}
+          {/if}
+
+          <!-- By player -->
+          {#if htPuckoutsByPlayer.length > 0}
+            <div class="ht-sub-label" style="margin-top:12px">By player</div>
+            {#each htPuckoutsByPlayer as row}
+              {@const pct = Math.round(row.won/(row.won+row.lost)*100)}
+              <div class="ht-zone-row">
+                <span class="ht-zone-name">{row.name}</span>
+                <span class="ht-zone-data">
+                  <span class="won-badge">{row.won}W</span>
+                  <span class="lost-badge">{row.lost}L</span>
+                  <span class="ht-zone-pct" class:green={pct>=60} class:amber={pct>=40&&pct<60} class:red={pct<40}>{pct}%</span>
+                </span>
+                <div class="ht-zone-bar"><div class="ht-zone-bar-fill" style="width:{pct}%; background:{pct>=60?'#2d7a2d':pct>=40?'#e0a020':'#e53935'}"></div></div>
+              </div>
+            {/each}
+          {/if}
         </div>
       {/if}
     </div>
   {/if}
 
+  <!-- ── SCORES CONCEDED accordion ── -->
   {#if $settingsStore.halftimeStats?.showConcededScores !== false && halftimeSnapshot?.oppScores?.length > 0}
     {@const htGoals = halftimeSnapshot.oppScores.filter(s => s.type === 'goal').length}
     {@const htPoints = halftimeSnapshot.oppScores.filter(s => s.type === 'point').length}
-    <div class="card">
-      <div class="section-label" style="margin-bottom:10px">Scores conceded</div>
-      <div class="ht-conceded-total">
-        {htGoals > 0 ? `${htGoals} goal${htGoals > 1 ? 's' : ''}` : ''}
-        {htGoals > 0 && htPoints > 0 ? ', ' : ''}
-        {htPoints > 0 ? `${htPoints} point${htPoints > 1 ? 's' : ''}` : ''}
-        {' '}({htGoals * 3 + htPoints} pts)
-      </div>
-      {#if htConcededByMarker.length > 0}
-        <div class="ht-breakdown" style="margin-top:10px">
-          <div class="ht-breakdown-title">By marker</div>
-          {#each htConcededByMarker as row}
-            <div class="ht-breakdown-row">
-              <span class="ht-breakdown-name">{row.marker}</span>
-              <span class="ht-breakdown-vals">
-                {#if row.goals > 0}<span class="goal-badge">{row.goals}G</span>{/if}
-                {#if row.points > 0}<span class="point-badge">{row.points}P</span>{/if}
-              </span>
-              <span class="ht-opp-nums">
-                {row.scores.filter(s => s.oppPlayerNum).map(s => '#' + s.oppPlayerNum).join(', ')}
-              </span>
-            </div>
-          {/each}
+    <div class="accordion-card">
+      <button class="accordion-header" on:click={() => toggleSection('conceded')}>
+        <div class="accordion-title">
+          <span class="accordion-name">Scores Conceded</span>
+          <span class="accordion-summary">
+            {#if htGoals > 0}<span class="badge-goal">{htGoals}G</span>{/if}
+            {#if htPoints > 0}<span class="badge-point">{htPoints}P</span>{/if}
+            <span class="badge-pts">{htGoals*3+htPoints} pts</span>
+          </span>
+        </div>
+        <span class="accordion-chevron">{openSections.conceded ? '▲' : '▼'}</span>
+      </button>
+      {#if openSections.conceded}
+        <div class="accordion-body">
+          <div class="ht-stats-row">
+            <div class="ht-stat-block"><div class="ht-stat-val red">{htGoals}</div><div class="ht-stat-label">Goals</div></div>
+            <div class="ht-stat-divider"></div>
+            <div class="ht-stat-block"><div class="ht-stat-val amber">{htPoints}</div><div class="ht-stat-label">Points</div></div>
+            <div class="ht-stat-divider"></div>
+            <div class="ht-stat-block"><div class="ht-stat-val red">{htGoals*3+htPoints}</div><div class="ht-stat-label">Total pts</div></div>
+          </div>
+
+          {#if htConcededByMarker.length > 0}
+            <div class="ht-sub-label" style="margin-top:12px">By our marker</div>
+            {#each htConcededByMarker as row}
+              <div class="ht-breakdown-row">
+                <span class="ht-breakdown-name">{row.marker}</span>
+                <span class="ht-breakdown-vals">
+                  {#if row.goals > 0}<span class="goal-badge">{row.goals}G</span>{/if}
+                  {#if row.points > 0}<span class="point-badge">{row.points}P</span>{/if}
+                  <span class="ht-opp-nums">{row.scores.filter(s=>s.oppPlayerNum).map(s=>'#'+s.oppPlayerNum).join(', ')}</span>
+                </span>
+              </div>
+            {/each}
+          {/if}
+
+          {#if htConcededByOppPlayer.length > 0}
+            <div class="ht-sub-label" style="margin-top:12px">By opposition player</div>
+            {#each htConcededByOppPlayer as row}
+              <div class="ht-breakdown-row">
+                <span class="ht-breakdown-name">{row.num}</span>
+                <span class="ht-breakdown-vals">
+                  {#if row.goals > 0}<span class="goal-badge">{row.goals}G</span>{/if}
+                  {#if row.points > 0}<span class="point-badge">{row.points}P</span>{/if}
+                  {#if row.markers.length > 0}<span class="ht-opp-nums">on {row.markers.join(', ')}</span>{/if}
+                </span>
+              </div>
+            {/each}
+          {/if}
         </div>
       {/if}
     </div>
   {/if}
 
+  <!-- ── PLAYER STATS accordion ── -->
   {#if $settingsStore.halftimeStats?.showPlayerStats !== false && halftimeSnapshot}
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div style="padding:1rem 1rem 0.5rem;">
-        <div class="section-label">Player stats (1st half)</div>
-      </div>
-      <div class="table-wrap">
-        <table class="player-table">
-          <thead>
-            <tr>
-              <th class="th-player">Player</th>
-              {#each allStats as stat}<th>{stat.split(' ')[0]}</th>{/each}
-            </tr>
-          </thead>
-          <tbody>
-            {#each (halftimeSnapshot.players || []).filter(p => p.position !== 'Sub' && p.name?.trim()) as player}
-              {@const s = halftimeSnapshot.stats?.[player.id] || {}}
-              {@const hasStats = Object.values(s).some(v => v > 0)}
-              {#if hasStats}
+    {@const playersWithStats = (halftimeSnapshot.players||[]).filter(p => p.name?.trim() && Object.values(halftimeSnapshot.stats?.[p.id]||{}).some(v=>v>0))}
+    <div class="accordion-card">
+      <button class="accordion-header" on:click={() => toggleSection('players')}>
+        <div class="accordion-title">
+          <span class="accordion-name">Player Stats</span>
+          <span class="accordion-summary"><span class="badge-pts">{playersWithStats.length} active</span></span>
+        </div>
+        <span class="accordion-chevron">{openSections.players ? '▲' : '▼'}</span>
+      </button>
+      {#if openSections.players}
+        <div class="accordion-body" style="padding:0; overflow:hidden;">
+          <div class="table-wrap">
+            <table class="player-table">
+              <thead>
                 <tr>
-                  <td class="td-player"><span class="num-badge">#{player.number}</span>{player.name}</td>
-                  {#each allStats as stat}
-                    <td>{s[stat] || 0}</td>
-                  {/each}
+                  <th class="th-player">Player</th>
+                  {#each allStats as stat}<th>{stat.split(' ')[0]}</th>{/each}
                 </tr>
-              {/if}
-            {/each}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {#each (halftimeSnapshot.players||[]).filter(p=>p.name?.trim()) as player}
+                  {@const s = halftimeSnapshot.stats?.[player.id] || {}}
+                  {@const hasStats = Object.values(s).some(v=>v>0)}
+                  {#if hasStats}
+                    <tr>
+                      <td class="td-player">
+                        <span class="num-badge" class:sub={player.position==='Sub'}>#{player.number}</span>{player.name}
+                      </td>
+                      {#each allStats as stat}<td>{s[stat]||0}</td>{/each}
+                    </tr>
+                  {/if}
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 
+  <!-- ── SUBSTITUTIONS accordion ── -->
   {#if $settingsStore.halftimeStats?.showSubs !== false && halftimeSnapshot?.subs?.length > 0}
-    <div class="card">
-      <div class="section-label" style="margin-bottom:8px">Substitutions</div>
-      {#each halftimeSnapshot.subs as sub}
-        <div class="sub-log-row">
-          <span class="sub-time">{formatTime(sub.time)}</span>
-          <span class="sub-detail">⬇ {sub.off} → ⬆ {sub.on}</span>
-          <span class="sub-period">{sub.period}</span>
+    <div class="accordion-card">
+      <button class="accordion-header" on:click={() => toggleSection('subs')}>
+        <div class="accordion-title">
+          <span class="accordion-name">Substitutions</span>
+          <span class="accordion-summary"><span class="badge-pts">{halftimeSnapshot.subs.length} made</span></span>
         </div>
-      {/each}
+        <span class="accordion-chevron">{openSections.subs ? '▲' : '▼'}</span>
+      </button>
+      {#if openSections.subs}
+        <div class="accordion-body">
+          {#each halftimeSnapshot.subs as sub}
+            <div class="sub-log-row">
+              <span class="sub-time">{formatTime(sub.time)}</span>
+              <span class="sub-detail">⬇ {sub.off} → ⬆ {sub.on}</span>
+              <span class="sub-period">{sub.period}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -1617,4 +1787,134 @@
   .puckout-pitch-wrap { border-radius: 8px; overflow: hidden; margin-bottom: 0.5rem; }
   .puckout-pitch-svg { width: 100%; height: auto; display: block; }
   .zone-hint { font-weight: 600; color: #2d7a2d; text-transform: none; letter-spacing: 0; font-size: 12px; }
+
+  /* ── HALFTIME SCORE BAR ── */
+  .ht-score-bar {
+    background: #6B1B2B;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: white;
+  }
+  .ht-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    color: white;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 4px 12px;
+    text-transform: uppercase;
+  }
+  .ht-score-bar-fixture {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+    width: 100%;
+  }
+  .ht-score-bar-team { text-align: center; flex: 1; }
+  .ht-score-bar-name { font-size: 12px; opacity: 0.8; margin-bottom: 2px; }
+  .ht-score-bar-val { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ht-score-bar-sep { font-size: 22px; opacity: 0.6; flex-shrink: 0; }
+  .ht-score-bar-meta { font-size: 11px; opacity: 0.6; }
+
+  /* ── ACCORDION ── */
+  .accordion-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .accordion-header:hover { background: var(--surface-2); }
+  .accordion-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .accordion-name { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .accordion-summary { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .accordion-chevron { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+  .accordion-body { padding: 0 16px 16px; border-top: 1px solid var(--divider-faint); }
+
+  /* ── ACCORDION BADGES ── */
+  .badge-won { background: rgba(45,122,45,0.12); color: #2d7a2d; font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .badge-lost { background: rgba(229,57,53,0.12); color: #e53935; font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .badge-pct { font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .badge-pct.pct-green { background: rgba(45,122,45,0.12); color: #2d7a2d; }
+  .badge-pct.pct-amber { background: rgba(224,160,32,0.12); color: #9a6000; }
+  .badge-pct.pct-red { background: rgba(229,57,53,0.12); color: #e53935; }
+  .badge-goal { background: rgba(229,57,53,0.12); color: #e53935; font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .badge-point { background: rgba(224,160,32,0.12); color: #9a6000; font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .badge-pts { background: var(--surface-2); color: var(--text-muted); font-weight: 600; font-size: 12px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+
+  /* ── HALFTIME SUB-LABEL ── */
+  .ht-sub-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
+
+  /* ── HALFTIME STAT VALUE COLORS ── */
+  .ht-stat-val.amber { color: #9a6000; }
+  .green { color: #2d7a2d; }
+  .amber { color: #9a6000; }
+  .red { color: #e53935; }
+
+  /* ── ZONE BREAKDOWN ROWS ── */
+  .ht-zone-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--divider-faint);
+    flex-wrap: wrap;
+  }
+  .ht-zone-row:last-child { border-bottom: none; }
+  .ht-zone-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); min-width: 80px; }
+  .ht-zone-data { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .ht-zone-pct { font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .ht-zone-pct.green { background: rgba(45,122,45,0.12); color: #2d7a2d; }
+  .ht-zone-pct.amber { background: rgba(224,160,32,0.12); color: #9a6000; }
+  .ht-zone-pct.red { background: rgba(229,57,53,0.12); color: #e53935; }
+  .ht-zone-bar { width: 100%; height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 2px; }
+  .ht-zone-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+
+  /* ── ZONE FILTER RESULT ── */
+  .zone-filter-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(107,27,43,0.07);
+    border: 1px solid rgba(107,27,43,0.18);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .zone-filter-name { font-size: 13px; font-weight: 700; color: #6B1B2B; flex: 1; }
+  .zone-filter-stats { font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+  .zone-filter-clear {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(107,27,43,0.3);
+    background: none;
+    color: #6B1B2B;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .zone-filter-clear:hover { background: #6B1B2B; color: white; }
 </style>
