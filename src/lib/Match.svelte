@@ -32,14 +32,22 @@
   let halftimeSnapshot = null
 
   // ── PUCKOUT SECTION ───────────────────────────
-  let puckoutSection = null  // 'short'|'own-half'|'midfield'|'opp-half'|'long'
-  const puckoutZones = [
+  let puckoutSection = null  // e.g. 'short-top', 'midfield-bottom'
+  const puckoutCols = [
     { key: 'short',    label: 'Short',    x: 4,   w: 58 },
     { key: 'own-half', label: 'Own Half', x: 62,  w: 58 },
     { key: 'midfield', label: 'Midfield', x: 120, w: 60 },
     { key: 'opp-half', label: 'Opp Half', x: 180, w: 58 },
     { key: 'long',     label: 'Long',     x: 238, w: 58 }
   ]
+  const puckoutRows = [
+    { key: 'top',    y: 4,  h: 46 },
+    { key: 'bottom', y: 50, h: 46 }
+  ]
+  function formatZoneLabel(key) {
+    if (!key) return ''
+    return key.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  }
 
   const defaultSquad = Array.from({ length: 20 }, (_, i) => ({
     id: i + 1,
@@ -905,44 +913,48 @@
           {/each}
         </div>
 
-        <div class="modal-section-label">Where did it land? (optional) {#if puckoutSection}<span class="zone-hint">— {puckoutZones.find(z => z.key === puckoutSection)?.label} selected</span>{/if}</div>
+        <div class="modal-section-label">Where did it land? (optional) {#if puckoutSection}<span class="zone-hint">— {formatZoneLabel(puckoutSection)} selected</span>{/if}</div>
         <div class="puckout-pitch-wrap">
           <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
             <!-- Pitch background -->
             <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
-            <!-- Clickable zones -->
-            {#each puckoutZones as zone}
-              <rect
-                x={zone.x} y="4" width={zone.w} height="92"
-                fill={puckoutSection === zone.key ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)'}
-                stroke={puckoutSection === zone.key ? 'white' : 'rgba(255,255,255,0.2)'}
-                stroke-width={puckoutSection === zone.key ? '2' : '0.5'}
-                rx="2"
-                style="cursor:pointer"
-                on:click={() => puckoutSection = puckoutSection === zone.key ? null : zone.key}
-              />
-              <text
-                x={zone.x + zone.w / 2} y="53"
-                text-anchor="middle"
-                fill="white"
-                font-size="7.5"
-                font-weight={puckoutSection === zone.key ? 'bold' : 'normal'}
-                opacity={puckoutSection === zone.key ? '1' : '0.75'}
-                style="pointer-events:none"
-              >{zone.label}</text>
+            <!-- 10 clickable zones (5 cols × 2 rows) -->
+            {#each puckoutRows as row}
+              {#each puckoutCols as col}
+                {@const zkey = col.key + '-' + row.key}
+                <rect
+                  x={col.x} y={row.y} width={col.w} height={row.h}
+                  fill={puckoutSection === zkey ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)'}
+                  stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
+                  stroke-width={puckoutSection === zkey ? '2' : '0.5'}
+                  style="cursor:pointer"
+                  on:click={() => puckoutSection = puckoutSection === zkey ? null : zkey}
+                />
+                <text
+                  x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
+                  text-anchor="middle"
+                  fill="white"
+                  font-size="6.5"
+                  font-weight={puckoutSection === zkey ? 'bold' : 'normal'}
+                  opacity={puckoutSection === zkey ? '1' : '0.65'}
+                  style="pointer-events:none"
+                >{col.label}</text>
+              {/each}
             {/each}
-            <!-- Zone dividers -->
+            <!-- Vertical zone dividers -->
             {#each [62, 120, 180, 238] as dx}
-              <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.3"/>
+              <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
             {/each}
-            <!-- Halfway line -->
-            <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.5" stroke-dasharray="3,3"/>
+            <!-- Horizontal mid-pitch divider (widthways split) -->
+            <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
+            <!-- Halfway length line (dashed) -->
+            <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
             <!-- Goal areas -->
-            <rect x="4" y="28" width="18" height="44" fill="none" stroke="white" stroke-width="0.8" opacity="0.5"/>
-            <rect x="278" y="28" width="18" height="44" fill="none" stroke="white" stroke-width="0.8" opacity="0.5"/>
+            <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+            <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
             <!-- End labels -->
-            <text x="33" y="14" text-anchor="middle" fill="white" font-size="6" opacity="0.6" style="pointer-events:none">DB END</text>
-            <text x="267" y="14" text-anchor="middle" fill="white" font-size="6" opacity="0.6" style="pointer-events:none">OPP END</text>
+            <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">DB END</text>
+            <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">OPP END</text>
           </svg>
         </div>
 
