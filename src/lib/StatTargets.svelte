@@ -128,7 +128,7 @@
       <p>Set performance goals for the team and track how each match measures up</p>
     </div>
     <button class="save-btn" class:saved on:click={saveTargets}>
-      {saved ? '✓ Saved' : 'Save Targets'}
+      {#if saved}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved{:else}Save Targets{/if}
     </button>
   </div>
 
@@ -165,7 +165,7 @@
             autofocus
           />
           <button class="confirm-btn" on:click={addCustomStat}>Add</button>
-          <button class="cancel-small" on:click={() => showAddStat = false}>✕</button>
+          <button class="cancel-small" on:click={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {:else}
         <button class="add-stat-btn" on:click={() => showAddStat = true}>+ Custom stat</button>
@@ -188,7 +188,7 @@
             <span class="lower-badge">lower = better</span>
           {/if}
           {#if stat.custom}
-            <button class="remove-custom" on:click={() => removeCustomStat(stat.key)}>✕</button>
+            <button class="remove-custom" on:click={() => removeCustomStat(stat.key)}><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           {/if}
         </div>
         <span>
@@ -275,7 +275,7 @@
   {/if}
 
   <button class="save-btn-full" class:saved on:click={saveTargets}>
-    {saved ? '✓ Targets Saved!' : 'Save Targets'}
+    {#if saved}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Targets Saved!{:else}Save Targets{/if}
   </button>
 
 </div>
@@ -362,10 +362,10 @@
   .confirm-btn { padding: 8px 12px; background: #6B1B2B; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 38px; }
   .cancel-small { background: none; border: none; color: var(--text-faint); font-size: 18px; cursor: pointer; padding: 4px 8px; min-height: 38px; }
 
-  .save-btn { padding: 11px 20px; background: #6B1B2B; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; flex-shrink: 0; min-height: 44px; }
+  .save-btn { display: inline-flex; align-items: center; gap: 6px; padding: 11px 20px; background: #6B1B2B; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; flex-shrink: 0; min-height: 44px; }
   .save-btn.saved { background: #2d7a2d; }
   .save-btn:hover { background: #551522; }
-  .save-btn-full { width: 100%; padding: 15px; background: #6B1B2B; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s; }
+  .save-btn-full { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 15px; background: #6B1B2B; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s; }
   .save-btn-full.saved { background: #2d7a2d; }
   .save-btn-full:hover { background: #551522; }
 

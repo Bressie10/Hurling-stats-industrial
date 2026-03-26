@@ -212,7 +212,7 @@
         {#each selectedMatch.subs_log as sub}
           <div class="sub-row">
             <span class="sub-time">{sub.time}</span>
-            <span class="sub-detail">⬇ {sub.off} → ⬆ {sub.on}</span>
+            <span class="sub-detail"><svg style="width:12px;height:12px;color:#e53935" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> {sub.off} → <svg style="width:12px;height:12px;color:#2d7a2d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> {sub.on}</span>
             <span class="sub-period">{sub.period}</span>
           </div>
         {/each}
@@ -452,7 +452,7 @@
 
     {#if filtered.length === 0}
       <div class="empty-state">
-        <div class="empty-icon">📭</div>
+        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg></div>
         <div class="empty-title">No matches found</div>
         <div class="empty-sub">
           {matches.length === 0
@@ -493,7 +493,7 @@
                 class="delete-btn"
                 on:click={e => deleteMatch(match.id, e)}
                 title="Delete match"
-              >✕</button>
+              ><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
           </div>
           {#if topScorer}

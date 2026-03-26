@@ -68,7 +68,7 @@ import { clearAllData } from './lib/db.js'
 
   async function handleSignOut() {
     const confirmed = confirm(
-      '⚠️ Before signing out:\n\n' +
+      'Before signing out:\n\n' +
       '1. Make sure you have a stable internet connection\n' +
       '2. Click "↑ Sync" in the top bar to back up your data to the cloud\n\n' +
       'If you sign out without syncing, any unsynced match data will be lost.\n\n' +

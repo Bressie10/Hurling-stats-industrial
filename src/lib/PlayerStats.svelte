@@ -172,7 +172,7 @@
           class="compare-btn"
           class:active={compareMode}
           on:click={() => compareMode = !compareMode}
-        >{compareMode ? '✕ Exit compare' : '⇄ Compare matches'}</button>
+        >{#if compareMode}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Exit compare{:else}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg> Compare matches{/if}</button>
       </div>
     {/if}
   </div>
@@ -403,6 +403,10 @@
   .field-group select:focus { outline: none; border-color: #6B1B2B; }
 
   .compare-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 12px 16px;
     border-radius: 10px;
     border: 1.5px solid #6B1B2B;

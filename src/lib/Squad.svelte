@@ -80,7 +80,7 @@
       <p>Your saved squad loads automatically every time you set up a new match. Update it here anytime.</p>
     </div>
     <button class="save-btn" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
-      {saving ? 'Saving…' : saved ? '✓ Saved' : saveError ? '✗ Failed — tap to retry' : 'Save Squad'}
+      {#if saving}Saving…{:else if saved}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved{:else if saveError}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Failed — tap to retry{:else}Save Squad{/if}
     </button>
   </div>
 
@@ -90,7 +90,7 @@
 
     <!-- HOW IT WORKS -->
     <div class="info-card">
-      <div class="info-icon">💡</div>
+      <div class="info-icon"><svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="#6B1B2B" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
       <div class="info-text">
         <strong>How it works:</strong> Add your full panel here once. Every time you start a new match,
         this squad loads automatically. You can still make changes on match day — swap jersey numbers,
@@ -135,7 +135,7 @@
               <option value={pos}>{pos}</option>
             {/each}
           </select>
-          <button class="delete-btn" on:click={() => removePlayer(player.id)} title="Remove player">✕</button>
+          <button class="delete-btn" on:click={() => removePlayer(player.id)} title="Remove player"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {/each}
     </div>
@@ -180,7 +180,7 @@
                 <option value={pos}>{pos}</option>
               {/each}
             </select>
-            <button class="delete-btn" on:click={() => removePlayer(player.id)} title="Remove player">✕</button>
+            <button class="delete-btn" on:click={() => removePlayer(player.id)} title="Remove player"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
         {/each}
       {/if}
@@ -217,7 +217,7 @@
 
     <!-- SAVE BUTTON BOTTOM -->
     <button class="save-btn-full" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
-      {saving ? 'Saving…' : saved ? '✓ Squad Saved!' : saveError ? '✗ Save failed — tap to retry' : 'Save Squad'}
+      {#if saving}Saving…{:else if saved}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Squad Saved!{:else if saveError}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Save failed — tap to retry{:else}Save Squad{/if}
     </button>
 
   {/if}
@@ -285,6 +285,9 @@
   .page-header p { font-size: 13px; color: var(--text-muted); max-width: 500px; }
 
   .save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 9px 20px;
     background: #6B1B2B;
     color: white;
@@ -459,6 +462,10 @@
 
   /* SAVE BOTTOM */
   .save-btn-full {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
     padding: 15px;
     background: #6B1B2B;

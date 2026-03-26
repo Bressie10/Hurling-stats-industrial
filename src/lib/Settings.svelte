@@ -68,7 +68,7 @@
       <p>Configure the app for your team</p>
     </div>
     <button class="save-btn" class:saved on:click={saveSettings}>
-      {saved ? '✓ Saved' : 'Save Settings'}
+      {#if saved}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved{:else}Save Settings{/if}
     </button>
   </div>
 
@@ -249,7 +249,7 @@
   </div>
 
   <button class="save-btn-full" class:saved on:click={saveSettings}>
-    {saved ? '✓ Settings Saved!' : 'Save Settings'}
+    {#if saved}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Settings Saved!{:else}Save Settings{/if}
   </button>
 
 </div>
@@ -375,6 +375,9 @@
   .about-val { font-weight: 500; color: var(--text); text-align: right; }
 
   .save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 11px 20px;
     background: #6B1B2B;
     color: white;
@@ -392,6 +395,10 @@
   .save-btn:hover { background: #551522; }
 
   .save-btn-full {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
     padding: 15px;
     background: #6B1B2B;

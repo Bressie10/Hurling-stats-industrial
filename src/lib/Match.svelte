@@ -613,7 +613,11 @@
       <div class="timer-display" class:running={timerRunning}>{formatTime(timerSeconds)}</div>
       <div class="timer-btns">
         <button class="timer-btn primary" on:click={toggleTimer}>
-          {timerRunning ? '⏸ Pause' : '▶ Start'}
+          {#if timerRunning}
+            <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause
+          {:else}
+            <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start
+          {/if}
         </button>
         <button class="timer-btn" on:click={resetTimer}>Reset</button>
       </div>
@@ -636,8 +640,12 @@
     </div>
     <div class="action-btns">
       <button class="puckout-btn" on:click={openPuckoutModal}>+ Puckout</button>
-      <button class="sub-btn" on:click={openSubModal}>⇄ Sub</button>
-      <button class="stats-view-btn" on:click={openStatsView}>📊 Stats</button>
+      <button class="sub-btn" on:click={openSubModal}>
+        <svg style="width:15px;height:15px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg> Sub
+      </button>
+      <button class="stats-view-btn" on:click={openStatsView}>
+        <svg style="width:15px;height:15px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> Stats
+      </button>
     </div>
   </div>
 
@@ -673,7 +681,7 @@
           <input bind:value={newCustomStat} placeholder="Stat name"
             on:keydown={e => e.key === 'Enter' && addCustomStat()} autofocus />
           <button class="confirm-btn" on:click={addCustomStat}>Add</button>
-          <button class="cancel-small" on:click={() => showAddStat = false}>✕</button>
+          <button class="cancel-small" on:click={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {:else}
         <button class="stat-btn dashed" on:click={() => showAddStat = true}>+ Custom stat</button>
@@ -688,7 +696,7 @@
           <input class="custom-stat-input" bind:value={newCustomStat} placeholder="Enter stat name..."
             on:keydown={e => e.key === 'Enter' && addCustomStat()} autofocus />
           <button class="confirm-btn" on:click={addCustomStat}>Add</button>
-          <button class="cancel-small" on:click={() => showAddStat = false}>✕</button>
+          <button class="cancel-small" on:click={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {:else}
         <button class="custom-stat-btn" on:click={() => showAddStat = true}>+ Add custom stat</button>
@@ -752,7 +760,7 @@
       {#each subs_log as sub}
         <div class="sub-log-row">
           <span class="sub-time">{formatTime(sub.time)}</span>
-          <span class="sub-detail">⬇ {sub.off} → ⬆ {sub.on}</span>
+          <span class="sub-detail"><svg style="width:12px;height:12px;color:#e53935" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> {sub.off} → <svg style="width:12px;height:12px;color:#2d7a2d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> {sub.on}</span>
           <span class="sub-period">{sub.period}</span>
         </div>
       {/each}
@@ -1080,7 +1088,7 @@
             <span class="badge-pct" class:pct-green={htWinPct>=60} class:pct-amber={htWinPct>=40&&htWinPct<60} class:pct-red={htWinPct<40}>{htWinPct}%</span>
           </span>
         </div>
-        <span class="accordion-chevron">{openSections.puckouts ? '▲' : '▼'}</span>
+        <span class="accordion-chevron">{#if openSections.puckouts}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>{:else}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>{/if}</span>
       </button>
       {#if openSections.puckouts}
         <div class="accordion-body">
@@ -1233,7 +1241,7 @@
             <span class="badge-pts">{htGoals*3+htPoints} pts</span>
           </span>
         </div>
-        <span class="accordion-chevron">{openSections.conceded ? '▲' : '▼'}</span>
+        <span class="accordion-chevron">{#if openSections.conceded}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>{:else}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>{/if}</span>
       </button>
       {#if openSections.conceded}
         <div class="accordion-body">
@@ -1295,7 +1303,7 @@
           <span class="accordion-name">Player Stats</span>
           <span class="accordion-summary"><span class="badge-pts">{playersWithStats.length} active</span></span>
         </div>
-        <span class="accordion-chevron">{openSections.players ? '▲' : '▼'}</span>
+        <span class="accordion-chevron">{#if openSections.players}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>{:else}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>{/if}</span>
       </button>
       {#if openSections.players}
         <div class="accordion-body" style="overflow:hidden;">
@@ -1346,14 +1354,14 @@
           <span class="accordion-name">Substitutions</span>
           <span class="accordion-summary"><span class="badge-pts">{subs_log.length} made</span></span>
         </div>
-        <span class="accordion-chevron">{openSections.subs ? '▲' : '▼'}</span>
+        <span class="accordion-chevron">{#if openSections.subs}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>{:else}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>{/if}</span>
       </button>
       {#if openSections.subs}
         <div class="accordion-body">
           {#each subs_log as sub}
             <div class="sub-log-row">
               <span class="sub-time">{formatTime(sub.time)}</span>
-              <span class="sub-detail">⬇ {sub.off} → ⬆ {sub.on}</span>
+              <span class="sub-detail"><svg style="width:12px;height:12px;color:#e53935" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> {sub.off} → <svg style="width:12px;height:12px;color:#2d7a2d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> {sub.on}</span>
               <span class="sub-period">{sub.period}</span>
             </div>
           {/each}
@@ -1505,7 +1513,7 @@
   .timer-display { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); min-width: 80px; }
   .timer-display.running { color: #6B1B2B; }
   .timer-btns { display: flex; gap: 6px; }
-  .timer-btn { padding: 10px 16px; border-radius: 8px; border: 1.5px solid var(--input-border); background: none; color: var(--text-2); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 44px; }
+  .timer-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; border: 1.5px solid var(--input-border); background: none; color: var(--text-2); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 44px; }
   .timer-btn.primary { background: #6B1B2B; border-color: #6B1B2B; color: white; }
   .period-pills { display: flex; gap: 6px; flex-wrap: wrap; }
   .period-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--input-border); background: none; font-size: 13px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 40px; }
@@ -1522,7 +1530,7 @@
   .mode-toggle { display: flex; border: 1px solid var(--input-border); border-radius: 8px; overflow: hidden; }
   .mode-toggle button { padding: 10px 20px; border: none; background: none; font-size: 14px; color: var(--text-muted); cursor: pointer; font-family: inherit; min-height: 44px; }
   .mode-toggle button.active { background: #6B1B2B; color: white; font-weight: 600; }
-  .sub-btn { padding: 10px 18px; border-radius: 8px; border: 1.5px solid #6B1B2B; background: none; color: #6B1B2B; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 44px; }
+  .sub-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: 1.5px solid #6B1B2B; background: none; color: #6B1B2B; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 44px; }
   .sub-btn:hover { background: #6B1B2B; color: white; }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
@@ -1625,6 +1633,9 @@
 
   /* ── QUICK VIEW STATS BUTTON ── */
   .stats-view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 10px 14px;
     border-radius: 8px;
     border: 1.5px solid #6B1B2B;
