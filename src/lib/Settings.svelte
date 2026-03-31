@@ -111,7 +111,7 @@
   }
 
   function handleCustomColor(e) {
-    settings.clubPrimaryColor = e.target.value
+    settings = { ...settings, clubPrimaryColor: e.target.value }
     customColorInput = e.target.value
     autoSave()
   }
@@ -119,10 +119,10 @@
   function handleCustomColorText(e) {
     const val = e.target.value
     if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-      settings.clubPrimaryColor = val
+      settings = { ...settings, clubPrimaryColor: val }
       autoSave()
     } else if (!val) {
-      settings.clubPrimaryColor = null
+      settings = { ...settings, clubPrimaryColor: null }
       autoSave()
     }
   }
@@ -440,7 +440,7 @@
             class:selected={settings.clubPrimaryColor === preset.color}
             style="--swatch-color: {preset.color}"
             on:click={() => {
-              settings.clubPrimaryColor = settings.clubPrimaryColor === preset.color ? null : preset.color
+              settings = { ...settings, clubPrimaryColor: settings.clubPrimaryColor === preset.color ? null : preset.color }
               autoSave()
             }}
             title={preset.label}
@@ -473,7 +473,7 @@
           </div>
         </div>
         {#if settings.clubPrimaryColor}
-          <button class="reset-color-btn" on:click={() => { settings.clubPrimaryColor = null; customColorInput = ''; autoSave() }}>
+          <button class="reset-color-btn" on:click={() => { settings = { ...settings, clubPrimaryColor: null }; customColorInput = ''; autoSave() }}>
             Reset to default
           </button>
         {/if}
@@ -746,7 +746,7 @@
   .color-swatch:hover { transform: scale(1.1); border-color: var(--border); }
   .color-swatch.selected { border-color: var(--text); transform: scale(1.1); color: inherit; }
 
-  .color-custom-row { display: flex; align-items: flex-end; gap: 12px; }
+  .color-custom-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   .color-input-wrap { display: flex; align-items: center; gap: 8px; }
   .color-picker {
     width: 46px; height: 46px; border-radius: 10px; border: 1.5px solid var(--input-border);
@@ -762,7 +762,10 @@
     padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border);
     background: none; color: var(--text-muted); font-size: 13px; font-weight: 500;
     cursor: pointer; font-family: inherit; white-space: nowrap; min-height: 46px;
-    transition: all 0.15s; align-self: flex-end;
+    transition: all 0.15s; align-self: flex-end; flex-shrink: 0;
+  }
+  @media (max-width: 400px) {
+    .reset-color-btn { width: 100%; }
   }
   .reset-color-btn:hover { border-color: var(--text-muted); color: var(--text); }
 
