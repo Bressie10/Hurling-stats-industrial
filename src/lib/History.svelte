@@ -1238,5 +1238,11 @@
   }
   @media (max-width: 480px) {
     .result-score { font-size: 22px; }
+    .season-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .season-val { font-size: 20px; }
+    .match-card { padding: 0.875rem 1rem; }
+    .match-card-left { gap: 8px; }
+    .match-card-right { gap: 6px; }
+    .filter-pill { padding: 7px 12px; font-size: 12px; }
   }
 </style>

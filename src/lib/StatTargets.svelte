@@ -172,6 +172,7 @@
       {/if}
     </div>
 
+    <div class="targets-scroll">
     <div class="targets-header">
       <span>Stat</span>
       <span>Target</span>
@@ -220,6 +221,7 @@
         </span>
       </div>
     {/each}
+    </div><!-- end targets-scroll -->
   </div>
 
   <!-- PROGRESS BARS -->
@@ -300,6 +302,7 @@
 
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); }
 
+  .targets-scroll { overflow-x: auto; }
   .targets-header {
     display: grid;
     grid-template-columns: 1fr 80px 80px 90px 70px;

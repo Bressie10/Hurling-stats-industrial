@@ -1714,6 +1714,10 @@
     .player-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
     .modal { padding: 1.25rem; padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); }
     .mini-val { font-size: 15px; min-width: 22px; }
+    .action-btns { flex-wrap: wrap; }
+    .ht-breakdown-row { flex-wrap: wrap; }
+    .ht-breakdown-vals { flex-shrink: 1; }
+    .ht-score-bar-val { font-size: 22px; }
   }
   @media (min-width: 481px) and (max-width: 768px) {
     .stat-grid { grid-template-columns: repeat(3, 1fr); }
