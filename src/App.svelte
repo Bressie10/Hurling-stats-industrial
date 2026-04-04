@@ -73,6 +73,7 @@ import { clearAllData } from './lib/db.js'
   let dataReady = false
   let lastUserId = null
   let showMoreSheet = false
+  let subscribeToast = ''
 
   $: morePages = ['timeline', 'squad', 'targets', 'settings']
   $: moreActive = morePages.includes(activePage)
@@ -83,6 +84,14 @@ import { clearAllData } from './lib/db.js'
   }
 
   onMount(async () => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('subscribed') === 'true') {
+      subscribeToast = 'Subscription active — welcome to Pro!'
+      setTimeout(() => subscribeToast = '', 5000)
+      history.replaceState({}, '', window.location.pathname)
+    } else if (params.get('subscribed') === 'cancelled') {
+      history.replaceState({}, '', window.location.pathname)
+    }
     const unsubscribe = user.subscribe(async (u) => {
       if (u && u.id !== lastUserId) {
         dataReady = false
@@ -179,6 +188,11 @@ import { clearAllData } from './lib/db.js'
   <TeamSetup onDone={() => { needsTeamSetup = false }} />
 
 {:else}
+  <!-- Subscribe success toast -->
+  {#if subscribeToast}
+    <div class="subscribe-toast">{subscribeToast}</div>
+  {/if}
+
   <!-- Live session banner -->
   {#if liveSession}
     <div class="live-banner" on:click={() => activePage = 'live'}>
@@ -508,6 +522,23 @@ import { clearAllData } from './lib/db.js'
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { animation: spin 1s linear infinite; }
+
+  /* ── SUBSCRIBE TOAST ── */
+  .subscribe-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2d7a2d;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    z-index: 9999;
+    white-space: nowrap;
+  }
 
   /* ── LIVE BANNER ── */
   .live-banner {

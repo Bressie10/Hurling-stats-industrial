@@ -1,5 +1,26 @@
 <script>
   export let feature = 'this feature'  // e.g. "Player Stats"
+
+  import { supabase } from './supabase.js'
+
+  let loading = null  // 'personal' | 'club' | 'club_pro' | null
+
+  async function checkout(plan) {
+    loading = plan
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { plan },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (error || !data?.url) throw new Error(error?.message ?? 'No checkout URL returned')
+      window.location.href = data.url
+    } catch (e) {
+      console.error('Checkout error:', e)
+      alert('Could not start checkout. Please try again.')
+      loading = null
+    }
+  }
 </script>
 
 <div class="paywall">
@@ -21,7 +42,9 @@
         <li>Stat targets</li>
         <li>1 coach</li>
       </ul>
-      <button class="plan-btn personal" disabled>Coming soon</button>
+      <button class="plan-btn personal" on:click={() => checkout('personal')} disabled={loading !== null}>
+        {loading === 'personal' ? 'Redirecting…' : 'Get Personal Pro'}
+      </button>
     </div>
 
     <div class="plan featured">
@@ -34,7 +57,9 @@
         <li>6-digit team join codes</li>
         <li>Full analytics for all teams</li>
       </ul>
-      <button class="plan-btn club" disabled>Coming soon</button>
+      <button class="plan-btn club" on:click={() => checkout('club')} disabled={loading !== null}>
+        {loading === 'club' ? 'Redirecting…' : 'Get Club'}
+      </button>
     </div>
 
     <div class="plan">
@@ -45,11 +70,11 @@
         <li>Live match sharing</li>
         <li>Coaches watch in real time</li>
       </ul>
-      <button class="plan-btn club" disabled>Coming soon</button>
+      <button class="plan-btn club" on:click={() => checkout('club_pro')} disabled={loading !== null}>
+        {loading === 'club_pro' ? 'Redirecting…' : 'Get Club Pro'}
+      </button>
     </div>
   </div>
-
-  <p class="coming-soon-note">Online payments are being set up — check back soon.</p>
 </div>
 
 <style>
