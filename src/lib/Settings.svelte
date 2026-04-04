@@ -387,21 +387,6 @@
         <input bind:value={settings.teamName} on:input={autoSave} placeholder="e.g. Doora Barefield" />
         {/if}
       </div>
-      <div class="field-group">
-        <label>Age group</label>
-        <select bind:value={settings.ageGroup} on:change={autoSave}>
-          <option value="U12">U12</option>
-          <option value="U13">U13</option>
-          <option value="U14">U14</option>
-          <option value="U15">U15</option>
-          <option value="U16">U16</option>
-          <option value="Minor">Minor (U17)</option>
-          <option value="U18">U18</option>
-          <option value="U20">U20</option>
-          <option value="Junior">Junior</option>
-          <option value="Senior">Senior</option>
-        </select>
-      </div>
     </div>
   </div>
 
