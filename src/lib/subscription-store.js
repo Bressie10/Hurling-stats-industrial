@@ -95,14 +95,11 @@ export async function ensureProfile(userId) {
 }
 
 export async function loadSubscription(userId) {
-  console.log('[sub] loadSubscription called for', userId)
   try {
-    const { data: profile, error: profileErr } = await supabase
+    const { data: profile } = await supabase
       .from('profiles').select('club_id, team_id').eq('id', userId).maybeSingle()
-    console.log('[sub] profile:', profile, profileErr)
-    const { data: member, error: memberErr } = await supabase
+    const { data: member } = await supabase
       .from('club_members').select('role, club_id, team_id').eq('user_id', userId).maybeSingle()
-    console.log('[sub] member:', member, memberErr)
 
     const clubId = profile?.club_id ?? member?.club_id ?? null
     const teamId = profile?.team_id ?? member?.team_id ?? null
@@ -113,9 +110,8 @@ export async function loadSubscription(userId) {
     let teamName = null
     let teamCode = null
 
-    const { data: personalSub, error: subErr } = await supabase
+    const { data: personalSub } = await supabase
       .from('subscriptions').select('*').eq('user_id', userId).maybeSingle()
-    console.log('[sub] personalSub:', personalSub, subErr)
     if (personalSub) {
       sub = personalSub
     }
@@ -139,7 +135,6 @@ export async function loadSubscription(userId) {
       teamCode = team?.code ?? null
     }
 
-    console.log('[sub] final sub object:', sub)
     subscriptionStore.set({
       plan: sub?.plan ?? 'free',
       status: sub?.status ?? 'active',
