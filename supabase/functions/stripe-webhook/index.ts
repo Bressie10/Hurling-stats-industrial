@@ -53,15 +53,21 @@ Deno.serve(async (req) => {
       const plan = PLAN_BY_PRICE[priceId] ?? 'personal'
       const periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString()
 
-      await supabase.from('subscriptions').upsert({
-        user_id: userId,
-        plan,
-        status: stripeSub.status,
-        seat_limit: SEAT_LIMITS[plan] ?? 1,
-        current_period_end: periodEnd,
-        stripe_customer_id: session.customer as string,
-        stripe_subscription_id: session.subscription as string,
-      }, { onConflict: 'user_id' })
+      const { error: updateErr } = await supabase.from('subscriptions')
+        .update({
+          plan,
+          status: stripeSub.status,
+          seat_limit: SEAT_LIMITS[plan] ?? 1,
+          current_period_end: periodEnd,
+          stripe_customer_id: session.customer as string,
+          stripe_subscription_id: session.subscription as string,
+        })
+        .eq('user_id', userId)
+
+      if (updateErr) {
+        console.error('Failed to update subscription:', updateErr)
+        throw new Error(updateErr.message)
+      }
 
     } else if (event.type === 'customer.subscription.updated') {
       const stripeSub = event.data.object as Stripe.Subscription

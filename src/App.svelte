@@ -93,7 +93,7 @@ import { clearAllData } from './lib/db.js'
         if (u.data?.user) await loadSubscription(u.data.user.id)
         subscribeToast = 'Subscription active — welcome to Pro!'
         setTimeout(() => subscribeToast = '', 5000)
-      }, 2000)
+      }, 4000)
     } else if (params.get('subscribed') === 'cancelled') {
       history.replaceState({}, '', window.location.pathname)
     }
