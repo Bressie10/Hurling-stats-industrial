@@ -328,8 +328,73 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Lineup auto-populated on match start — `Match.svelte` builds `lineup` from squad jersey numbers silently; saved with match for PDF export; no interactive builder on setup screen
 - [x] Landing page — separate project at `~/gaa-stats-landing/`, single HTML file with embedded CSS/JS; showcases all features with CSS-drawn mockups, animated pitch map, scroll reveals; live at https://github.com/Bressie10/gaa-stats-landing-
 
+- [x] Stripe subscription payments — Personal Pro (€7.99/mo), Club (€15/mo), Club Pro (€25/mo); Stripe Checkout hosted by Supabase Edge Functions; webhook syncs plan/status to DB; Stripe Customer Portal for managing card/invoices/cancellation
+
 ### Still To Build
 - [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
+
+---
+
+## Stripe & Payments
+
+### Architecture
+Payments run through four Supabase Edge Functions (all deployed with `--no-verify-jwt`):
+
+| Function | Purpose |
+|---|---|
+| `create-checkout-session` | Creates a Stripe Checkout session and returns the URL |
+| `stripe-webhook` | Receives Stripe events and syncs subscription state to DB |
+| `cancel-subscription` | Cancels at period end via Stripe; DB updated by webhook |
+| `create-portal-session` | Creates a Stripe Customer Portal session for billing management |
+
+### Webhook events handled
+- `checkout.session.completed` — activates plan after payment
+- `customer.subscription.updated` — syncs plan, status, period end, `cancel_at_period_end`
+- `customer.subscription.deleted` — downgrades to free
+- `invoice.payment_succeeded` — refreshes period end on renewal
+- `invoice.payment_failed` — marks status as `past_due`
+
+### DB columns (subscriptions table)
+| Column | Purpose |
+|---|---|
+| `plan` | `'free'` \| `'personal'` \| `'club'` \| `'club_pro'` |
+| `status` | `'active'` \| `'trialing'` \| `'past_due'` \| `'cancelled'` |
+| `cancel_at_period_end` | `true` when user has cancelled but period hasn't ended |
+| `current_period_end` | ISO timestamp of next billing date |
+| `stripe_customer_id` | Reused on resubscribe to avoid duplicate Stripe customers |
+| `stripe_subscription_id` | Used to match webhook events to DB rows |
+
+`user_id` has a UNIQUE constraint — one subscription row per user.
+
+### Supabase secrets required
+```
+STRIPE_SECRET_KEY       sk_test_... (or sk_live_... in production)
+STRIPE_WEBHOOK_SECRET   whsec_...
+```
+
+### Going live (test → production)
+1. Activate Stripe account (business details + bank account)
+2. Switch to live mode in Stripe
+3. Create the same 3 products/prices in live mode — copy the new `price_...` IDs
+4. Update the 3 price IDs in `supabase/functions/create-checkout-session/index.ts`
+5. Update the 3 price IDs in `supabase/functions/stripe-webhook/index.ts` (`PLAN_BY_PRICE`)
+6. Run: `supabase secrets set STRIPE_SECRET_KEY=sk_live_...`
+7. Create a new live webhook endpoint in Stripe pointing to the same URL, add the same 5 events
+8. Run: `supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_live_...`
+9. Redeploy all four functions
+
+### Deploying edge functions
+Requires the Supabase CLI (`~/Downloads/supabase` or install fresh):
+```bash
+supabase link --project-ref syikhsgovqogzkmmhuis
+supabase functions deploy create-checkout-session --no-verify-jwt
+supabase functions deploy stripe-webhook --no-verify-jwt
+supabase functions deploy cancel-subscription --no-verify-jwt
+supabase functions deploy create-portal-session --no-verify-jwt
+```
+
+### Stripe Customer Portal
+Must be activated in Stripe dashboard → Settings → Billing → Customer portal before `create-portal-session` will work. The "Manage billing" button in Settings opens the portal for the logged-in user (no email entry required — session is created server-side using their `stripe_customer_id`).
 
 ---
 
