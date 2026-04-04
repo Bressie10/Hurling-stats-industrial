@@ -378,17 +378,17 @@
   {/if}
 
   <!-- ── TEAM ── -->
+  {#if $subscriptionStore.isOwner || !$subscriptionStore.clubId}
   <div class="section-block">
     <div class="section-title">Team</div>
     <div class="card">
       <div class="field-group">
-        {#if $subscriptionStore.isOwner || !$subscriptionStore.clubId}
         <label>Club name</label>
         <input bind:value={settings.teamName} on:input={autoSave} placeholder="e.g. Doora Barefield" />
-        {/if}
       </div>
     </div>
   </div>
+  {/if}
 
   <!-- ── MATCH SETUP ── -->
   <div class="section-block">
