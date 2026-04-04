@@ -91,7 +91,7 @@ import { clearAllData } from './lib/db.js'
       setTimeout(async () => {
         const u = await supabase.auth.getUser()
         if (u.data?.user) await loadSubscription(u.data.user.id)
-        subscribeToast = 'Subscription active — welcome to Pro!'
+        subscribeToast = "You're now a Pro — let's go!"
         setTimeout(() => subscribeToast = '', 5000)
       }, 4000)
     } else if (params.get('subscribed') === 'cancelled') {
