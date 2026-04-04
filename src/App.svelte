@@ -86,9 +86,14 @@ import { clearAllData } from './lib/db.js'
   onMount(async () => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('subscribed') === 'true') {
-      subscribeToast = 'Subscription active — welcome to Pro!'
-      setTimeout(() => subscribeToast = '', 5000)
       history.replaceState({}, '', window.location.pathname)
+      // Reload subscription — give webhook a moment to write to DB
+      setTimeout(async () => {
+        const u = await supabase.auth.getUser()
+        if (u.data?.user) await loadSubscription(u.data.user.id)
+        subscribeToast = 'Subscription active — welcome to Pro!'
+        setTimeout(() => subscribeToast = '', 5000)
+      }, 2000)
     } else if (params.get('subscribed') === 'cancelled') {
       history.replaceState({}, '', window.location.pathname)
     }
