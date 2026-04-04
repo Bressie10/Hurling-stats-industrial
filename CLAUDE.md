@@ -394,7 +394,15 @@ supabase functions deploy create-portal-session --no-verify-jwt
 ```
 
 ### Stripe Customer Portal
-Must be activated in Stripe dashboard → Settings → Billing → Customer portal before `create-portal-session` will work. The "Manage billing" button in Settings opens the portal for the logged-in user (no email entry required — session is created server-side using their `stripe_customer_id`).
+Activated. The "Manage billing" button in Settings opens the portal for the logged-in user (no email entry required — session is created server-side using their `stripe_customer_id`).
+
+### Sandbox setup status
+All of the following are complete and confirmed working in test mode:
+- [x] SQL migrations run (`stripe_customer_id`, `stripe_subscription_id`, `cancel_at_period_end`, unique constraint on `user_id`)
+- [x] Webhook events registered: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
+- [x] Stripe Customer Portal activated
+- [x] All four edge functions deployed with `--no-verify-jwt`
+- [x] Supabase secrets set: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 
 ---
 
