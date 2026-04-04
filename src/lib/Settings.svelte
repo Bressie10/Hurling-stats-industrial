@@ -2,8 +2,32 @@
   import { onMount } from 'svelte'
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
-  import { user } from './auth-store.js'
+  import { user, signOut } from './auth-store.js'
   import { subscriptionStore, isPro } from './subscription-store.js'
+  import { supabase } from './supabase.js'
+  import { clearAllData } from './db.js'
+
+  let deletingAccount = false
+
+  async function handleDeleteAccount() {
+    const confirmed = confirm(
+      'Are you sure you want to delete your account?\n\n' +
+      'This will permanently delete all your matches, squad, and data. This cannot be undone.'
+    )
+    if (!confirmed) return
+    const reconfirmed = confirm('Last warning — this is permanent. Delete account?')
+    if (!reconfirmed) return
+
+    deletingAccount = true
+    try {
+      await clearAllData()
+      await supabase.rpc('delete_own_account')
+      await signOut()
+    } catch (e) {
+      alert('Failed to delete account: ' + e.message)
+      deletingAccount = false
+    }
+  }
 
   let settings = { ...$settingsStore, quickViewSections: { ...$settingsStore.quickViewSections } }
   let savedFlash = false
@@ -589,6 +613,22 @@
     </div>
   </div>
 
+  <!-- ── DANGER ZONE ── -->
+  <div class="section-block">
+    <div class="section-title danger-title">Danger Zone</div>
+    <div class="card danger-card">
+      <div class="danger-row">
+        <div>
+          <strong>Delete account</strong>
+          <p>Permanently deletes your account and all data. Cannot be undone.</p>
+        </div>
+        <button class="delete-account-btn" on:click={handleDeleteAccount} disabled={deletingAccount}>
+          {deletingAccount ? 'Deleting…' : 'Delete account'}
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <style>
@@ -913,4 +953,32 @@
     color: var(--primary);
     background: rgba(var(--primary-rgb), 0.05);
   }
+
+  /* Danger zone */
+  .danger-title { color: #c62828; }
+  .danger-card { border-color: #f5c0c0; background: #fff8f8; }
+  .danger-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .danger-row strong { display: block; font-size: 13px; color: var(--text); margin-bottom: 3px; }
+  .danger-row p { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .delete-account-btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1.5px solid #e53935;
+    background: none;
+    color: #e53935;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .delete-account-btn:hover { background: #e53935; color: white; }
+  .delete-account-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

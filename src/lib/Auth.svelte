@@ -86,10 +86,9 @@
       <button class="submit-btn" on:click={handleLogin} disabled={loading}>
         {loading ? 'Signing in…' : 'Sign in'}
       </button>
-      <div class="auth-hint">
-        No account?
-        <button class="link-btn" on:click={() => setMode('choose')}>Create one</button>
-      </div>
+      <button class="create-account-btn" on:click={() => setMode('choose')}>
+        Create an account
+      </button>
 
     <!-- ── CHOOSE SIGNUP TYPE ── -->
     {:else if mode === 'choose'}
@@ -321,6 +320,21 @@
     font-size: 13px; font-weight: 600; cursor: pointer;
     font-family: inherit; text-decoration: underline;
   }
+  .create-account-btn {
+    width: 100%;
+    padding: 15px;
+    background: none;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    min-height: 50px;
+  }
+  .create-account-btn:hover { background: rgba(var(--primary-rgb), 0.06); }
 
   /* ── Choose type ── */
   .choose-title {
