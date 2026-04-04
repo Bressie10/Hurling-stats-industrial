@@ -347,7 +347,7 @@
     <div class="section-title">Team</div>
     <div class="card">
       <div class="field-group">
-        <label>Team name</label>
+        <label>Club name</label>
         <input bind:value={settings.teamName} on:input={autoSave} placeholder="e.g. Doora Barefield" />
       </div>
       <div class="field-group">
