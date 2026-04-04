@@ -529,20 +529,35 @@ import { clearAllData } from './lib/db.js'
   .spin { animation: spin 1s linear infinite; }
 
   /* ── SUBSCRIBE TOAST ── */
+  @keyframes toast-in {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(24px) scale(0.9); }
+    60%  { transform: translateX(-50%) translateY(-4px) scale(1.03); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
   .subscribe-toast {
     position: fixed;
     bottom: 80px;
     left: 50%;
     transform: translateX(-50%);
-    background: #2d7a2d;
+    background: linear-gradient(90deg, #2d7a2d, #4caf50, #2d7a2d);
+    background-size: 200% auto;
     color: white;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 12px 20px;
-    border-radius: 24px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 14px 28px;
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(45, 122, 45, 0.45), 0 2px 8px rgba(0,0,0,0.15);
     z-index: 9999;
     white-space: nowrap;
+    animation: toast-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+               shimmer 2s linear 0.5s infinite;
   }
 
   /* ── LIVE BANNER ── */
