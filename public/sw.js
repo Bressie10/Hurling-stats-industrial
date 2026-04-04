@@ -1,4 +1,4 @@
-const CACHE = 'gaa-industrial-v3'
+const CACHE = 'gaa-industrial-v4'
 
 const PRECACHE = [
   '/',
