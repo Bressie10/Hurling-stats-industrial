@@ -551,7 +551,6 @@
             {#if selectedMatch.competition}<tr><td class="pi-label">Competition</td><td>{selectedMatch.competition}</td></tr>{/if}
             <tr><td class="pi-label">Period</td><td>{selectedMatch.period || '—'}</td></tr>
             <tr><td class="pi-label">Team</td><td>{$settingsStore.teamName || 'Home'}</td></tr>
-            <tr><td class="pi-label">Age Group</td><td>{$settingsStore.ageGroup || '—'}</td></tr>
           </tbody>
         </table>
       </div>

@@ -5,7 +5,6 @@ const SETTINGS_KEY = 'doora-settings'
 const defaults = {
   // Team
   teamName: 'Doora Barefield',
-  ageGroup: 'Minor',
 
   // Match setup fields
   showVenueField: true,

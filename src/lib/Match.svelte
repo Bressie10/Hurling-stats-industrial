@@ -684,7 +684,7 @@
     <img src="doora-barefield.png" alt="Doora Barefield GAA" class="hero-logo">
     <div>
       <h2>New Match</h2>
-      <p>{$settingsStore.teamName || 'GAA Stats'} · {$settingsStore.ageGroup || ''} Hurling</p>
+      <p>{$settingsStore.teamName || 'GAA Stats'} · Hurling</p>
     </div>
   </div>
 
