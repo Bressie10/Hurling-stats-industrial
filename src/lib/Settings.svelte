@@ -8,6 +8,26 @@
   import { clearAllData } from './db.js'
 
   let deletingAccount = false
+  let cancellingSubscription = false
+  let cancelSuccess = false
+
+  async function handleCancelSubscription() {
+    const confirmed = confirm(
+      'Cancel your subscription?\n\nYou\'ll keep access until the end of your current billing period.'
+    )
+    if (!confirmed) return
+
+    cancellingSubscription = true
+    try {
+      const { error } = await supabase.functions.invoke('cancel-subscription')
+      if (error) throw new Error(error.message)
+      cancelSuccess = true
+      setTimeout(() => cancelSuccess = false, 4000)
+    } catch (e) {
+      alert('Failed to cancel subscription: ' + e.message)
+    }
+    cancellingSubscription = false
+  }
 
   // Teams management
   let teams = []
@@ -71,6 +91,8 @@
 
     deletingAccount = true
     try {
+      // Cancel Stripe subscription if active
+      await supabase.functions.invoke('cancel-subscription').catch(() => {})
       await clearAllData()
       await supabase.rpc('delete_own_account')
       await signOut()
@@ -739,6 +761,19 @@
   <div class="section-block">
     <div class="section-title danger-title">Danger Zone</div>
     <div class="card danger-card">
+      {#if $isPro}
+        <div class="danger-row">
+          <div>
+            <strong>Cancel subscription</strong>
+            <p>You'll keep access until the end of your billing period.</p>
+            {#if cancelSuccess}<span class="cancel-success">Subscription cancelled.</span>{/if}
+          </div>
+          <button class="cancel-sub-btn" on:click={handleCancelSubscription} disabled={cancellingSubscription}>
+            {cancellingSubscription ? 'Cancelling…' : 'Cancel subscription'}
+          </button>
+        </div>
+        <div class="danger-divider"></div>
+      {/if}
       <div class="danger-row">
         <div>
           <strong>Delete account</strong>
@@ -1161,4 +1196,35 @@
   }
   .delete-account-btn:hover { background: #e53935; color: white; }
   .delete-account-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .cancel-sub-btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .cancel-sub-btn:hover { background: var(--surface-2); color: var(--text); }
+  .cancel-sub-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .danger-divider {
+    height: 1px;
+    background: var(--divider);
+    margin: 4px 0;
+  }
+
+  .cancel-success {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #2d7a2d;
+    font-weight: 600;
+  }
 </style>
