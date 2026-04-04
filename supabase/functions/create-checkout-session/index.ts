@@ -1,4 +1,4 @@
-import Stripe from 'https://esm.sh/stripe@14'
+import Stripe from 'https://esm.sh/stripe@14?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -21,17 +21,16 @@ Deno.serve(async (req) => {
 
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) return new Response('Unauthorized', { status: 401 })
 
-    const { data: { user }, error: userErr } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
     )
+    const { data: { user }, error: userErr } = await authClient.auth.getUser()
     if (userErr || !user) return new Response('Unauthorized', { status: 401 })
 
     const { plan } = await req.json()

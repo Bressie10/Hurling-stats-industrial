@@ -1,4 +1,4 @@
-import Stripe from 'https://esm.sh/stripe@14'
+import Stripe from 'https://esm.sh/stripe@14?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
