@@ -87,13 +87,21 @@ import { clearAllData } from './lib/db.js'
     const params = new URLSearchParams(window.location.search)
     if (params.get('subscribed') === 'true') {
       history.replaceState({}, '', window.location.pathname)
-      // Reload subscription — give webhook a moment to write to DB
-      setTimeout(async () => {
-        const u = await supabase.auth.getUser()
-        if (u.data?.user) await loadSubscription(u.data.user.id)
-        subscribeToast = "You're now a Pro — let's go!"
-        setTimeout(() => subscribeToast = '', 5000)
-      }, 4000)
+      // Poll until webhook has written the plan upgrade (up to 16s)
+      let attempts = 0
+      const poll = setInterval(async () => {
+        attempts++
+        const { data: { user: u } } = await supabase.auth.getUser()
+        if (!u) { clearInterval(poll); return }
+        await loadSubscription(u.id)
+        let currentPlan
+        subscriptionStore.subscribe(s => currentPlan = s.plan)()
+        if (currentPlan !== 'free' || attempts >= 8) {
+          clearInterval(poll)
+          subscribeToast = "You're now a Pro — let's go!"
+          setTimeout(() => subscribeToast = '', 5000)
+        }
+      }, 2000)
     } else if (params.get('subscribed') === 'cancelled') {
       history.replaceState({}, '', window.location.pathname)
     }

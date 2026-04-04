@@ -4,6 +4,7 @@ import { supabase } from './supabase.js'
 export const subscriptionStore = writable({
   plan: 'free',        // 'free' | 'personal' | 'club' | 'club_pro'
   status: 'active',    // 'active' | 'trialing' | 'past_due' | 'cancelled'
+  cancelAtPeriodEnd: false,
   clubId: null,
   clubName: null,
   teamId: null,
@@ -138,6 +139,7 @@ export async function loadSubscription(userId) {
     subscriptionStore.set({
       plan: sub?.plan ?? 'free',
       status: sub?.status ?? 'active',
+      cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
       clubId, clubName, teamId, teamName, teamCode, isOwner,
       currentPeriodEnd: sub?.current_period_end ?? null,
       loading: false
@@ -145,7 +147,7 @@ export async function loadSubscription(userId) {
   } catch (e) {
     console.warn('Failed to load subscription:', e)
     subscriptionStore.set({
-      plan: 'free', status: 'active', clubId: null, clubName: null,
+      plan: 'free', status: 'active', cancelAtPeriodEnd: false, clubId: null, clubName: null,
       teamId: null, teamName: null, teamCode: null, isOwner: false,
       currentPeriodEnd: null, loading: false
     })

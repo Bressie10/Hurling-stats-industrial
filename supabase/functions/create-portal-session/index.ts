@@ -17,31 +17,31 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) return new Response('Unauthorized', { status: 401 })
 
-    // Same auth pattern as create-checkout-session (service role + getUser)
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: userErr } = await supabase.auth.getUser(token)
     if (userErr || !user) return new Response('Unauthorized', { status: 401 })
 
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('stripe_subscription_id')
+      .select('stripe_customer_id')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (!sub?.stripe_subscription_id) {
-      // No Stripe subscription — nothing to cancel, not an error
-      return new Response(JSON.stringify({ success: true, noop: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    if (!sub?.stripe_customer_id) {
+      return new Response(JSON.stringify({ error: 'No billing account found' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Cancel at period end — user keeps access until billing cycle ends
-    // The customer.subscription.updated webhook will sync cancel_at_period_end to the DB
-    await stripe.subscriptions.update(sub.stripe_subscription_id, {
-      cancel_at_period_end: true
+    const { return_url } = await req.json().catch(() => ({ return_url: null }))
+    const appUrl = req.headers.get('origin') ?? 'https://syikhsgovqogzkmmhuis.supabase.co'
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripe_customer_id,
+      return_url: return_url ?? appUrl,
     })
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (e) {

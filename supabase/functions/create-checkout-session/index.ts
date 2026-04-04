@@ -36,20 +36,36 @@ Deno.serve(async (req) => {
     const { plan } = await req.json()
     const priceId = PRICE_IDS[plan]
     if (!priceId) {
-      return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: 'Invalid plan' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
+
+    // Reuse existing Stripe customer if we have one — avoids duplicate customers on resubscribe
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
     const appUrl = req.headers.get('origin') ?? 'https://syikhsgovqogzkmmhuis.supabase.co'
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Record<string, unknown> = {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/?subscribed=true`,
       cancel_url:  `${appUrl}/?subscribed=cancelled`,
       client_reference_id: user.id,
-      customer_email: user.email,
       metadata: { plan, seat_limit: String(SEAT_LIMITS[plan]) },
-    })
+    }
+
+    if (existingSub?.stripe_customer_id) {
+      sessionParams.customer = existingSub.stripe_customer_id
+    } else {
+      sessionParams.customer_email = user.email
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams as Stripe.Checkout.SessionCreateParams)
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
