@@ -4,6 +4,11 @@
   import { settingsStore } from './settings-store.js'
   import { user } from './auth-store.js'
   import { deleteMatchFromCloud } from './sync.js'
+  import Upgrade from './Upgrade.svelte'
+
+  export let proAccess = false
+
+  const FREE_MATCH_LIMIT = 3
 
   let matches = []
   let search = ''
@@ -14,6 +19,9 @@
     matches = await loadMatches()
     matches.sort((a, b) => new Date(b.date) - new Date(a.date))
   })
+
+  $: visibleMatches = proAccess ? filtered : filtered.slice(0, FREE_MATCH_LIMIT)
+  $: lockedCount = proAccess ? 0 : Math.max(0, filtered.length - FREE_MATCH_LIMIT)
 
   async function deleteMatch(id, e) {
     e.stopPropagation()
@@ -906,7 +914,7 @@
         </div>
       </div>
     {:else}
-      {#each filtered as match}
+      {#each visibleMatches as match}
         {@const result = getResult(match)}
         {@const topScorer = getTopScorer(match)}
         <div class="match-card" on:click={() => selectedMatch = match}>
@@ -949,12 +957,55 @@
           {/if}
         </div>
       {/each}
+
+      {#if lockedCount > 0}
+        <div class="history-paywall">
+          <div class="history-paywall-lock">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <strong>{lockedCount} older {lockedCount === 1 ? 'match' : 'matches'} locked</strong>
+            <p>Upgrade to Pro to view your full match history</p>
+          </div>
+          <div class="history-paywall-prices">
+            <span>Personal €7.99/mo · Club €19.99/mo</span>
+          </div>
+        </div>
+      {/if}
     {/if}
 
   {/if}
 </div>
 
 <style>
+  .history-paywall {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(var(--primary-rgb), 0.04);
+    border: 1.5px dashed rgba(var(--primary-rgb), 0.3);
+    border-radius: 12px;
+    color: var(--text);
+  }
+  .history-paywall-lock {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .history-paywall strong { display: block; font-size: 13px; margin-bottom: 2px; }
+  .history-paywall p { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .history-paywall-prices {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    white-space: nowrap;
+  }
+
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
 

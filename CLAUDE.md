@@ -96,7 +96,7 @@ Draft match is saved with `id: 'draft'` and `isDraft: true`. It is auto-resumed 
 
 ### Supabase (cloud sync)
 
-Project URL: `https://kszidkfsvszhglufpcwq.supabase.co`
+Project URL: `https://syikhsgovqogzkmmhuis.supabase.co`
 
 | Table | Purpose |
 |---|---|

@@ -10,9 +10,11 @@ import { clearAllData } from './lib/db.js'
   import Settings from './lib/Settings.svelte'
   import StatTargets from './lib/StatTargets.svelte'
   import Auth from './lib/Auth.svelte'
+  import Upgrade from './lib/Upgrade.svelte'
   import { user, authLoading, signOut } from './lib/auth-store.js'
   import { syncToSupabase, syncFromSupabase } from './lib/sync.js'
   import { settingsStore } from './lib/settings-store.js'
+  import { subscriptionStore, isPro, ensureProfile, loadSubscription } from './lib/subscription-store.js'
   import { onMount } from 'svelte'
 
   function hexToRgbString(hex) {
@@ -80,6 +82,11 @@ import { clearAllData } from './lib/db.js'
         dataReady = false
         lastUserId = u.id
 
+        // Create profile/club/subscription records on first login
+        await ensureProfile(u.id)
+        // Load subscription plan
+        await loadSubscription(u.id)
+
         const previousUserId = localStorage.getItem(LAST_USER_KEY)
 
         if (previousUserId === u.id) {
@@ -94,6 +101,7 @@ import { clearAllData } from './lib/db.js'
       if (!u) {
         lastUserId = null
         dataReady = false
+        subscriptionStore.set({ plan: 'free', status: 'active', clubId: null, clubCode: null, clubName: null, seatLimit: 1, currentPeriodEnd: null, loading: false })
       }
     })
     return unsubscribe
@@ -208,17 +216,33 @@ import { clearAllData } from './lib/db.js'
       {#if activePage === 'match'}
         <Match />
       {:else if activePage === 'timeline'}
-        <Timeline />
+        {#if $isPro}
+          <Timeline />
+        {:else}
+          <Upgrade feature="Timeline" />
+        {/if}
       {:else if activePage === 'player'}
-        <PlayerStats />
+        {#if $isPro}
+          <PlayerStats />
+        {:else}
+          <Upgrade feature="Player Stats" />
+        {/if}
       {:else if activePage === 'team'}
-        <TeamStats />
+        {#if $isPro}
+          <TeamStats />
+        {:else}
+          <Upgrade feature="Team Stats" />
+        {/if}
       {:else if activePage === 'history'}
-        <History />
+        <History proAccess={$isPro} />
       {:else if activePage === 'squad'}
         <Squad />
       {:else if activePage === 'targets'}
-        <StatTargets />
+        {#if $isPro}
+          <StatTargets />
+        {:else}
+          <Upgrade feature="Stat Targets" />
+        {/if}
       {:else if activePage === 'settings'}
         <Settings />
       {/if}

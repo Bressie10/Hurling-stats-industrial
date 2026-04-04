@@ -3,6 +3,7 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user } from './auth-store.js'
+  import { subscriptionStore, isPro } from './subscription-store.js'
 
   let settings = { ...$settingsStore, quickViewSections: { ...$settingsStore.quickViewSections } }
   let savedFlash = false
@@ -160,6 +161,63 @@
       <p>Configure every aspect of the app for your team</p>
     </div>
     <div class="saved-badge" class:visible={savedFlash}>Saved</div>
+  </div>
+
+  <!-- ── SUBSCRIPTION ── -->
+  <div class="section-block">
+    <div class="section-title">Subscription</div>
+    <div class="card">
+      {#if $subscriptionStore.loading}
+        <div class="sub-loading">Loading…</div>
+      {:else if $isPro}
+        <div class="sub-active">
+          <div class="sub-badge pro">
+            {$subscriptionStore.plan === 'club' ? 'Club Plan' : 'Personal Pro'}
+          </div>
+          <div class="sub-detail">
+            {#if $subscriptionStore.currentPeriodEnd}
+              Renews {new Date($subscriptionStore.currentPeriodEnd).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {:else}
+              Active
+            {/if}
+          </div>
+          {#if $subscriptionStore.clubCode}
+            <div class="sub-code-row">
+              <span class="sub-code-label">Club invite code</span>
+              <span class="sub-code">{$subscriptionStore.clubCode}</span>
+            </div>
+          {/if}
+          <button class="manage-btn" disabled>Manage subscription — coming soon</button>
+        </div>
+      {:else}
+        <div class="sub-free">
+          <div class="sub-badge free">Free</div>
+          <div class="sub-detail">Match logging · Squad · Last 3 matches</div>
+          {#if $subscriptionStore.clubCode}
+            <div class="sub-code-row">
+              <span class="sub-code-label">Club invite code</span>
+              <span class="sub-code">{$subscriptionStore.clubCode}</span>
+            </div>
+          {/if}
+          <div class="upgrade-options">
+            <div class="upgrade-option">
+              <div>
+                <strong>Personal Pro</strong>
+                <span>Full analytics, 1 coach</span>
+              </div>
+              <button class="upgrade-btn" disabled>€7.99/mo — coming soon</button>
+            </div>
+            <div class="upgrade-option">
+              <div>
+                <strong>Club Plan</strong>
+                <span>Full analytics, up to 6 coaches</span>
+              </div>
+              <button class="upgrade-btn featured" disabled>€19.99/mo — coming soon</button>
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- ── TEAM ── -->
@@ -778,5 +836,81 @@
   }
   .preview-badge {
     padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  }
+
+  /* ── Subscription ── */
+  .sub-loading { font-size: 13px; color: var(--text-faint); padding: 8px 0; }
+  .sub-active, .sub-free { display: flex; flex-direction: column; gap: 12px; }
+  .sub-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    align-self: flex-start;
+  }
+  .sub-badge.pro { background: rgba(var(--primary-rgb), 0.15); color: var(--primary); }
+  .sub-badge.free { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+  .sub-detail { font-size: 13px; color: var(--text-muted); }
+  .sub-code-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .sub-code-label { font-size: 12px; color: var(--text-muted); }
+  .sub-code {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.12em;
+    font-family: monospace;
+    margin-left: auto;
+  }
+  .manage-btn {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: not-allowed;
+    font-family: inherit;
+    opacity: 0.7;
+  }
+  .upgrade-options { display: flex; flex-direction: column; gap: 10px; }
+  .upgrade-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .upgrade-option strong { display: block; font-size: 13px; color: var(--text); }
+  .upgrade-option span { font-size: 12px; color: var(--text-muted); }
+  .upgrade-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: not-allowed;
+    font-family: inherit;
+    white-space: nowrap;
+    opacity: 0.75;
+  }
+  .upgrade-btn.featured {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.05);
   }
 </style>
