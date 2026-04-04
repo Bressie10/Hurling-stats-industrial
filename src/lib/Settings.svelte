@@ -3,11 +3,62 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isPro } from './subscription-store.js'
+  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
 
   let deletingAccount = false
+
+  // Teams management
+  let teams = []
+  let newTeamName = ''
+  let addingTeam = false
+  let teamError = ''
+  let editingTeamId = null
+  let editingTeamName = ''
+
+  async function loadTeams() {
+    if ($subscriptionStore.clubId) {
+      teams = await loadClubTeams($subscriptionStore.clubId)
+    }
+  }
+
+  async function handleAddTeam() {
+    if (!newTeamName.trim()) return
+    if (teams.length >= 4) { teamError = 'Maximum 4 teams on Club plan'; return }
+    addingTeam = true
+    teamError = ''
+    try {
+      const t = await createTeam($subscriptionStore.clubId, newTeamName)
+      teams = [...teams, t]
+      newTeamName = ''
+    } catch (e) {
+      teamError = e.message
+    }
+    addingTeam = false
+  }
+
+  async function handleDeleteTeam(id) {
+    if (!confirm('Delete this team? Coaches linked to it will lose access.')) return
+    await deleteTeam(id)
+    teams = teams.filter(t => t.id !== id)
+  }
+
+  async function handleRenameTeam(id) {
+    if (!editingTeamName.trim()) return
+    const { error } = await supabase.from('teams').update({ name: editingTeamName.trim() }).eq('id', id)
+    if (!error) {
+      teams = teams.map(t => t.id === id ? { ...t, name: editingTeamName.trim() } : t)
+    }
+    editingTeamId = null
+    editingTeamName = ''
+  }
+
+  async function copyCode(code) {
+    await navigator.clipboard.writeText(code)
+  }
+
+  $: if ($subscriptionStore.clubId) loadTeams()
 
   async function handleDeleteAccount() {
     const confirmed = confirm(
@@ -250,6 +301,46 @@
       {/if}
     </div>
   </div>
+
+  <!-- ── CLUB TEAMS ── -->
+  {#if $isClub && $subscriptionStore.isOwner}
+  <div class="section-block">
+    <div class="section-title">Club Teams</div>
+    <div class="card">
+      {#each teams as team}
+        <div class="team-row">
+          {#if editingTeamId === team.id}
+            <input class="team-name-input" bind:value={editingTeamName} on:keydown={e => e.key === 'Enter' && handleRenameTeam(team.id)} />
+            <button class="team-save-btn" on:click={() => handleRenameTeam(team.id)}>Save</button>
+            <button class="team-cancel-btn" on:click={() => { editingTeamId = null }}>Cancel</button>
+          {:else}
+            <div class="team-info">
+              <span class="team-name">{team.name}</span>
+              <span class="team-code-badge">Code: {team.code}</span>
+            </div>
+            <div class="team-actions">
+              <button class="team-copy-btn" on:click={() => copyCode(team.code)}>Copy code</button>
+              <button class="team-edit-btn" on:click={() => { editingTeamId = team.id; editingTeamName = team.name }}>Rename</button>
+              <button class="team-delete-btn" on:click={() => handleDeleteTeam(team.id)}>Delete</button>
+            </div>
+          {/if}
+        </div>
+      {/each}
+
+      {#if teams.length < 4}
+        <div class="team-add-row">
+          <input class="team-name-input" bind:value={newTeamName} placeholder="New team name" on:keydown={e => e.key === 'Enter' && handleAddTeam()} />
+          <button class="team-save-btn" on:click={handleAddTeam} disabled={addingTeam}>
+            {addingTeam ? 'Adding…' : 'Add team'}
+          </button>
+        </div>
+      {:else}
+        <p class="team-limit-note">Maximum 4 teams reached</p>
+      {/if}
+      {#if teamError}<p class="team-error">{teamError}</p>{/if}
+    </div>
+  </div>
+  {/if}
 
   <!-- ── TEAM ── -->
   <div class="section-block">
@@ -884,6 +975,51 @@
   .preview-badge {
     padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;
   }
+
+  /* ── Club Teams ── */
+  .team-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--divider-faint);
+  }
+  .team-row:last-child { border-bottom: none; }
+  .team-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .team-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .team-code-badge {
+    font-size: 12px; color: var(--primary); font-weight: 700;
+    letter-spacing: 0.08em; font-family: monospace;
+  }
+  .team-actions { display: flex; gap: 6px; }
+  .team-add-row { display: flex; gap: 8px; padding-top: 12px; }
+  .team-name-input {
+    flex: 1; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--input-border); background: var(--surface);
+    color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .team-save-btn {
+    padding: 8px 14px; border-radius: 8px; border: none;
+    background: var(--primary); color: var(--primary-text);
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    white-space: nowrap;
+  }
+  .team-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .team-cancel-btn, .team-edit-btn {
+    padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: none;
+    color: var(--text-muted); font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .team-copy-btn {
+    padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: none;
+    color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .team-delete-btn {
+    padding: 7px 12px; border-radius: 8px;
+    border: 1px solid #fca5a5; background: none;
+    color: #e53935; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .team-limit-note { font-size: 13px; color: var(--text-muted); padding-top: 10px; }
+  .team-error { font-size: 13px; color: #e53935; padding-top: 6px; }
 
   /* ── Subscription ── */
   .sub-loading { font-size: 13px; color: var(--text-faint); padding: 8px 0; }
