@@ -21,16 +21,16 @@ Deno.serve(async (req) => {
 
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) return new Response('Unauthorized', { status: 401 })
 
-    const authClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
-    const { data: { user }, error: userErr } = await authClient.auth.getUser()
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userErr } = await supabase.auth.getUser(token)
     if (userErr || !user) return new Response('Unauthorized', { status: 401 })
 
     const { plan } = await req.json()

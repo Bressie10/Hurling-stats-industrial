@@ -8,10 +8,8 @@
   async function checkout(plan) {
     loading = plan
     try {
-      const { data: { session } } = await supabase.auth.getSession()
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: { plan },
-        headers: { Authorization: `Bearer ${session.access_token}` },
       })
       if (error || !data?.url) throw new Error(error?.message ?? 'No checkout URL returned')
       window.location.href = data.url
