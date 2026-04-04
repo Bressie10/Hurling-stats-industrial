@@ -1,4 +1,4 @@
-const CACHE = 'doora-v2'
+const CACHE = 'gaa-industrial-v1'
 
 const PRECACHE = [
   '/',
