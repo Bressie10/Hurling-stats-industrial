@@ -38,15 +38,11 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Cancel at period end so they keep access until billing cycle ends
+    // Cancel at period end — they keep access until billing cycle ends
+    // The customer.subscription.updated webhook will update the DB status
     await stripe.subscriptions.update(sub.stripe_subscription_id, {
       cancel_at_period_end: true
     })
-
-    // Mark as cancelled in DB
-    await supabase.from('subscriptions')
-      .update({ status: 'cancelled' })
-      .eq('user_id', user.id)
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

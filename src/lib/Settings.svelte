@@ -3,7 +3,7 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam } from './subscription-store.js'
+  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
 
@@ -21,6 +21,8 @@
     try {
       const { error } = await supabase.functions.invoke('cancel-subscription')
       if (error) throw new Error(error.message)
+      // Reload subscription so UI reflects cancellation
+      if ($user) await loadSubscription($user.id)
       cancelSuccess = true
       setTimeout(() => cancelSuccess = false, 4000)
     } catch (e) {
@@ -91,8 +93,9 @@
 
     deletingAccount = true
     try {
-      // Cancel Stripe subscription if active
-      await supabase.functions.invoke('cancel-subscription').catch(() => {})
+      // Cancel Stripe subscription immediately (not at period end) before deleting
+      const { error: cancelErr } = await supabase.functions.invoke('cancel-subscription')
+      if (cancelErr) console.warn('Stripe cancellation failed during account delete:', cancelErr)
       await clearAllData()
       await supabase.rpc('delete_own_account')
       await signOut()
