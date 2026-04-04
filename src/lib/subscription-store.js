@@ -118,10 +118,12 @@ export async function loadSubscription(userId) {
     console.log('[sub] personalSub:', personalSub, subErr)
     if (personalSub) {
       sub = personalSub
-    } else if (clubId) {
+    }
+    if (!sub && clubId) {
+      // Member inherits club subscription — fetch via RPC to bypass RLS
       const { data: clubSub } = await supabase
-        .from('subscriptions').select('*').eq('club_id', clubId).maybeSingle()
-      if (clubSub) sub = clubSub
+        .rpc('get_club_subscription', { p_club_id: clubId })
+      if (clubSub && clubSub.length > 0) sub = clubSub[0]
     }
 
     if (clubId) {

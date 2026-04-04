@@ -238,7 +238,8 @@
     <div class="saved-badge" class:visible={savedFlash}>Saved</div>
   </div>
 
-  <!-- ── SUBSCRIPTION ── -->
+  <!-- ── SUBSCRIPTION (owners/personal only) ── -->
+  {#if $subscriptionStore.isOwner || (!$subscriptionStore.clubId)}
   <div class="section-block">
     <div class="section-title">Subscription</div>
     <div class="card">
@@ -301,6 +302,40 @@
       {/if}
     </div>
   </div>
+  {/if}
+
+  <!-- ── MY CLUB (member view) ── -->
+  {#if !$subscriptionStore.isOwner && $subscriptionStore.clubId}
+  <div class="section-block">
+    <div class="section-title">My Club</div>
+    <div class="card">
+      {#if $subscriptionStore.clubName}
+        <div class="member-info-row">
+          <span class="member-info-label">Club</span>
+          <span class="member-info-val">{$subscriptionStore.clubName}</span>
+        </div>
+      {/if}
+      {#if $subscriptionStore.teamName}
+        <div class="member-info-row">
+          <span class="member-info-label">Team</span>
+          <span class="member-info-val">{$subscriptionStore.teamName}</span>
+        </div>
+      {/if}
+      {#if $subscriptionStore.teamCode}
+        <div class="member-info-row">
+          <span class="member-info-label">Team join code</span>
+          <span class="member-info-code">{$subscriptionStore.teamCode}</span>
+        </div>
+      {/if}
+      <div class="member-info-row">
+        <span class="member-info-label">Plan</span>
+        <span class="member-info-val">
+          {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : $subscriptionStore.plan === 'club' ? 'Club' : 'Club'}
+        </span>
+      </div>
+    </div>
+  </div>
+  {/if}
 
   <!-- ── CLUB TEAMS ── -->
   {#if $isClub && $subscriptionStore.isOwner}
@@ -347,8 +382,10 @@
     <div class="section-title">Team</div>
     <div class="card">
       <div class="field-group">
+        {#if $subscriptionStore.isOwner || !$subscriptionStore.clubId}
         <label>Club name</label>
         <input bind:value={settings.teamName} on:input={autoSave} placeholder="e.g. Doora Barefield" />
+        {/if}
       </div>
       <div class="field-group">
         <label>Age group</label>
@@ -607,7 +644,8 @@
     </div>
   </div>
 
-  <!-- ── CLUB COLOURS ── -->
+  <!-- ── CLUB COLOURS (owners only) ── -->
+  {#if $subscriptionStore.isOwner || !$subscriptionStore.clubId}
   <div class="section-block">
     <div class="section-title">Club Colours</div>
     <div class="card">
@@ -670,6 +708,7 @@
       {/if}
     </div>
   </div>
+  {/if}
 
   <!-- ── DATA BACKUP ── -->
   <div class="section-block">
@@ -974,6 +1013,19 @@
   }
   .preview-badge {
     padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  }
+
+  /* ── My Club (member view) ── */
+  .member-info-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid var(--divider-faint);
+  }
+  .member-info-row:last-child { border-bottom: none; }
+  .member-info-label { font-size: 13px; color: var(--text-muted); }
+  .member-info-val { font-size: 14px; font-weight: 600; color: var(--text); }
+  .member-info-code {
+    font-size: 18px; font-weight: 800; color: var(--primary);
+    letter-spacing: 0.12em; font-family: monospace;
   }
 
   /* ── Club Teams ── */
