@@ -11,11 +11,17 @@ import { clearAllData } from './lib/db.js'
   import StatTargets from './lib/StatTargets.svelte'
   import Auth from './lib/Auth.svelte'
   import Upgrade from './lib/Upgrade.svelte'
+  import TeamSetup from './lib/TeamSetup.svelte'
+  import LiveViewer from './lib/LiveViewer.svelte'
   import { user, authLoading, signOut } from './lib/auth-store.js'
   import { syncToSupabase, syncFromSupabase } from './lib/sync.js'
   import { settingsStore } from './lib/settings-store.js'
-  import { subscriptionStore, isPro, ensureProfile, loadSubscription } from './lib/subscription-store.js'
+  import { subscriptionStore, isPro, isClub, isClubPro, ensureProfile, loadSubscription, loadClubTeams } from './lib/subscription-store.js'
+  import { supabase } from './lib/supabase.js'
   import { onMount } from 'svelte'
+
+  let needsTeamSetup = false
+  let liveSession = null
 
   function hexToRgbString(hex) {
     const r = parseInt(hex.slice(1,3), 16)
@@ -84,7 +90,7 @@ import { clearAllData } from './lib/db.js'
 
         // Create profile/club/subscription records on first login
         await ensureProfile(u.id)
-        // Load subscription plan
+        // Load subscription plan + team context
         await loadSubscription(u.id)
 
         const previousUserId = localStorage.getItem(LAST_USER_KEY)
@@ -96,6 +102,27 @@ import { clearAllData } from './lib/db.js'
           await clearAllData()
           await syncFromSupabase(u.id)
           dataReady = true
+        }
+
+        // Club owners with no teams yet → show team setup
+        const sub = subscriptionStore
+        let subVal; sub.subscribe(s => subVal = s)()
+        if (subVal.isOwner && subVal.clubId) {
+          const teams = await loadClubTeams(subVal.clubId)
+          needsTeamSetup = teams.length === 0
+        }
+
+        // Check for active live session on this team
+        if (subVal.teamId) {
+          const { data: sessions } = await supabase
+            .from('live_sessions')
+            .select('*')
+            .eq('team_id', subVal.teamId)
+            .is('ended_at', null)
+            .neq('host_user_id', u.id)
+            .order('started_at', { ascending: false })
+            .limit(1)
+          liveSession = sessions?.[0] ?? null
         }
       }
       if (!u) {
@@ -142,13 +169,26 @@ import { clearAllData } from './lib/db.js'
 {:else if !$user}
   <Auth />
 
-{:else if !dataReady}
+{:else if !dataReady && !needsTeamSetup}
   <div class="loading-screen">
     <img src="doora-barefield.png" alt="Doora Barefield GAA" class="loading-logo">
     <p class="loading-text">Loading your data…</p>
   </div>
 
+{:else if needsTeamSetup}
+  <TeamSetup onDone={() => { needsTeamSetup = false }} />
+
 {:else}
+  <!-- Live session banner -->
+  {#if liveSession}
+    <div class="live-banner" on:click={() => activePage = 'live'}>
+      <span class="live-dot-sm"></span>
+      <strong>Live match in progress</strong>
+      <span>Tap to watch</span>
+      <button class="live-banner-close" on:click|stopPropagation={() => liveSession = null}>✕</button>
+    </div>
+  {/if}
+
   <div class="app">
     <!-- Top bar: brand + desktop tabs + actions -->
     <nav class="top-nav">
@@ -213,7 +253,9 @@ import { clearAllData } from './lib/db.js'
     </nav>
 
     <main>
-      {#if activePage === 'match'}
+      {#if activePage === 'live' && liveSession}
+        <LiveViewer session={liveSession} onClose={() => { activePage = 'match'; liveSession = null }} />
+      {:else if activePage === 'match'}
         <Match />
       {:else if activePage === 'timeline'}
         {#if $isPro}
@@ -466,6 +508,27 @@ import { clearAllData } from './lib/db.js'
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { animation: spin 1s linear infinite; }
+
+  /* ── LIVE BANNER ── */
+  .live-banner {
+    display: flex; align-items: center; gap: 8px;
+    background: #e53935; color: white;
+    padding: 10px 16px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    position: sticky; top: 0; z-index: 200;
+  }
+  .live-banner span:not(.live-dot-sm) { font-size: 12px; font-weight: 400; opacity: 0.85; margin-left: 4px; flex: 1; }
+  .live-dot-sm {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: white; flex-shrink: 0;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .live-banner-close {
+    background: none; border: none; color: white;
+    font-size: 14px; cursor: pointer; opacity: 0.7; padding: 0 4px;
+  }
 
   /* ── MAIN CONTENT ── */
   main {

@@ -196,7 +196,7 @@
       {:else if $isPro}
         <div class="sub-active">
           <div class="sub-badge pro">
-            {$subscriptionStore.plan === 'club' ? 'Club Plan' : 'Personal Pro'}
+            {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : $subscriptionStore.plan === 'club' ? 'Club' : 'Personal Pro'}
           </div>
           <div class="sub-detail">
             {#if $subscriptionStore.currentPeriodEnd}
@@ -233,10 +233,17 @@
             </div>
             <div class="upgrade-option">
               <div>
-                <strong>Club Plan</strong>
-                <span>Full analytics, up to 6 coaches</span>
+                <strong>Club — €15/mo</strong>
+                <span>4 teams, unlimited coaches, join codes</span>
               </div>
-              <button class="upgrade-btn featured" disabled>€19.99/mo — coming soon</button>
+              <button class="upgrade-btn featured" disabled>Coming soon</button>
+            </div>
+            <div class="upgrade-option">
+              <div>
+                <strong>Club Pro — €25/mo</strong>
+                <span>Everything in Club + live match sharing</span>
+              </div>
+              <button class="upgrade-btn featured" disabled>Coming soon</button>
             </div>
           </div>
         </div>

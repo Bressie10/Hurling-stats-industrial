@@ -1,9 +1,60 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { saveSquad, loadSquad, saveMatch, saveDraftMatch, loadDraftMatch, clearDraftMatch, markDraftSaved } from './db.js'
   import { user } from './auth-store.js'
   import { scheduleAutoSync } from './sync.js'
   import { settingsStore } from './settings-store.js'
+  import { subscriptionStore, isClubPro } from './subscription-store.js'
+  import { supabase } from './supabase.js'
+
+  // ── LIVE SHARING ─────────────────────────────────────────
+  let liveSessionId = null
+  let liveChannel = null
+  let isLive = false
+  let liveError = null
+
+  async function startLive() {
+    if (!$subscriptionStore.teamId) { liveError = 'No team set up'; return }
+    const { data, error } = await supabase
+      .from('live_sessions')
+      .insert({ team_id: $subscriptionStore.teamId, host_user_id: $user.id, match_data: getLivePayload() })
+      .select().single()
+    if (error) { liveError = error.message; return }
+    liveSessionId = data.id
+    liveChannel = supabase.channel(`live:${liveSessionId}`)
+    await liveChannel.subscribe()
+    isLive = true
+    liveError = null
+  }
+
+  async function stopLive() {
+    if (liveSessionId) {
+      await supabase.from('live_sessions').update({ ended_at: new Date().toISOString() }).eq('id', liveSessionId)
+    }
+    if (liveChannel) { supabase.removeChannel(liveChannel); liveChannel = null }
+    liveSessionId = null
+    isLive = false
+  }
+
+  function getLivePayload() {
+    return {
+      teamName: $settingsStore.teamName,
+      opposition,
+      period,
+      score,
+      stats,
+      events,
+      players
+    }
+  }
+
+  async function broadcastLive() {
+    if (!isLive || !liveChannel || !liveSessionId) return
+    const payload = getLivePayload()
+    liveChannel.send({ type: 'broadcast', event: 'match_update', payload })
+    // Also persist to DB so late joiners get current state
+    supabase.from('live_sessions').update({ match_data: payload }).eq('id', liveSessionId).then(() => {})
+  }
 
   let screen = 'setup'
   let finishing = false
@@ -283,9 +334,13 @@
     } catch (e) {
       console.warn('Draft save failed:', e)
     }
+    broadcastLive()
   }
 
+  onDestroy(() => { if (isLive) stopLive() })
+
   async function finishMatch() {
+    if (isLive) await stopLive()
     if (!confirm('End match and save stats?')) return
     if (finishing) return
     finishing = true
@@ -1012,6 +1067,22 @@
     <div class="section-label">Match notes</div>
     <textarea bind:value={notes} placeholder="Add notes about the match..." on:input={saveDraft}></textarea>
   </div>
+
+  {#if $isClubPro}
+    <div class="live-share-row">
+      {#if isLive}
+        <div class="live-active-badge"><span class="live-pulse"></span> Live — coaches can watch in real time</div>
+        <button class="stop-live-btn" on:click={stopLive}>Stop sharing</button>
+      {:else}
+        <button class="go-live-btn" on:click={startLive}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+          Go Live
+        </button>
+        <span class="live-hint">Let other coaches watch this match in real time</span>
+      {/if}
+      {#if liveError}<span class="live-error">{liveError}</span>{/if}
+    </div>
+  {/if}
 
   <div class="finish-row">
     <button class="finish-btn" disabled={finishing} on:click={finishMatch}>{finishing ? 'Saving…' : 'End Match & Save'}</button>
@@ -1940,6 +2011,40 @@
   .point-badge { background: rgba(224,160,32,0.12); color: #9a6000; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
 
   .ht-conceded-total { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* ── LIVE SHARING ── */
+  .live-share-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 14px; border-radius: 10px;
+    background: rgba(229,57,53,0.05); border: 1.5px solid rgba(229,57,53,0.2);
+    margin-top: 8px;
+  }
+  .go-live-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px;
+    background: #e53935; color: white;
+    border: none; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .go-live-btn:hover { background: #c62828; }
+  .live-hint { font-size: 12px; color: var(--text-muted); flex: 1; }
+  .live-active-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: #e53935; flex: 1;
+  }
+  .live-pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: #e53935;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .stop-live-btn {
+    padding: 7px 12px; border-radius: 7px;
+    border: 1.5px solid #e53935; background: none;
+    color: #e53935; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .live-error { font-size: 12px; color: #c62828; }
 
   /* ── CANCEL MATCH + FINISH ROW ── */
   .finish-row { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }

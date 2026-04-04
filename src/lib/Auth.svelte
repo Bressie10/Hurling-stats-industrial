@@ -6,7 +6,7 @@
   let email = ''
   let password = ''
   let clubName = ''
-  let clubCode = ''
+  let teamCode = ''
   let loading = false
   let error = null
   let successMsg = null
@@ -14,9 +14,8 @@
   async function handleLogin() {
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
-    try {
-      await signIn(email, password)
-    } catch (e) { error = e.message }
+    try { await signIn(email, password) }
+    catch (e) { error = e.message }
     loading = false
   }
 
@@ -26,31 +25,32 @@
     try {
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'personal' }))
       await signUp(email, password)
-      successMsg = 'Check your email to confirm your account'
+      successMsg = 'Check your email to confirm your account, then sign in.'
     } catch (e) { error = e.message }
     loading = false
   }
 
   async function handleClubSignup() {
-    if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     if (!clubName.trim()) { error = 'Please enter your club name'; return }
+    if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
     try {
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'club', clubName: clubName.trim() }))
       await signUp(email, password)
-      successMsg = 'Check your email to confirm your account'
+      successMsg = 'Check your email to confirm your account, then sign in to set up your teams.'
     } catch (e) { error = e.message }
     loading = false
   }
 
-  async function handleJoinClub() {
+  async function handleJoinTeam() {
+    const code = teamCode.trim()
+    if (code.length !== 6 || !/^\d{6}$/.test(code)) { error = 'Team code must be 6 digits'; return }
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
-    if (!clubCode.trim()) { error = 'Please enter your club code'; return }
     loading = true; error = null
     try {
-      localStorage.setItem('signup_intent', JSON.stringify({ type: 'join', clubCode: clubCode.trim() }))
+      localStorage.setItem('signup_intent', JSON.stringify({ type: 'join', teamCode: code }))
       await signUp(email, password)
-      successMsg = 'Check your email to confirm your account'
+      successMsg = 'Check your email to confirm your account, then sign in.'
     } catch (e) { error = e.message }
     loading = false
   }
@@ -63,7 +63,7 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <img src="doora-barefield.png" alt="Doora Barefield" class="auth-logo" />
+      <img src="doora-barefield.png" alt="GAA Stats" class="auth-logo" />
       <h1>GAA Stats</h1>
       <p>Hurling match analytics</p>
     </div>
@@ -80,101 +80,131 @@
         <input type="password" bind:value={password} placeholder="••••••••"
           on:keydown={e => e.key === 'Enter' && handleLogin()} />
       </div>
-
       {#if error}<div class="msg error">{error}</div>{/if}
-
       <button class="submit-btn" on:click={handleLogin} disabled={loading}>
         {loading ? 'Signing in…' : 'Sign in'}
       </button>
-      <button class="create-account-btn" on:click={() => setMode('choose')}>
+      <button class="outline-btn" on:click={() => setMode('choose')}>
         Create an account
       </button>
 
-    <!-- ── CHOOSE SIGNUP TYPE ── -->
+    <!-- ── CHOOSE ── -->
     {:else if mode === 'choose'}
-      <div class="choose-title">How would you like to sign up?</div>
-      <div class="signup-options">
+      <p class="choose-sub">How are you using GAA Stats?</p>
+      <div class="option-list">
+
+        <button class="option-card" on:click={() => setMode('join')}>
+          <div class="option-icon join">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          </div>
+          <div class="option-body">
+            <strong>Join my team</strong>
+            <span>I have a 6-digit code from my manager</span>
+          </div>
+          <svg class="option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+
         <button class="option-card" on:click={() => setMode('personal')}>
-          <div class="option-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div class="option-icon personal">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
-          <div class="option-text">
-            <strong>Personal</strong>
-            <span>Just you — 1 coach</span>
+          <div class="option-body">
+            <strong>Personal account</strong>
+            <span>Just me — 1 coach, 1 team</span>
           </div>
-          <div class="option-price">Free to start</div>
+          <svg class="option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
 
         <button class="option-card" on:click={() => setMode('club')}>
-          <div class="option-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div class="option-icon club">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <div class="option-text">
-            <strong>Create a Club</strong>
-            <span>Up to 6 coaches share access</span>
+          <div class="option-body">
+            <strong>Set up my club</strong>
+            <span>Manage multiple teams with shared codes</span>
           </div>
-          <div class="option-price">Free to start</div>
+          <svg class="option-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
 
-        <button class="option-card" on:click={() => setMode('join')}>
-          <div class="option-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          </div>
-          <div class="option-text">
-            <strong>Join a Club</strong>
-            <span>Enter your club's invite code</span>
-          </div>
-          <div class="option-price">Free to start</div>
-        </button>
       </div>
-      <div class="auth-hint">
-        Already have an account?
-        <button class="link-btn" on:click={() => setMode('login')}>Sign in</button>
-      </div>
+      <button class="back-text-btn" on:click={() => setMode('login')}>← Back to sign in</button>
 
-    <!-- ── PERSONAL SIGNUP ── -->
+    <!-- ── JOIN TEAM ── -->
+    {:else if mode === 'join'}
+      {#if successMsg}
+        <div class="msg success">{successMsg}</div>
+        <button class="submit-btn" on:click={() => setMode('login')}>Go to sign in</button>
+      {:else}
+        <div class="flow-header">
+          <button class="back-btn" on:click={() => setMode('choose')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span>Join my team</span>
+        </div>
+        <div class="field-group">
+          <label>6-digit team code</label>
+          <input
+            type="text" inputmode="numeric" pattern="\d*" maxlength="6"
+            bind:value={teamCode}
+            placeholder="e.g. 482651"
+            style="font-size: 28px; font-weight: 800; letter-spacing: 0.2em; text-align: center;"
+          />
+          <div class="field-hint">Your manager will have shared this with you</div>
+        </div>
+        <div class="field-group">
+          <label>Your email</label>
+          <input type="email" bind:value={email} placeholder="coach@example.com" />
+        </div>
+        <div class="field-group">
+          <label>Create a password</label>
+          <input type="password" bind:value={password} placeholder="••••••••" />
+        </div>
+        {#if error}<div class="msg error">{error}</div>{/if}
+        <button class="submit-btn" on:click={handleJoinTeam} disabled={loading}>
+          {loading ? 'Joining…' : 'Join team'}
+        </button>
+      {/if}
+
+    <!-- ── PERSONAL ── -->
     {:else if mode === 'personal'}
       {#if successMsg}
         <div class="msg success">{successMsg}</div>
-        <button class="submit-btn" on:click={() => setMode('login')}>Back to sign in</button>
+        <button class="submit-btn" on:click={() => setMode('login')}>Go to sign in</button>
       {:else}
-        <div class="back-row">
+        <div class="flow-header">
           <button class="back-btn" on:click={() => setMode('choose')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
           </button>
-          <span class="mode-label">Personal account</span>
+          <span>Personal account</span>
         </div>
         <div class="field-group">
           <label>Email</label>
           <input type="email" bind:value={email} placeholder="coach@example.com" />
         </div>
         <div class="field-group">
-          <label>Password</label>
+          <label>Create a password</label>
           <input type="password" bind:value={password} placeholder="••••••••" />
         </div>
         {#if error}<div class="msg error">{error}</div>{/if}
         <button class="submit-btn" on:click={handlePersonalSignup} disabled={loading}>
           {loading ? 'Creating account…' : 'Create account'}
         </button>
-        <div class="tier-info">
-          <strong>Free tier includes:</strong> Match logging · Squad · Last 3 matches
-          <br>Upgrade to <strong>Personal Pro at €7.99/month</strong> for full analytics
+        <div class="tier-note">
+          Free to start · Upgrade to <strong>Personal Pro at €7.99/month</strong> for full analytics
         </div>
       {/if}
 
-    <!-- ── CLUB SIGNUP ── -->
+    <!-- ── CLUB SETUP ── -->
     {:else if mode === 'club'}
       {#if successMsg}
         <div class="msg success">{successMsg}</div>
-        <button class="submit-btn" on:click={() => setMode('login')}>Back to sign in</button>
+        <button class="submit-btn" on:click={() => setMode('login')}>Go to sign in</button>
       {:else}
-        <div class="back-row">
+        <div class="flow-header">
           <button class="back-btn" on:click={() => setMode('choose')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
           </button>
-          <span class="mode-label">Create a club</span>
+          <span>Set up my club</span>
         </div>
         <div class="field-group">
           <label>Club name</label>
@@ -182,52 +212,20 @@
         </div>
         <div class="field-group">
           <label>Your email</label>
-          <input type="email" bind:value={email} placeholder="coach@example.com" />
+          <input type="email" bind:value={email} placeholder="manager@example.com" />
         </div>
         <div class="field-group">
-          <label>Password</label>
+          <label>Create a password</label>
           <input type="password" bind:value={password} placeholder="••••••••" />
         </div>
         {#if error}<div class="msg error">{error}</div>{/if}
         <button class="submit-btn" on:click={handleClubSignup} disabled={loading}>
           {loading ? 'Creating club…' : 'Create club'}
         </button>
-        <div class="tier-info">
-          You'll get a shareable club code after signing up.
-          <br>Upgrade to <strong>Club Plan at €19.99/month</strong> for full access for up to 6 coaches.
+        <div class="tier-note">
+          After signing in you'll create your teams and get codes to share with your coaches.
+          <br>Upgrade to <strong>Club at €15/month</strong> to unlock all features.
         </div>
-      {/if}
-
-    <!-- ── JOIN CLUB ── -->
-    {:else if mode === 'join'}
-      {#if successMsg}
-        <div class="msg success">{successMsg}</div>
-        <button class="submit-btn" on:click={() => setMode('login')}>Back to sign in</button>
-      {:else}
-        <div class="back-row">
-          <button class="back-btn" on:click={() => setMode('choose')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
-          </button>
-          <span class="mode-label">Join a club</span>
-        </div>
-        <div class="field-group">
-          <label>Club invite code</label>
-          <input type="text" bind:value={clubCode} placeholder="e.g. AB3X9K2M"
-            style="text-transform: uppercase; letter-spacing: 0.1em;" />
-        </div>
-        <div class="field-group">
-          <label>Your email</label>
-          <input type="email" bind:value={email} placeholder="coach@example.com" />
-        </div>
-        <div class="field-group">
-          <label>Password</label>
-          <input type="password" bind:value={password} placeholder="••••••••" />
-        </div>
-        {#if error}<div class="msg error">{error}</div>{/if}
-        <button class="submit-btn" on:click={handleJoinClub} disabled={loading}>
-          {loading ? 'Joining…' : 'Join club'}
-        </button>
       {/if}
     {/if}
 
@@ -241,8 +239,7 @@
     align-items: center;
     justify-content: center;
     background: var(--bg);
-    background-image:
-      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(var(--primary-rgb), 0.08) 0%, transparent 70%);
+    background-image: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(var(--primary-rgb), 0.08) 0%, transparent 70%);
     padding: 1rem;
   }
   .auth-card {
@@ -260,11 +257,8 @@
 
   .auth-header { text-align: center; padding-bottom: 4px; }
   .auth-logo {
-    width: 72px;
-    height: 72px;
-    object-fit: contain;
-    margin-bottom: 14px;
-    border-radius: 16px;
+    width: 72px; height: 72px; object-fit: contain;
+    margin-bottom: 14px; border-radius: 16px;
     box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.2);
   }
   .auth-header h1 { font-size: 21px; font-weight: 700; color: var(--text); margin-bottom: 4px; letter-spacing: -0.02em; }
@@ -279,8 +273,8 @@
     font-size: 16px;
     font-family: inherit;
     background: var(--surface-3);
-    transition: all 0.15s;
     color: var(--text);
+    transition: all 0.15s;
   }
   .field-group input:focus {
     outline: none;
@@ -288,127 +282,86 @@
     background: var(--surface);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.08);
   }
+  .field-hint { font-size: 12px; color: var(--text-faint); }
 
-  .msg {
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-  }
+  .msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
   .msg.error { background: #fce8e8; color: #c62828; border: 1px solid #f5c0c0; }
   .msg.success { background: #e6f4ea; color: #2d7a2d; border: 1px solid #b8e0bf; }
 
   .submit-btn {
-    width: 100%;
-    padding: 15px;
-    background: var(--primary);
-    color: var(--primary-text);
-    border: none;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s;
-    min-height: 50px;
+    width: 100%; padding: 15px;
+    background: var(--primary); color: var(--primary-text);
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: background 0.15s; min-height: 50px;
   }
   .submit-btn:hover { background: var(--primary-hover); }
   .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-  .auth-hint { text-align: center; font-size: 13px; color: var(--text-muted); }
-  .link-btn {
-    background: none; border: none; color: var(--primary);
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    font-family: inherit; text-decoration: underline;
+  .outline-btn {
+    width: 100%; padding: 15px;
+    background: none; color: var(--primary);
+    border: 2px solid var(--primary); border-radius: 10px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: all 0.15s; min-height: 50px;
   }
-  .create-account-btn {
-    width: 100%;
-    padding: 15px;
-    background: none;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.15s;
-    min-height: 50px;
-  }
-  .create-account-btn:hover { background: rgba(var(--primary-rgb), 0.06); }
+  .outline-btn:hover { background: rgba(var(--primary-rgb), 0.06); }
 
-  /* ── Choose type ── */
-  .choose-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    text-align: center;
-    margin-bottom: -4px;
-  }
-  .signup-options { display: flex; flex-direction: column; gap: 10px; }
+  /* Choose screen */
+  .choose-sub { font-size: 14px; color: var(--text-muted); text-align: center; margin: -4px 0; }
+  .option-list { display: flex; flex-direction: column; gap: 10px; }
   .option-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
+    display: flex; align-items: center; gap: 14px;
     padding: 14px 16px;
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
+    border: 1.5px solid var(--border); border-radius: 14px;
     background: var(--surface-2);
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
+    cursor: pointer; text-align: left;
+    font-family: inherit; color: var(--text);
     transition: all 0.15s;
-    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
   }
-  .option-card:hover {
-    border-color: var(--primary);
-    background: rgba(var(--primary-rgb), 0.04);
-  }
+  .option-card:hover { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.04); }
+  .option-card:active { transform: scale(0.98); }
   .option-icon {
-    width: 48px; height: 48px;
-    border-radius: 12px;
-    background: rgba(var(--primary-rgb), 0.1);
-    color: var(--primary);
+    width: 48px; height: 48px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  .option-text { flex: 1; }
-  .option-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
-  .option-text span { font-size: 12px; color: var(--text-muted); }
-  .option-price {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--primary);
-    white-space: nowrap;
-  }
+  .option-icon.join     { background: rgba(59,130,246,0.12); color: #3b82f6; }
+  .option-icon.personal { background: rgba(var(--primary-rgb),0.12); color: var(--primary); }
+  .option-icon.club     { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .option-body { flex: 1; }
+  .option-body strong { display: block; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .option-body span { font-size: 12px; color: var(--text-muted); }
+  .option-arrow { color: var(--text-faint); flex-shrink: 0; }
 
-  /* ── Back row ── */
-  .back-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .back-text-btn {
+    background: none; border: none;
+    color: var(--text-muted); font-size: 13px;
+    cursor: pointer; font-family: inherit;
+    text-align: center; padding: 4px 0;
+  }
+  .back-text-btn:hover { color: var(--primary); }
+
+  /* Flow header */
+  .flow-header {
+    display: flex; align-items: center; gap: 10px;
     margin-bottom: -4px;
   }
+  .flow-header span { font-size: 15px; font-weight: 600; color: var(--text); }
   .back-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    border: none; background: none;
-    color: var(--text-muted); font-size: 13px;
-    cursor: pointer; font-family: inherit; padding: 0;
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted); flex-shrink: 0;
   }
-  .back-btn:hover { color: var(--primary); }
-  .mode-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-  }
+  .back-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-  /* ── Tier info note ── */
-  .tier-info {
-    font-size: 12px;
-    color: var(--text-muted);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    line-height: 1.6;
+  .tier-note {
+    font-size: 12px; color: var(--text-muted);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; line-height: 1.6;
   }
 </style>

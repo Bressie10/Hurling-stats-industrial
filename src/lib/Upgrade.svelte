@@ -21,24 +21,31 @@
         <li>Stat targets</li>
         <li>1 coach</li>
       </ul>
-      <button class="plan-btn personal" disabled>
-        Coming soon
-      </button>
+      <button class="plan-btn personal" disabled>Coming soon</button>
     </div>
 
     <div class="plan featured">
-      <div class="plan-badge">Best value</div>
+      <div class="plan-badge">Most popular</div>
       <div class="plan-name">Club</div>
-      <div class="plan-price">€19.99<span>/month</span></div>
+      <div class="plan-price">€15<span>/month</span></div>
       <ul class="plan-features">
-        <li>Everything in Personal</li>
-        <li>Up to 6 coaches</li>
-        <li>Shared club invite code</li>
-        <li>Club-wide data access</li>
+        <li>Up to 4 teams</li>
+        <li>Unlimited coaches</li>
+        <li>6-digit team join codes</li>
+        <li>Full analytics for all teams</li>
       </ul>
-      <button class="plan-btn club" disabled>
-        Coming soon
-      </button>
+      <button class="plan-btn club" disabled>Coming soon</button>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Club Pro</div>
+      <div class="plan-price">€25<span>/month</span></div>
+      <ul class="plan-features">
+        <li>Everything in Club</li>
+        <li>Live match sharing</li>
+        <li>Coaches watch in real time</li>
+      </ul>
+      <button class="plan-btn club" disabled>Coming soon</button>
     </div>
   </div>
 
@@ -87,7 +94,7 @@
     margin-top: 8px;
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 560px) {
     .plans { flex-direction: column; }
   }
 

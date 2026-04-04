@@ -2,20 +2,36 @@ import { writable, derived } from 'svelte/store'
 import { supabase } from './supabase.js'
 
 export const subscriptionStore = writable({
-  plan: 'free',         // 'free' | 'personal' | 'club'
-  status: 'active',     // 'active' | 'trialing' | 'past_due' | 'cancelled'
+  plan: 'free',        // 'free' | 'personal' | 'club' | 'club_pro'
+  status: 'active',    // 'active' | 'trialing' | 'past_due' | 'cancelled'
   clubId: null,
-  clubCode: null,
   clubName: null,
-  seatLimit: 1,
+  teamId: null,
+  teamName: null,
+  teamCode: null,
+  isOwner: false,
   currentPeriodEnd: null,
   loading: true
 })
 
 export const isPro = derived(subscriptionStore, $s =>
-  ($s.plan === 'personal' || $s.plan === 'club') &&
+  ($s.plan === 'personal' || $s.plan === 'club' || $s.plan === 'club_pro') &&
   ($s.status === 'active' || $s.status === 'trialing')
 )
+
+export const isClub = derived(subscriptionStore, $s =>
+  ($s.plan === 'club' || $s.plan === 'club_pro') &&
+  ($s.status === 'active' || $s.status === 'trialing')
+)
+
+export const isClubPro = derived(subscriptionStore, $s =>
+  $s.plan === 'club_pro' &&
+  ($s.status === 'active' || $s.status === 'trialing')
+)
+
+function generateTeamCode() {
+  return String(Math.floor(100000 + Math.random() * 900000))
+}
 
 function generateClubCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -24,7 +40,7 @@ function generateClubCode() {
   return code
 }
 
-// Called on first login if no profile exists yet — creates profile, club, subscription
+// Called on first login — creates profile, club, team memberships
 export async function ensureProfile(userId) {
   const { data: existing } = await supabase
     .from('profiles').select('id').eq('id', userId).maybeSingle()
@@ -35,65 +51,42 @@ export async function ensureProfile(userId) {
   localStorage.removeItem('signup_intent')
 
   if (intent.type === 'club') {
-    // Create club
-    const code = generateClubCode()
+    const clubCode = generateClubCode()
     const { data: club, error: clubErr } = await supabase
       .from('clubs')
-      .insert({ name: intent.clubName, code, owner_id: userId })
-      .select()
-      .single()
+      .insert({ name: intent.clubName, code: clubCode, owner_id: userId })
+      .select().single()
     if (clubErr) { console.error('Failed to create club:', clubErr); return }
 
-    // Create subscription for club
     await supabase.from('subscriptions').insert({
-      user_id: userId,
-      club_id: club.id,
-      plan: 'free',
-      status: 'active',
-      seat_limit: 6
+      user_id: userId, club_id: club.id, plan: 'free', status: 'active', seat_limit: 999
     })
-
-    // Owner joins their own club
     await supabase.from('club_members').insert({
-      club_id: club.id,
-      user_id: userId,
-      role: 'owner'
+      club_id: club.id, user_id: userId, role: 'owner'
     })
-
-    // Create profile
     await supabase.from('profiles').insert({ id: userId, club_id: club.id })
 
   } else if (intent.type === 'join') {
-    const code = (intent.clubCode || '').toUpperCase().trim()
-    const { data: club } = await supabase
-      .from('clubs').select('id').eq('code', code).maybeSingle()
+    const code = (intent.teamCode || '').trim()
+    const { data: team } = await supabase
+      .from('teams').select('id, club_id').eq('code', code).maybeSingle()
 
-    if (club) {
-      // Check seat limit
-      const { data: sub } = await supabase
-        .from('subscriptions').select('seat_limit').eq('club_id', club.id).maybeSingle()
-      const { count } = await supabase
-        .from('club_members').select('id', { count: 'exact', head: true }).eq('club_id', club.id)
-      const limit = sub?.seat_limit ?? 6
-
-      if ((count ?? 0) < limit) {
-        await supabase.from('club_members').insert({
-          club_id: club.id,
-          user_id: userId,
-          role: 'member'
-        })
-        await supabase.from('profiles').insert({ id: userId, club_id: club.id })
-        return
-      }
+    if (team) {
+      await supabase.from('club_members').insert({
+        club_id: team.club_id, team_id: team.id, user_id: userId, role: 'member'
+      })
+      await supabase.from('profiles').insert({
+        id: userId, club_id: team.club_id, team_id: team.id
+      })
+      return
     }
-    // Fallback — join failed, create personal free profile
+    // Fallback — invalid code
     await supabase.from('profiles').insert({ id: userId })
     await supabase.from('subscriptions').insert({
       user_id: userId, plan: 'free', status: 'active', seat_limit: 1
     })
 
   } else {
-    // Personal
     await supabase.from('profiles').insert({ id: userId })
     await supabase.from('subscriptions').insert({
       user_id: userId, plan: 'free', status: 'active', seat_limit: 1
@@ -103,64 +96,78 @@ export async function ensureProfile(userId) {
 
 export async function loadSubscription(userId) {
   try {
-    // Get profile (to find club_id if member)
     const { data: profile } = await supabase
-      .from('profiles').select('club_id').eq('id', userId).maybeSingle()
+      .from('profiles').select('club_id, team_id').eq('id', userId).maybeSingle()
+    const { data: member } = await supabase
+      .from('club_members').select('role, club_id, team_id').eq('user_id', userId).maybeSingle()
+
+    const clubId = profile?.club_id ?? member?.club_id ?? null
+    const teamId = profile?.team_id ?? member?.team_id ?? null
+    const isOwner = member?.role === 'owner'
 
     let sub = null
-    let clubCode = null
     let clubName = null
+    let teamName = null
+    let teamCode = null
 
-    // Personal subscription first
     const { data: personalSub } = await supabase
       .from('subscriptions').select('*').eq('user_id', userId).maybeSingle()
-
     if (personalSub) {
       sub = personalSub
-      // If sub has a club_id, fetch club details
-      if (sub.club_id) {
-        const { data: club } = await supabase
-          .from('clubs').select('name, code').eq('id', sub.club_id).maybeSingle()
-        clubCode = club?.code ?? null
-        clubName = club?.name ?? null
-      }
-    } else if (profile?.club_id) {
-      // Club member — find the club's subscription (owned by someone else)
+    } else if (clubId) {
       const { data: clubSub } = await supabase
-        .from('subscriptions').select('*').eq('club_id', profile.club_id).maybeSingle()
-      if (clubSub) {
-        sub = clubSub
-        const { data: club } = await supabase
-          .from('clubs').select('name, code').eq('id', profile.club_id).maybeSingle()
-        clubCode = club?.code ?? null
-        clubName = club?.name ?? null
-      }
+        .from('subscriptions').select('*').eq('club_id', clubId).maybeSingle()
+      if (clubSub) sub = clubSub
     }
 
-    if (sub) {
-      subscriptionStore.set({
-        plan: sub.plan || 'free',
-        status: sub.status || 'active',
-        clubId: sub.club_id ?? null,
-        clubCode,
-        clubName,
-        seatLimit: sub.seat_limit ?? 1,
-        currentPeriodEnd: sub.current_period_end ?? null,
-        loading: false
-      })
-    } else {
-      subscriptionStore.set({
-        plan: 'free', status: 'active', clubId: null,
-        clubCode: null, clubName: null, seatLimit: 1,
-        currentPeriodEnd: null, loading: false
-      })
+    if (clubId) {
+      const { data: club } = await supabase
+        .from('clubs').select('name').eq('id', clubId).maybeSingle()
+      clubName = club?.name ?? null
     }
+
+    if (teamId) {
+      const { data: team } = await supabase
+        .from('teams').select('name, code').eq('id', teamId).maybeSingle()
+      teamName = team?.name ?? null
+      teamCode = team?.code ?? null
+    }
+
+    subscriptionStore.set({
+      plan: sub?.plan ?? 'free',
+      status: sub?.status ?? 'active',
+      clubId, clubName, teamId, teamName, teamCode, isOwner,
+      currentPeriodEnd: sub?.current_period_end ?? null,
+      loading: false
+    })
   } catch (e) {
     console.warn('Failed to load subscription:', e)
     subscriptionStore.set({
-      plan: 'free', status: 'active', clubId: null,
-      clubCode: null, clubName: null, seatLimit: 1,
+      plan: 'free', status: 'active', clubId: null, clubName: null,
+      teamId: null, teamName: null, teamCode: null, isOwner: false,
       currentPeriodEnd: null, loading: false
     })
   }
+}
+
+export async function createTeam(clubId, teamName) {
+  const code = generateTeamCode()
+  const { data, error } = await supabase
+    .from('teams')
+    .insert({ club_id: clubId, name: teamName.trim(), code })
+    .select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteTeam(teamId) {
+  const { error } = await supabase.from('teams').delete().eq('id', teamId)
+  if (error) throw error
+}
+
+export async function loadClubTeams(clubId) {
+  const { data, error } = await supabase
+    .from('teams').select('*').eq('club_id', clubId).order('created_at')
+  if (error) throw error
+  return data ?? []
 }
