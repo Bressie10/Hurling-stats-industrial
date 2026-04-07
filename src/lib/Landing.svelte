@@ -1539,8 +1539,8 @@
   .footer-links a:hover { color: var(--lp-lime); }
 
   /* ── SCROLL REVEAL ────────────────────────────────────────────────────── */
-  .reveal { opacity: 0; transform: translateY(32px); transition: opacity .7s ease, transform .7s ease; }
-  .reveal.in { opacity: 1; transform: translateY(0); }
+  .reveal { transform: translateY(24px); transition: transform .7s ease; }
+  .reveal.in { transform: translateY(0); }
   .reveal-delay-1 { transition-delay: .1s; }
   .reveal-delay-2 { transition-delay: .2s; }
   .reveal-delay-3 { transition-delay: .3s; }
