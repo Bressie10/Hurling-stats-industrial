@@ -63,8 +63,12 @@
       entries.forEach(e => {
         if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) }
       })
-    }, { threshold: 0.12 })
+    }, { threshold: 0 })
     revealEls.forEach(el => io.observe(el))
+    // Fallback: ensure nothing stays hidden if IO doesn't fire
+    const fallback = setTimeout(() => {
+      revealEls.forEach(el => el.classList.add('in'))
+    }, 1500)
 
     // Count-up animation
     function animateCount(el) {
@@ -106,6 +110,7 @@
     window.addEventListener('mousemove', onMousemove, { passive: true })
 
     return () => {
+      clearTimeout(fallback)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('mousemove', onMousemove)
     }
@@ -633,54 +638,83 @@
     <div class="analytics-inner">
       <div class="chart-mockup reveal">
         <div class="chart-header">
-          <div class="chart-title">Player Performance — Points</div>
-          <div class="chart-period">Last 6 Matches</div>
+          <div class="chart-title">Live Match Logging</div>
+          <div class="chart-period">Doora Barefield vs Clarecastle</div>
         </div>
-        <div class="chart-area">
-          <svg class="bar-chart" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
-            <line x1="0" y1="0" x2="300" y2="0" stroke="#1A2840" stroke-width="0.5"/>
-            <line x1="0" y1="35" x2="300" y2="35" stroke="#1A2840" stroke-width="0.5"/>
-            <line x1="0" y1="70" x2="300" y2="70" stroke="#1A2840" stroke-width="0.5"/>
-            <line x1="0" y1="105" x2="300" y2="105" stroke="#1A2840" stroke-width="0.5"/>
-            <rect x="8" y="70" width="28" height="70" rx="3" fill="#BAFF29" opacity="0.7"/>
-            <rect x="58" y="42" width="28" height="98" rx="3" fill="#BAFF29" opacity="0.75"/>
-            <rect x="108" y="56" width="28" height="84" rx="3" fill="#BAFF29" opacity="0.8"/>
-            <rect x="158" y="14" width="28" height="126" rx="3" fill="#BAFF29" opacity="0.9"/>
-            <rect x="208" y="28" width="28" height="112" rx="3" fill="#BAFF29"/>
-            <rect x="258" y="21" width="28" height="119" rx="3" fill="#BAFF29"/>
-            <text x="22" y="65" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Bebas Neue">4</text>
-            <text x="72" y="37" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Bebas Neue">6</text>
-            <text x="122" y="51" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Bebas Neue">5</text>
-            <text x="172" y="9" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Bebas Neue">8</text>
-            <text x="222" y="23" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Bebas Neue">7</text>
-            <text x="272" y="16" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Bebas Neue">8</text>
+        <div class="chart-area" style="height:auto">
+          <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+            <!-- Background -->
+            <rect width="300" height="200" fill="#080D18" rx="6"/>
+            <!-- Top nav -->
+            <rect width="300" height="38" fill="#0C1422" rx="6"/>
+            <rect y="12" width="300" height="26" fill="#0C1422"/>
+            <text x="12" y="24" fill="#8CA3BF" font-size="9" font-family="Barlow Condensed" font-weight="700" letter-spacing="0.5">DOORA BAREFIELD</text>
+            <text x="150" y="24" text-anchor="middle" fill="#BAFF29" font-size="11" font-family="Barlow Condensed" font-weight="700">H1  18:23</text>
+            <rect x="256" y="12" width="36" height="18" rx="4" fill="rgba(186,255,41,0.12)" stroke="rgba(186,255,41,0.3)" stroke-width="0.5"/>
+            <text x="274" y="24" text-anchor="middle" fill="#BAFF29" font-size="7.5" font-family="Barlow Condensed" font-weight="700" letter-spacing="0.5">STATS</text>
+            <!-- Score area -->
+            <rect y="38" width="300" height="44" fill="#101C30"/>
+            <text x="78" y="70" text-anchor="middle" fill="#E4EDF8" font-size="28" font-family="Bebas Neue">0-07</text>
+            <circle cx="150" cy="60" r="4" fill="#BAFF29"/>
+            <text x="222" y="70" text-anchor="middle" fill="#4A6280" font-size="28" font-family="Bebas Neue">0-05</text>
+            <text x="78" y="78" text-anchor="middle" fill="#8CA3BF" font-size="7" font-family="Barlow Condensed">DOORA</text>
+            <text x="222" y="78" text-anchor="middle" fill="#4A6280" font-size="7" font-family="Barlow Condensed">OPP</text>
+            <!-- Player row 1 -->
+            <rect y="82" width="300" height="28" fill="#0C1422"/>
+            <text x="12" y="97" fill="#E4EDF8" font-size="11" font-family="Barlow Condensed" font-weight="700">B. MURPHY</text>
+            <text x="12" y="108" fill="#4A6280" font-size="8" font-family="Barlow Condensed">Points</text>
+            <text x="238" y="100" text-anchor="middle" fill="#BAFF29" font-size="15" font-family="Bebas Neue">3</text>
+            <rect x="252" y="86" width="38" height="20" rx="5" fill="rgba(186,255,41,0.15)" stroke="rgba(186,255,41,0.3)" stroke-width="0.5"/>
+            <text x="271" y="100" text-anchor="middle" fill="#BAFF29" font-size="16" font-weight="700">+</text>
+            <line x1="0" y1="110" x2="300" y2="110" stroke="#1A2840" stroke-width="0.5"/>
+            <!-- Player row 2 -->
+            <rect y="110" width="300" height="28" fill="#0D1321"/>
+            <text x="12" y="125" fill="#E4EDF8" font-size="11" font-family="Barlow Condensed" font-weight="700">S. COLLINS</text>
+            <text x="12" y="136" fill="#4A6280" font-size="8" font-family="Barlow Condensed">Points</text>
+            <text x="238" y="128" text-anchor="middle" fill="#BAFF29" font-size="15" font-family="Bebas Neue">2</text>
+            <rect x="252" y="114" width="38" height="20" rx="5" fill="rgba(186,255,41,0.15)" stroke="rgba(186,255,41,0.3)" stroke-width="0.5"/>
+            <text x="271" y="128" text-anchor="middle" fill="#BAFF29" font-size="16" font-weight="700">+</text>
+            <line x1="0" y1="138" x2="300" y2="138" stroke="#1A2840" stroke-width="0.5"/>
+            <!-- Player row 3 -->
+            <rect y="138" width="300" height="28" fill="#0C1422"/>
+            <text x="12" y="153" fill="#E4EDF8" font-size="11" font-family="Barlow Condensed" font-weight="700">C. RYAN</text>
+            <text x="12" y="164" fill="#4A6280" font-size="8" font-family="Barlow Condensed">Shots</text>
+            <text x="238" y="156" text-anchor="middle" fill="#BAFF29" font-size="15" font-family="Bebas Neue">5</text>
+            <rect x="252" y="142" width="38" height="20" rx="5" fill="rgba(186,255,41,0.15)" stroke="rgba(186,255,41,0.3)" stroke-width="0.5"/>
+            <text x="271" y="156" text-anchor="middle" fill="#BAFF29" font-size="16" font-weight="700">+</text>
+            <line x1="0" y1="166" x2="300" y2="166" stroke="#1A2840" stroke-width="0.5"/>
+            <!-- Action bar -->
+            <rect y="166" width="300" height="34" fill="#0C1422"/>
+            <rect x="8" y="172" width="62" height="20" rx="4" fill="rgba(186,255,41,0.12)" stroke="rgba(186,255,41,0.25)" stroke-width="0.5"/>
+            <text x="39" y="185" text-anchor="middle" fill="#BAFF29" font-size="7.5" font-family="Barlow Condensed" font-weight="700" letter-spacing="0.3">PUCKOUT</text>
+            <rect x="78" y="172" width="50" height="20" rx="4" fill="rgba(255,255,255,0.04)" stroke="#1A2840" stroke-width="0.5"/>
+            <text x="103" y="185" text-anchor="middle" fill="#8CA3BF" font-size="7.5" font-family="Barlow Condensed" font-weight="700">OPP SCORE</text>
+            <rect x="136" y="172" width="36" height="20" rx="4" fill="rgba(255,255,255,0.04)" stroke="#1A2840" stroke-width="0.5"/>
+            <text x="154" y="185" text-anchor="middle" fill="#8CA3BF" font-size="7.5" font-family="Barlow Condensed" font-weight="700">SUB</text>
+            <circle cx="282" cy="182" r="6" fill="rgba(186,255,41,0.15)" stroke="#BAFF29" stroke-width="0.5"/>
+            <circle cx="282" cy="182" r="3" fill="#BAFF29"/>
           </svg>
         </div>
-        <div class="chart-labels">
-          <span class="chart-label">M1</span><span class="chart-label">M2</span>
-          <span class="chart-label">M3</span><span class="chart-label">M4</span>
-          <span class="chart-label">M5</span><span class="chart-label">M6</span>
-        </div>
         <div class="player-compare">
-          <div class="compare-sub">Player Compare — Avg Points</div>
-          <div class="compare-row"><div class="compare-name">B. Murphy</div><div class="compare-bar-wrap"><div class="compare-bar" style="width:90%"></div></div><div class="compare-val">6.3</div></div>
-          <div class="compare-row"><div class="compare-name">S. Collins</div><div class="compare-bar-wrap"><div class="compare-bar amber" style="width:72%"></div></div><div class="compare-val amber">5.1</div></div>
-          <div class="compare-row"><div class="compare-name">C. Ryan</div><div class="compare-bar-wrap"><div class="compare-bar" style="width:56%"></div></div><div class="compare-val">3.9</div></div>
-          <div class="compare-row"><div class="compare-name">M. Keane</div><div class="compare-bar-wrap"><div class="compare-bar amber" style="width:43%"></div></div><div class="compare-val amber">3.0</div></div>
+          <div class="compare-sub">Season Totals — Points Scored</div>
+          <div class="compare-row"><div class="compare-name">B. Murphy</div><div class="compare-bar-wrap"><div class="compare-bar" style="width:90%"></div></div><div class="compare-val">38</div></div>
+          <div class="compare-row"><div class="compare-name">S. Collins</div><div class="compare-bar-wrap"><div class="compare-bar amber" style="width:67%"></div></div><div class="compare-val amber">28</div></div>
+          <div class="compare-row"><div class="compare-name">C. Ryan</div><div class="compare-bar-wrap"><div class="compare-bar" style="width:50%"></div></div><div class="compare-val">21</div></div>
+          <div class="compare-row"><div class="compare-name">M. Keane</div><div class="compare-bar-wrap"><div class="compare-bar amber" style="width:36%"></div></div><div class="compare-val amber">15</div></div>
         </div>
       </div>
       <div>
-        <div class="section-eyebrow reveal">Deep analytics</div>
-        <h2 class="section-title reveal reveal-delay-1">Know your<br><span style="color:var(--lp-lime)">players</span><br>completely.</h2>
+        <div class="section-eyebrow reveal">Built for the sideline</div>
+        <h2 class="section-title reveal reveal-delay-1">One tap.<br><span style="color:var(--lp-lime)">Every</span><br>stat.</h2>
         <p class="section-body reveal reveal-delay-2" style="margin-bottom:28px">
-          GAA Stats App doesn't just count — it analyses. Every player's stats are tracked across every match so you can spot trends, compare players, and make selection decisions based on data.
+          One tap to log any stat for any player. No fumbling, no scrolling — just tap and keep watching the match. Everything is timestamped and stored, ready to analyse the moment the final whistle blows.
         </p>
         <ul class="check-list reveal reveal-delay-3">
-          <li>Per-player trend charts across the full season</li>
-          <li>Side-by-side player comparison view</li>
-          <li>Per-match breakdown table — drill into any game</li>
-          <li>Custom stats tracked the same as default stats</li>
-          <li>Aggregate totals across all matches with one tap</li>
+          <li>Player rows mode — each player's own row of stat buttons</li>
+          <li>Quick tap mode — select player then stat in two taps</li>
+          <li>Undo last action in one tap</li>
+          <li>Auto-saves every tap — nothing lost if app closes</li>
+          <li>Full season totals and per-match breakdown after each game</li>
         </ul>
       </div>
     </div>
@@ -1311,7 +1345,7 @@
   .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .chart-title { font-family: var(--lp-font-sub); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--lp-text2); }
   .chart-period { font-size: 11px; color: var(--lp-text3); font-family: var(--lp-font-sub); }
-  .chart-area { height: 140px; position: relative; margin-bottom: 16px; }
+  .chart-area { position: relative; margin-bottom: 16px; }
   .bar-chart { width: 100%; height: 100%; }
   .chart-labels { display: flex; justify-content: space-between; }
   .chart-label { font-size: 10px; color: var(--lp-text3); font-family: var(--lp-font-sub); }
