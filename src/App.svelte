@@ -1,6 +1,7 @@
 <script>
 
 import { clearAllData } from './lib/db.js'
+  import Landing from './lib/Landing.svelte'
   import Match from './lib/Match.svelte'
   import PlayerStats from './lib/PlayerStats.svelte'
   import TeamStats from './lib/TeamStats.svelte'
@@ -22,6 +23,7 @@ import { clearAllData } from './lib/db.js'
 
   let needsTeamSetup = false
   let liveSession = null
+  let isPWA = false
 
   function hexToRgbString(hex) {
     const r = parseInt(hex.slice(1,3), 16)
@@ -84,6 +86,7 @@ import { clearAllData } from './lib/db.js'
   }
 
   onMount(async () => {
+    isPWA = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone
     const params = new URLSearchParams(window.location.search)
     if (params.get('subscribed') === 'true') {
       history.replaceState({}, '', window.location.pathname)
@@ -189,7 +192,11 @@ import { clearAllData } from './lib/db.js'
   </div>
 
 {:else if !$user}
-  <Auth />
+  {#if isPWA}
+    <Auth />
+  {:else}
+    <Landing />
+  {/if}
 
 {:else if !dataReady && !needsTeamSetup}
   <div class="loading-screen">
