@@ -44,7 +44,8 @@ hurling-stats/
 │   │   ├── auth-store.js             # Svelte writable store for auth state
 │   │   ├── settings-store.js         # Svelte writable store for app settings
 │   │   ├── sync.js                   # Supabase sync logic (push/pull)
-│   │   ├── Auth.svelte               # Login / signup screen
+│   │   ├── Auth.svelte               # Compact sign-in card — shown only when running as PWA (standalone)
+│   │   ├── Landing.svelte            # Full marketing landing page — shown to web (non-PWA) visitors; embeds sign-in form in hero
 │   │   ├── Match.svelte              # Live match logging (main screen)
 │   │   ├── PlayerStats.svelte        # Individual player stats + charts
 │   │   ├── TeamStats.svelte          # Team stats + pitch map
@@ -110,7 +111,16 @@ All tables have Row Level Security (RLS) enabled. Every row has a `user_id` colu
 
 ## Auth Flow
 
-1. User signs up or logs in via `Auth.svelte`
+### Web vs PWA routing (App.svelte)
+`App.svelte` detects standalone (PWA) mode in `onMount` via:
+```javascript
+isPWA = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone
+```
+- **PWA (installed to home screen):** shows the compact `<Auth />` card
+- **Browser (web visit):** shows `<Landing />` — the full marketing/landing page with the sign-in form embedded in the hero section
+
+### Sign-in flow (both paths)
+1. User signs up or logs in (via `Landing.svelte` hero form or `Auth.svelte` card)
 2. On login, `App.svelte` detects the new `user.id` via `auth-store.js`
 3. `clearAllData()` wipes local IndexedDB
 4. `syncFromSupabase()` pulls that user's data from Supabase into IndexedDB
@@ -326,7 +336,9 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Dark mode removed — app is light-only; `[data-theme="dark"]` block removed from `app.css`
 - [x] Squad pitch view — List/Pitch toggle on Squad page; visual GAA formation with 15 slots; tap to assign players, inline new-player form, removable sub chips, reactive `$: slotMap` driving display
 - [x] Lineup auto-populated on match start — `Match.svelte` builds `lineup` from squad jersey numbers silently; saved with match for PDF export; no interactive builder on setup screen
-- [x] Landing page — separate project at `~/gaa-stats-landing/`, single HTML file with embedded CSS/JS; showcases all features with CSS-drawn mockups, animated pitch map, scroll reveals; live at https://github.com/Bressie10/gaa-stats-landing-
+- [x] Landing page integrated into app — `Landing.svelte` is the full dark-themed marketing site shown to web (non-PWA) visitors who aren't signed in; sign-in/signup form is embedded directly in the hero; PWA users get the compact `Auth.svelte` card (detected via `matchMedia('(display-mode: standalone)')`)
+- [x] Pricing section on landing page — 4 tier cards (Free, Personal Pro €7.99/mo, Club €15/mo, Club Pro €25/mo) + Custom/Enterprise card with amber styling and contact CTA; correct info: no dark mode reference, CTA reflects real pricing
+- [x] Google Fonts added to `index.html` — Bebas Neue, Barlow Condensed, Outfit; used by `Landing.svelte` only
 
 - [x] Stripe subscription payments — Personal Pro (€7.99/mo), Club (€15/mo), Club Pro (€25/mo); Stripe Checkout hosted by Supabase Edge Functions; webhook syncs plan/status to DB; Stripe Customer Portal for managing card/invoices/cancellation
 
