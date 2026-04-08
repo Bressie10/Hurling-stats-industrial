@@ -45,15 +45,16 @@ hurling-stats/
 │   │   ├── settings-store.js         # Svelte writable store for app settings (includes rememberLastTeam)
 │   │   ├── subscription-store.js     # Club/team membership, active team, join/leave helpers
 │   │   ├── sync.js                   # Supabase sync logic (push/pull)
-│   │   ├── Auth.svelte               # Compact sign-in card — shown only when running as PWA (standalone)
-│   │   ├── Landing.svelte            # Full marketing landing page — shown to web (non-PWA) visitors; embeds sign-in form in hero
-│   │   ├── LpNav.svelte              # Shared nav for all public pages — Supabase-style CSS hover dropdowns
+│   │   ├── Auth.svelte               # Compact sign-in card — kept in codebase but no longer used in routing
+│   │   ├── Landing.svelte            # Full marketing landing page — shown to ALL unauthenticated visitors (web + PWA); embeds sign-in form in hero
+│   │   ├── LpNav.svelte              # Shared nav for all public pages — CSS hover dropdowns + Home link + mobile hamburger overlay
 │   │   ├── LpFooter.svelte           # Shared footer for all public pages
-│   │   ├── DocsPage.svelte           # /docs — feature documentation with fixed sidebar
+│   │   ├── DocsPage.svelte           # /docs — "User Guide" (renamed from Documentation); fixed sidebar, 12 feature sections, slide-in mobile drawer, minmax(0,1fr) grid fix
 │   │   ├── PricingPage.svelte        # /pricing — plan cards + feature comparison table
 │   │   ├── AboutPage.svelte          # /about — origin story, mission, values, tech stack
 │   │   ├── PrivacyPage.svelte        # /privacy — GDPR-compliant privacy policy
 │   │   ├── TermsPage.svelte          # /terms — terms of service
+│   │   ├── ContactPage.svelte        # /contact — email card, help topics list, User Guide nudge
 │   │   ├── TeamPicker.svelte         # Team selection overlay shown on login when multiple teams exist
 │   │   ├── Match.svelte              # Live match logging (main screen)
 │   │   ├── PlayerStats.svelte        # Individual player stats + charts
@@ -140,15 +141,12 @@ All tables have Row Level Security (RLS) enabled. Every row has a `user_id` colu
 ## Auth Flow
 
 ### Web vs PWA routing (App.svelte)
-`App.svelte` detects standalone (PWA) mode in `onMount` via:
-```javascript
-isPWA = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone
-```
-- **PWA (installed to home screen):** shows the compact `<Auth />` card
-- **Browser (web visit):** shows `<Landing />` — the full marketing/landing page with the sign-in form embedded in the hero section
+All unauthenticated users — whether on the web or installed as a PWA — see the full `<Landing />` marketing page with the sign-in form embedded in the hero. The `isPWA` check and `<Auth />` card have been removed from the unauthenticated routing path.
+
+`Auth.svelte` still exists in the codebase but is no longer imported or used in `App.svelte`.
 
 ### Sign-in flow (both paths)
-1. User signs up or logs in (via `Landing.svelte` hero form or `Auth.svelte` card)
+1. User signs up or logs in (via `Landing.svelte` hero form — same flow on web and PWA)
 2. On login, `App.svelte` detects the new `user.id` via `auth-store.js`
 3. `clearAllData()` wipes local IndexedDB
 4. `syncFromSupabase()` pulls that user's data from Supabase into IndexedDB
@@ -364,7 +362,7 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Dark mode removed — app is light-only; `[data-theme="dark"]` block removed from `app.css`
 - [x] Squad pitch view — List/Pitch toggle on Squad page; visual GAA formation with 15 slots; tap to assign players, inline new-player form, removable sub chips, reactive `$: slotMap` driving display
 - [x] Lineup auto-populated on match start — `Match.svelte` builds `lineup` from squad jersey numbers silently; saved with match for PDF export; no interactive builder on setup screen
-- [x] Landing page integrated into app — `Landing.svelte` is the full dark-themed marketing site shown to web (non-PWA) visitors who aren't signed in; sign-in/signup form is embedded directly in the hero; PWA users get the compact `Auth.svelte` card (detected via `matchMedia('(display-mode: standalone)')`)
+- [x] Landing page integrated into app — `Landing.svelte` is the full dark-themed marketing site shown to ALL unauthenticated visitors (web + PWA); sign-in/signup form is embedded directly in the hero; the old `isPWA` → `<Auth />` routing has been removed
 - [x] Pricing section on landing page — 5 cards: Free, Personal Pro €7.99/mo, Club €15/mo, Club Pro €25/mo, Custom/Enterprise (contact CTA, amber styling); all plan buttons use `goToSignup(mode)` to set auth mode + smooth-scroll to hero sign-in card
 - [x] Google Fonts added to `index.html` — Bebas Neue, Barlow Condensed, Outfit; used by `Landing.svelte` only
 - [x] Landing page buttons fully wired — all CTAs use `goToSignup(mode)` helper; nav anchor links have `scroll-padding-top: 80px` offset for fixed nav; contact/enterprise button left as mailto link
@@ -375,8 +373,9 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Two-tier role model — `club_members` (owner/admin/coach) + `team_members` junction table for many-to-many user↔team; owners have implicit access to all teams
 - [x] Team Picker — coaches with multiple teams prompted to choose on login; "Remember last team" toggle in Settings skips picker
 - [x] Join another team from Settings — coaches can join additional teams by code without a new account; leave team button per team row
-- [x] Public site — 7 pages with shared `LpNav` (Supabase-style CSS hover dropdowns) + `LpFooter`
-- [x] DocsPage — Supabase docs layout with fixed sidebar, 12 feature sections, IntersectionObserver active link tracking
+- [x] Public site — 8 pages with shared `LpNav` (Supabase-style CSS hover dropdowns + Home link) + `LpFooter`
+- [x] DocsPage — renamed to "User Guide"; Supabase docs layout with fixed sidebar, 12 feature sections, IntersectionObserver active link tracking; mobile slide-in drawer; `minmax(0,1fr)` grid fix prevents text overflow on mobile
+- [x] ContactPage — email card (contact@gaastatsapp.com), help topics list, User Guide nudge; linked from nav Company dropdown + footer
 - [x] PricingPage — 5 plan cards + feature comparison table with 4 row groups + FAQ accordion
 - [x] AboutPage — origin story (Doora Barefield GAA), mission, 4 values, tech stack badges, CTA
 - [x] PrivacyPage — GDPR-compliant: data tables, sub-processors (Supabase EU, Stripe), retention periods, user rights, DPC link
@@ -461,7 +460,7 @@ The analytics section left panel shows an SVG of the actual match logging screen
 
 ---
 
-## Public Site (6 pages)
+## Public Site (8 pages)
 
 All public pages share:
 - `LpNav.svelte` — fixed nav, Supabase-style CSS hover dropdowns (no JS), mobile hamburger overlay
@@ -488,7 +487,7 @@ CSS-only hover dropdowns — no JS toggle needed:
 .dd-trigger:hover .dd-menu,
 .dd-menu:hover { opacity: 1; pointer-events: auto; transform: none; }
 ```
-Three dropdown groups: **Product** (6 items, 2-col grid), **Resources** (Documentation + Quick Start, both link to /docs), **Company** (3 items). Each item has a coloured icon box + title + description line. Arrow pointer via `::before` clip-path triangle.
+Three dropdown groups: **Product** (6 items, 2-col grid), **Resources** (User Guide + Quick Start, both link to /docs), **Company** (4 items: About, Privacy, Terms, Contact). Plus a standalone **Home** link as the first nav item. Each item has a coloured icon box + title + description line. Arrow pointer via `::before` clip-path triangle.
 
 ### Scroll reveal — IMPORTANT CSS GOTCHA (applies to all public pages)
 Elements with `.reveal` use `opacity: 0; transform: translateY(20px)` and animate when `.in` is added by IntersectionObserver. **Unlike `Landing.svelte`**, the public pages DO use `opacity: 0` on `.reveal` — this works because the styles are defined inline in each component's `<style>` block with Svelte scoping, and the `.in` class is added by JS at component scope. The 1.5s fallback timer ensures `.in` is always added even if the observer doesn't fire.
