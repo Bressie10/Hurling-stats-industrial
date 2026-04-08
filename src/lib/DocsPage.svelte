@@ -124,7 +124,7 @@
         </div>
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <strong>Tip:</strong> Install the app before heading to a ground. Once installed, it works completely offline — no signal needed.
+          <span><strong>Tip:</strong> Install the app before heading to a ground. Once installed, it works completely offline — no signal needed.</span>
         </div>
       </section>
 
@@ -173,7 +173,7 @@
 
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <strong>Tip:</strong> Custom stats can be added during a live match from the stats setup — you're not locked into the default list.
+          <span><strong>Tip:</strong> Custom stats can be added during a live match from the stats setup — you're not locked into the default list.</span>
         </div>
       </section>
 
@@ -274,7 +274,7 @@
 
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <strong>Tip:</strong> Players are identified by <strong>name</strong>, not jersey number. Numbers can change week to week — the player identity never changes.
+          <span><strong>Tip:</strong> Players are identified by <strong>name</strong>, not jersey number. Numbers can change week to week — the player identity never changes.</span>
         </div>
 
         <h2>Lineup and PDF export</h2>
@@ -376,7 +376,7 @@
 
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <strong>Important:</strong> Each coach's match data is private to their account — only they can see their own matches and squad. The club owner manages teams and codes, but cannot read coaches' data.
+          <span><strong>Important:</strong> Each coach's match data is private to their account — only they can see their own matches and squad. The club owner manages teams and codes, but cannot read coaches' data.</span>
         </div>
       </section>
 
@@ -400,7 +400,7 @@
 
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
-          <strong>Always sync before signing out.</strong> Unsynced data lives only on the device. Sign out without syncing = that data is gone.
+          <span><strong>Always sync before signing out.</strong> Unsynced data lives only on the device. Sign out without syncing = that data is gone.</span>
         </div>
       </section>
 
@@ -546,6 +546,7 @@
     font-size: 14px; color: var(--lp-text2); line-height: 1.6;
   }
   .docs-tip svg { flex-shrink: 0; color: var(--lp-lime); margin-top: 1px; }
+  .docs-tip span { flex: 1; min-width: 0; }
 
   .docs-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
   .docs-card {
