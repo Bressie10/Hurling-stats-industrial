@@ -56,6 +56,11 @@
   function reset() { error = null; successMsg = null }
   function setMode(m) { mode = m; reset() }
 
+  function goToSignup(m) {
+    setMode(m)
+    document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   onMount(() => {
     // Scroll reveal
     const revealEls = document.querySelectorAll('.lp .reveal')
@@ -153,10 +158,10 @@
         Real-time match statistics for hurling coaches. Log every stat, track every player, and analyse performance — even with zero signal at the ground.
       </p>
       <div class="hero-actions">
-        <a href="#signin" class="btn-primary">
+        <button class="btn-primary" on:click={() => goToSignup('choose')}>
           Get Started Free
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
+        </button>
         <a href="#features" class="btn-secondary">
           See all features
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -781,7 +786,7 @@
           <li class="plan-feature-faded">PDF match reports</li>
           <li class="plan-feature-faded">Performance targets</li>
         </ul>
-        <button class="plan-btn" on:click={() => setMode('personal')}>
+        <button class="plan-btn" on:click={() => goToSignup('personal')}>
           Get Started Free
         </button>
       </div>
@@ -802,8 +807,8 @@
           <li>PDF match reports</li>
           <li>Performance targets</li>
         </ul>
-        <button class="plan-btn plan-btn-featured" on:click={() => setMode('personal')}>
-          Start Free Trial
+        <button class="plan-btn plan-btn-featured" on:click={() => goToSignup('personal')}>
+          Get Started
         </button>
       </div>
 
@@ -822,7 +827,7 @@
           <li>PDF match reports</li>
           <li>Performance targets</li>
         </ul>
-        <button class="plan-btn" on:click={() => setMode('club')}>
+        <button class="plan-btn" on:click={() => goToSignup('club')}>
           Set Up My Club
         </button>
       </div>
@@ -842,8 +847,8 @@
           <li>Live match sharing</li>
           <li>Unlimited history</li>
         </ul>
-        <button class="plan-btn" on:click={() => setMode('club')}>
-          Start Club Pro
+        <button class="plan-btn" on:click={() => goToSignup('club')}>
+          Set Up My Club
         </button>
       </div>
 
@@ -885,10 +890,10 @@
         Join GAA coaches already using GAA Stats App on the sideline. Works on any phone, fully offline. Free to start — Pro plans from €7.99/month.
       </p>
       <div class="cta-actions reveal reveal-delay-2">
-        <a href="#signin" class="btn-large primary">
+        <button class="btn-large primary" on:click={() => goToSignup('personal')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Get Started Free
-        </a>
+        </button>
         <a href="#features" class="btn-large ghost">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           Explore Features
@@ -916,6 +921,11 @@
 </div>
 
 <style>
+  /* ── SCROLL OFFSET FOR FIXED NAV ─────────────────────────────────────── */
+  :global(html:has(.lp)) {
+    scroll-padding-top: 80px;
+  }
+
   /* ── TOKENS ───────────────────────────────────────────────────────────── */
   .lp {
     --lp-bg:        #05080F;
@@ -1059,7 +1069,7 @@
     padding: 16px 32px; border-radius: 8px;
     display: inline-flex; align-items: center; gap: 10px;
     transition: background .2s, transform .15s, box-shadow .2s;
-    text-decoration: none;
+    text-decoration: none; border: none; cursor: pointer;
   }
   .btn-primary:hover { background: var(--lp-lime-dim); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(186,255,41,0.2); }
   .btn-secondary {
@@ -1519,6 +1529,7 @@
     font-size: 17px; padding: 18px 40px; border-radius: 10px;
     font-family: var(--lp-font-sub); font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
     display: inline-flex; align-items: center; gap: 10px; transition: all .2s; text-decoration: none;
+    border: none; cursor: pointer;
   }
   .btn-large.primary { background: var(--lp-lime); color: var(--lp-bg); }
   .btn-large.primary:hover { background: var(--lp-lime-dim); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(186,255,41,0.25); }
