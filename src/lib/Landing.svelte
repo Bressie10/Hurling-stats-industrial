@@ -1,6 +1,10 @@
 <script>
   import { onMount } from 'svelte'
   import { signIn, signUp } from './auth-store.js'
+  import LpNav from './LpNav.svelte'
+  import LpFooter from './LpFooter.svelte'
+
+  export let onNavigate = () => {}
 
   // Auth state
   let mode = 'login' // 'login' | 'choose' | 'personal' | 'club' | 'join'
@@ -126,20 +130,7 @@
   <!-- Noise overlay -->
   <div class="lp-noise"></div>
 
-  <!-- ── NAV ────────────────────────────────────────────────────────────── -->
-  <nav class="lp-nav">
-    <div class="nav-logo">
-      <div class="nav-logo-mark">G</div>
-      <span class="nav-logo-text">GAA <span>Stats</span> App</span>
-    </div>
-    <ul class="nav-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="#offline">Offline</a></li>
-      <li><a href="#analytics">Analytics</a></li>
-    </ul>
-    <a href="#signin" class="nav-cta">Sign In</a>
-  </nav>
+  <LpNav {onNavigate} currentPage="home" />
 
   <!-- ── HERO ───────────────────────────────────────────────────────────── -->
   <section class="hero">
@@ -380,6 +371,42 @@
       <span class="strip-item"><span class="strip-dot"></span> Stripe Payments</span>
     </div>
   </div>
+
+  <!-- ── HOW IT WORKS ────────────────────────────────────────────────────── -->
+  <section class="how-section">
+    <div class="section-eyebrow reveal" style="justify-content:center">Get started in minutes</div>
+    <h2 class="section-title reveal reveal-delay-1" style="text-align:center">
+      Up and running<br><span style="color:var(--lp-lime)">before the warm-up ends.</span>
+    </h2>
+    <div class="how-steps">
+      <div class="how-step reveal reveal-delay-1">
+        <div class="how-num">01</div>
+        <div class="how-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <h3>Install the PWA</h3>
+        <p>Add to your home screen from any browser — no App Store needed. Works on iPhone and Android. Fully offline from day one.</p>
+      </div>
+      <div class="how-connector"></div>
+      <div class="how-step reveal reveal-delay-2">
+        <div class="how-num">02</div>
+        <div class="how-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Set up your squad</h3>
+        <p>Add your players, assign jersey numbers, and set positions on a visual GAA pitch. Your lineup is ready for every match.</p>
+      </div>
+      <div class="how-connector"></div>
+      <div class="how-step reveal reveal-delay-3">
+        <div class="how-num">03</div>
+        <div class="how-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Log your first match</h3>
+        <p>Tap to record every stat as it happens. Puckouts, scores, tackles, subs — all logged in real time, one hand on the phone.</p>
+      </div>
+    </div>
+  </section>
 
   <!-- ── FEATURES ────────────────────────────────────────────────────────── -->
   <section class="features-section" id="features">
@@ -803,6 +830,82 @@
     </div>
   </section>
 
+  <!-- ── FOR YOUR CLUB ───────────────────────────────────────────────────── -->
+  <section class="club-section">
+    <div class="club-inner">
+      <div class="club-content reveal">
+        <div class="section-eyebrow">Club &amp; Pro plans</div>
+        <h2 class="section-title" style="max-width:480px">
+          One app.<br>Your <span style="color:var(--lp-lime)">whole club.</span>
+        </h2>
+        <p class="section-body">
+          Scale from a single coach to every team in your club. Create sub-teams, share join codes, and give every coach their own private data — all under one subscription.
+        </p>
+        <div class="club-cards">
+          <div class="club-role-card">
+            <div class="club-role-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div class="club-role-title">Club Owners</div>
+              <div class="club-role-desc">Create teams, generate join codes, and keep oversight across all squads from one account.</div>
+            </div>
+          </div>
+          <div class="club-role-card">
+            <div class="club-role-icon club-role-icon-amber">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div>
+              <div class="club-role-title">Coaches</div>
+              <div class="club-role-desc">Join with a 6-digit code. Your match data stays private — only you can see your stats.</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-primary" on:click={() => onNavigate('pricing')} style="margin-top:8px">
+          Compare all plans →
+        </button>
+      </div>
+      <div class="club-visual reveal reveal-delay-2">
+        <div class="club-diagram">
+          <div class="club-diagram-top">
+            <div class="club-node owner-node">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Club Owner
+            </div>
+          </div>
+          <div class="club-diagram-lines">
+            <svg viewBox="0 0 280 60" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <line x1="140" y1="0" x2="46" y2="60" stroke="rgba(186,255,41,0.25)" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <line x1="140" y1="0" x2="140" y2="60" stroke="rgba(186,255,41,0.25)" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <line x1="140" y1="0" x2="234" y2="60" stroke="rgba(186,255,41,0.25)" stroke-width="1.5" stroke-dasharray="4 3"/>
+            </svg>
+          </div>
+          <div class="club-diagram-teams">
+            <div class="club-node team-node">Seniors</div>
+            <div class="club-node team-node">U21s</div>
+            <div class="club-node team-node">Minor</div>
+          </div>
+          <div class="club-diagram-lines" style="margin-top:-4px">
+            <svg viewBox="0 0 280 40" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <line x1="46" y1="0" x2="46" y2="40" stroke="rgba(255,184,0,0.2)" stroke-width="1" stroke-dasharray="3 3"/>
+              <line x1="140" y1="0" x2="140" y2="40" stroke="rgba(255,184,0,0.2)" stroke-width="1" stroke-dasharray="3 3"/>
+              <line x1="234" y1="0" x2="234" y2="40" stroke="rgba(255,184,0,0.2)" stroke-width="1" stroke-dasharray="3 3"/>
+            </svg>
+          </div>
+          <div class="club-diagram-coaches">
+            <div class="club-node coach-node">Coach A</div>
+            <div class="club-node coach-node">Coach B</div>
+            <div class="club-node coach-node">Coach C</div>
+          </div>
+        </div>
+        <div class="club-code-pill">
+          <span class="club-code-label">Team join code</span>
+          <span class="club-code-val">482910</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── PRICING ─────────────────────────────────────────────────────────── -->
   <section class="pricing-section" id="pricing">
     <div class="pricing-header">
@@ -925,6 +1028,38 @@
     </div>
   </section>
 
+  <!-- ── FAQ ─────────────────────────────────────────────────────────────── -->
+  <section class="faq-section">
+    <div class="faq-inner">
+      <div class="faq-header">
+        <div class="section-eyebrow reveal" style="justify-content:center">FAQ</div>
+        <h2 class="section-title reveal reveal-delay-1" style="text-align:center">Common questions</h2>
+      </div>
+      <div class="faq-grid">
+        {#each [
+          { q: 'Does it really work without internet?', a: 'Yes — completely. Every stat, squad member, and match is stored locally on your device using IndexedDB. You can log a full match with zero signal. Data syncs automatically to the cloud when you\'re next online.' },
+          { q: 'Do I need to install it from an app store?', a: 'No. Open the site in Safari (iOS) or Chrome (Android), tap "Add to Home Screen", and it installs as a full PWA. No App Store, no waiting, no permissions hassle.' },
+          { q: 'Can multiple coaches use the same club account?', a: 'On Club and Club Pro plans, yes. The club owner creates teams and shares a 6-digit join code. Each coach creates their own free account and joins with the code. Their match data stays private to them.' },
+          { q: 'What is live match sharing?', a: 'Club Pro\'s standout feature. The coach logging the match can broadcast live data to backroom staff watching on the sideline or anywhere in the world. Viewers see the live score, stats, and puckout breakdown updating in real time.' },
+          { q: 'Can I cancel anytime?', a: 'Yes. Cancel from Settings → Manage billing. You keep full access until the end of your current billing period. No lock-ins.' },
+          { q: 'What happens to my data if I downgrade?', a: 'Your data is always yours. If you downgrade from Pro, your match history is preserved — you just won\'t be able to view analytics until you upgrade again. You can export everything as JSON at any time from Settings.' },
+        ] as item, i}
+          <div class="faq-item reveal" style="--delay:{i * 0.05}s">
+            <div class="faq-q">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              {item.q}
+            </div>
+            <div class="faq-a">{item.a}</div>
+          </div>
+        {/each}
+      </div>
+      <div class="faq-more reveal">
+        <span>More questions?</span>
+        <button class="faq-docs-link" on:click={() => onNavigate('docs')}>Read the full docs →</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ── CTA ────────────────────────────────────────────────────────────── -->
   <section class="cta-section" id="cta">
     <div class="cta-inner">
@@ -951,18 +1086,7 @@
     </div>
   </section>
 
-  <!-- ── FOOTER ──────────────────────────────────────────────────────────── -->
-  <footer class="lp-footer">
-    <div class="footer-logo">GAA <span>Stats</span> App</div>
-    <ul class="footer-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="#offline">Offline</a></li>
-      <li><a href="#analytics">Analytics</a></li>
-      <li><a href="#signin">Sign In</a></li>
-    </ul>
-    <div class="footer-copy">© 2026 GAA Stats App. Built for GAA coaches.</div>
-  </footer>
+  <LpFooter {onNavigate} />
 
 </div>
 
@@ -972,34 +1096,7 @@
     scroll-padding-top: 80px;
   }
 
-  /* ── TOKENS ───────────────────────────────────────────────────────────── */
-  .lp {
-    --lp-bg:        #05080F;
-    --lp-bg2:       #080D18;
-    --lp-surface:   #0C1422;
-    --lp-surface2:  #101C30;
-    --lp-border:    #1A2840;
-    --lp-lime:      #BAFF29;
-    --lp-lime-dim:  #8FCC00;
-    --lp-amber:     #FFB800;
-    --lp-amber-dim: #CC9200;
-    --lp-red:       #FF3A3A;
-    --lp-text:      #E4EDF8;
-    --lp-text2:     #8CA3BF;
-    --lp-text3:     #4A6280;
-    --lp-font-head: 'Bebas Neue', sans-serif;
-    --lp-font-sub:  'Barlow Condensed', sans-serif;
-    --lp-font-body: 'Outfit', sans-serif;
-
-    background: var(--lp-bg);
-    color: var(--lp-text);
-    font-family: var(--lp-font-body);
-    font-size: 16px;
-    line-height: 1.6;
-    overflow-x: hidden;
-    position: relative;
-    min-height: 100vh;
-  }
+  /* tokens + .lp base styles now in app.css */
 
   /* ── NOISE ────────────────────────────────────────────────────────────── */
   .lp-noise {
@@ -1011,42 +1108,6 @@
     opacity: 0.6;
   }
 
-  /* ── NAV ──────────────────────────────────────────────────────────────── */
-  .lp-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 40px; height: 68px;
-    background: rgba(5,8,15,0.85);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--lp-border);
-  }
-  .nav-logo { display: flex; align-items: center; gap: 10px; }
-  .nav-logo-mark {
-    width: 36px; height: 36px; background: var(--lp-lime);
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    font-family: var(--lp-font-head); font-size: 18px; color: var(--lp-bg); letter-spacing: 0;
-  }
-  .nav-logo-text {
-    font-family: var(--lp-font-sub); font-weight: 700; font-size: 18px;
-    letter-spacing: 0.08em; text-transform: uppercase; color: var(--lp-text);
-  }
-  .nav-logo-text span { color: var(--lp-lime); }
-  .nav-links { display: flex; gap: 36px; list-style: none; }
-  .nav-links a {
-    font-family: var(--lp-font-sub); font-size: 15px; font-weight: 600;
-    letter-spacing: 0.06em; text-transform: uppercase; color: var(--lp-text2);
-    transition: color .2s; text-decoration: none;
-  }
-  .nav-links a:hover { color: var(--lp-lime); }
-  .nav-cta {
-    background: var(--lp-lime); color: var(--lp-bg);
-    font-family: var(--lp-font-sub); font-weight: 700; font-size: 14px;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 10px 22px; border-radius: 6px;
-    transition: background .2s, transform .15s;
-    text-decoration: none;
-  }
-  .nav-cta:hover { background: var(--lp-lime-dim); transform: translateY(-1px); }
 
   /* ── HERO ─────────────────────────────────────────────────────────────── */
   .hero {
@@ -1583,17 +1644,124 @@
   .btn-large.ghost:hover { border-color: var(--lp-text2); color: var(--lp-text); }
   .cta-note { margin-top: 20px; font-size: 13px; color: var(--lp-text3); }
 
-  /* ── FOOTER ───────────────────────────────────────────────────────────── */
-  .lp-footer {
-    background: var(--lp-bg); border-top: 1px solid var(--lp-border);
-    padding: 40px 80px; display: flex; align-items: center; justify-content: space-between;
+  /* ── HOW IT WORKS ────────────────────────────────────────────────────── */
+  .how-section {
+    padding: 100px 80px;
+    text-align: center;
+    background: linear-gradient(to bottom, var(--lp-bg) 0%, var(--lp-bg2) 100%);
   }
-  .footer-logo { font-family: var(--lp-font-sub); font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-  .footer-logo span { color: var(--lp-lime); }
-  .footer-copy { font-size: 13px; color: var(--lp-text3); }
-  .footer-links { display: flex; gap: 28px; list-style: none; }
-  .footer-links a { font-size: 13px; color: var(--lp-text3); font-family: var(--lp-font-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; transition: color .2s; text-decoration: none; }
-  .footer-links a:hover { color: var(--lp-lime); }
+  .how-steps {
+    display: flex; align-items: flex-start; justify-content: center;
+    gap: 0; margin-top: 56px; max-width: 900px; margin-left: auto; margin-right: auto;
+  }
+  .how-step {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 0 24px; text-align: center;
+  }
+  .how-num {
+    font-family: var(--lp-font-head); font-size: 48px; color: rgba(186,255,41,0.15);
+    line-height: 1; letter-spacing: 0.02em;
+  }
+  .how-icon {
+    width: 60px; height: 60px; border-radius: 16px;
+    background: rgba(186,255,41,0.1); border: 1px solid rgba(186,255,41,0.2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--lp-lime);
+  }
+  .how-step h3 { font-size: 18px; font-weight: 700; color: var(--lp-text); }
+  .how-step p { font-size: 14px; color: var(--lp-text3); line-height: 1.7; }
+  .how-connector {
+    width: 80px; height: 2px; background: linear-gradient(90deg, rgba(186,255,41,0.3), rgba(186,255,41,0.05));
+    margin-top: 80px; flex-shrink: 0;
+  }
+
+  /* ── FOR YOUR CLUB ────────────────────────────────────────────────────── */
+  .club-section {
+    padding: 100px 80px;
+    background: var(--lp-bg);
+    border-top: 1px solid var(--lp-border);
+    border-bottom: 1px solid var(--lp-border);
+  }
+  .club-inner {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px;
+    align-items: center; max-width: 1100px; margin: 0 auto;
+  }
+  .club-content { display: flex; flex-direction: column; gap: 24px; }
+  .club-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+  .club-role-card {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 18px; border-radius: 12px;
+    background: var(--lp-surface); border: 1px solid var(--lp-border);
+  }
+  .club-role-icon {
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    background: rgba(186,255,41,0.1); border: 1px solid rgba(186,255,41,0.15);
+    display: flex; align-items: center; justify-content: center; color: var(--lp-lime);
+  }
+  .club-role-icon-amber { background: rgba(255,184,0,0.1); border-color: rgba(255,184,0,0.15); color: var(--lp-amber); }
+  .club-role-title { font-size: 14px; font-weight: 700; color: var(--lp-text); margin-bottom: 4px; }
+  .club-role-desc { font-size: 13px; color: var(--lp-text3); line-height: 1.6; }
+
+  .club-visual { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .club-diagram {
+    background: var(--lp-surface); border: 1px solid var(--lp-border);
+    border-radius: 16px; padding: 28px 20px; width: 100%; max-width: 340px;
+  }
+  .club-diagram-top { display: flex; justify-content: center; margin-bottom: 4px; }
+  .club-diagram-lines { width: 100%; height: 50px; }
+  .club-diagram-lines svg { width: 100%; height: 100%; }
+  .club-diagram-teams, .club-diagram-coaches {
+    display: flex; justify-content: space-around; gap: 8px;
+  }
+  .club-node {
+    padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    border: 1px solid; white-space: nowrap;
+  }
+  .owner-node {
+    background: rgba(186,255,41,0.1); border-color: rgba(186,255,41,0.3); color: var(--lp-lime);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .team-node { background: var(--lp-surface2); border-color: var(--lp-border); color: var(--lp-text2); font-size: 11px; }
+  .coach-node { background: rgba(255,184,0,0.08); border-color: rgba(255,184,0,0.2); color: var(--lp-amber); font-size: 11px; }
+  .club-code-pill {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; border-radius: 10px;
+    background: var(--lp-surface); border: 1px solid var(--lp-border);
+  }
+  .club-code-label { font-size: 12px; color: var(--lp-text3); }
+  .club-code-val { font-family: monospace; font-size: 22px; font-weight: 800; color: var(--lp-lime); letter-spacing: 0.2em; }
+
+  /* ── FAQ ──────────────────────────────────────────────────────────────── */
+  .faq-section { padding: 100px 80px; background: var(--lp-bg2); }
+  .faq-inner { max-width: 900px; margin: 0 auto; }
+  .faq-header { margin-bottom: 56px; }
+  .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .faq-item {
+    padding: 24px; border-radius: 14px;
+    background: var(--lp-surface); border: 1px solid var(--lp-border);
+    display: flex; flex-direction: column; gap: 10px;
+    transition: border-color 0.2s;
+  }
+  .faq-item:hover { border-color: rgba(186,255,41,0.2); }
+  .faq-q {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 15px; font-weight: 700; color: var(--lp-text); line-height: 1.4;
+  }
+  .faq-q svg { flex-shrink: 0; margin-top: 2px; color: var(--lp-lime); }
+  .faq-a { font-size: 14px; color: var(--lp-text3); line-height: 1.7; padding-left: 26px; }
+  .faq-more {
+    margin-top: 40px; text-align: center;
+    font-size: 15px; color: var(--lp-text3);
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+  }
+  .faq-docs-link {
+    background: none; border: none; cursor: pointer;
+    font-family: var(--lp-font-body); font-size: 15px; font-weight: 700; color: var(--lp-lime);
+    transition: opacity 0.15s;
+  }
+  .faq-docs-link:hover { opacity: 0.75; }
+
+  /* footer now in LpFooter.svelte */
 
   /* ── SCROLL REVEAL ────────────────────────────────────────────────────── */
   .reveal { transform: translateY(24px); transition: transform .7s ease; }
@@ -1608,8 +1776,6 @@
     .plan-custom { grid-column: span 1; }
   }
   @media (max-width: 900px) {
-    .lp-nav { padding: 0 20px; }
-    .nav-links { display: none; }
     .hero { grid-template-columns: 1fr; }
     .hero-content { padding: 40px 24px 24px; }
     .hero-auth { padding: 0 24px 60px; }
@@ -1627,7 +1793,12 @@
     .pricing-section { padding: 60px 24px; }
     .pricing-grid { grid-template-columns: 1fr; }
     .cta-section { padding: 80px 24px; }
-    .lp-footer { flex-direction: column; gap: 20px; padding: 32px 24px; text-align: center; }
-    .footer-links { flex-wrap: wrap; justify-content: center; }
+    .how-section { padding: 60px 24px; }
+    .how-steps { flex-direction: column; align-items: center; }
+    .how-connector { width: 2px; height: 40px; background: linear-gradient(180deg, rgba(186,255,41,0.3), rgba(186,255,41,0.05)); margin: 0; }
+    .club-section { padding: 60px 24px; }
+    .club-inner { grid-template-columns: 1fr; gap: 40px; }
+    .faq-section { padding: 60px 24px; }
+    .faq-grid { grid-template-columns: 1fr; }
   }
 </style>

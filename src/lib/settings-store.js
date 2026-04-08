@@ -34,6 +34,9 @@ const defaults = {
   // Appearance
   clubPrimaryColor: null,
 
+  // Team context behaviour
+  rememberLastTeam: false,  // false = always show team picker on login
+
   // Legacy: halftime sheet section visibility (kept for compatibility)
   halftimeStats: {
     showScore: true,

@@ -1,16 +1,20 @@
 import { writable, derived } from 'svelte/store'
 import { supabase } from './supabase.js'
 
+const ACTIVE_TEAM_KEY = 'active-team-id'
+
 export const subscriptionStore = writable({
-  plan: 'free',        // 'free' | 'personal' | 'club' | 'club_pro'
-  status: 'active',    // 'active' | 'trialing' | 'past_due' | 'cancelled'
+  plan: 'free',
+  status: 'active',
   cancelAtPeriodEnd: false,
   clubId: null,
   clubName: null,
-  teamId: null,
-  teamName: null,
-  teamCode: null,
-  isOwner: false,
+  clubRole: null,        // 'owner' | 'admin' | 'coach' | null
+  isOwner: false,        // true when clubRole is 'owner' or 'admin'
+  teams: [],             // [{ id, name, code }] — all teams this user can access
+  activeTeamId: null,    // currently selected team
+  activeTeamName: null,
+  activeTeamCode: null,
   currentPeriodEnd: null,
   loading: true
 })
@@ -73,11 +77,16 @@ export async function ensureProfile(userId) {
       .from('teams').select('id, club_id').eq('code', code).maybeSingle()
 
     if (team) {
+      // Club-level membership (role: coach)
       await supabase.from('club_members').insert({
-        club_id: team.club_id, team_id: team.id, user_id: userId, role: 'member'
+        club_id: team.club_id, user_id: userId, role: 'coach'
+      })
+      // Team-level membership
+      await supabase.from('team_members').insert({
+        club_id: team.club_id, team_id: team.id, user_id: userId, role: 'coach'
       })
       await supabase.from('profiles').insert({
-        id: userId, club_id: team.club_id, team_id: team.id
+        id: userId, club_id: team.club_id
       })
       return
     }
@@ -98,18 +107,17 @@ export async function ensureProfile(userId) {
 export async function loadSubscription(userId) {
   try {
     const { data: profile } = await supabase
-      .from('profiles').select('club_id, team_id').eq('id', userId).maybeSingle()
+      .from('profiles').select('club_id').eq('id', userId).maybeSingle()
     const { data: member } = await supabase
-      .from('club_members').select('role, club_id, team_id').eq('user_id', userId).maybeSingle()
+      .from('club_members').select('role, club_id').eq('user_id', userId).maybeSingle()
 
     const clubId = profile?.club_id ?? member?.club_id ?? null
-    const teamId = profile?.team_id ?? member?.team_id ?? null
-    const isOwner = member?.role === 'owner'
+    const clubRole = member?.role ?? null
+    const isOwner = clubRole === 'owner' || clubRole === 'admin'
 
     let sub = null
     let clubName = null
-    let teamName = null
-    let teamCode = null
+    let teams = []
 
     const { data: personalSub } = await supabase
       .from('subscriptions').select('*').eq('user_id', userId).maybeSingle()
@@ -117,7 +125,6 @@ export async function loadSubscription(userId) {
       sub = personalSub
     }
     if (!sub && clubId) {
-      // Member inherits club subscription — fetch via RPC to bypass RLS
       const { data: clubSub } = await supabase
         .rpc('get_club_subscription', { p_club_id: clubId })
       if (clubSub && clubSub.length > 0) sub = clubSub[0]
@@ -129,29 +136,109 @@ export async function loadSubscription(userId) {
       clubName = club?.name ?? null
     }
 
-    if (teamId) {
-      const { data: team } = await supabase
-        .from('teams').select('name, code').eq('id', teamId).maybeSingle()
-      teamName = team?.name ?? null
-      teamCode = team?.code ?? null
+    // Load teams: owners see all club teams; coaches see only their assigned teams
+    if (isOwner && clubId) {
+      const { data: allTeams } = await supabase
+        .from('teams').select('id, name, code').eq('club_id', clubId).order('created_at')
+      teams = allTeams ?? []
+    } else {
+      const { data: myTeams } = await supabase
+        .from('team_members')
+        .select('team_id, role, teams(id, name, code)')
+        .eq('user_id', userId)
+      teams = (myTeams ?? []).map(row => row.teams).filter(Boolean)
     }
+
+    // Restore active team from localStorage — validate it's still in the teams list
+    const storedTeamId = localStorage.getItem(ACTIVE_TEAM_KEY)
+    const validStored = teams.find(t => t.id === storedTeamId)
+    const activeTeam = validStored ?? (teams.length === 1 ? teams[0] : null)
 
     subscriptionStore.set({
       plan: sub?.plan ?? 'free',
       status: sub?.status ?? 'active',
       cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
-      clubId, clubName, teamId, teamName, teamCode, isOwner,
+      clubId, clubName, clubRole, isOwner,
+      teams,
+      activeTeamId: activeTeam?.id ?? null,
+      activeTeamName: activeTeam?.name ?? null,
+      activeTeamCode: activeTeam?.code ?? null,
       currentPeriodEnd: sub?.current_period_end ?? null,
       loading: false
     })
   } catch (e) {
     console.warn('Failed to load subscription:', e)
     subscriptionStore.set({
-      plan: 'free', status: 'active', cancelAtPeriodEnd: false, clubId: null, clubName: null,
-      teamId: null, teamName: null, teamCode: null, isOwner: false,
+      plan: 'free', status: 'active', cancelAtPeriodEnd: false,
+      clubId: null, clubName: null, clubRole: null, isOwner: false,
+      teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
       currentPeriodEnd: null, loading: false
     })
   }
+}
+
+// Set the active team and persist to localStorage
+export function setActiveTeam(team) {
+  if (!team) return
+  localStorage.setItem(ACTIVE_TEAM_KEY, team.id)
+  subscriptionStore.update(s => ({
+    ...s,
+    activeTeamId: team.id,
+    activeTeamName: team.name,
+    activeTeamCode: team.code
+  }))
+}
+
+// Join an additional team by code — works for existing users
+export async function joinTeam(teamCode, userId) {
+  const code = (teamCode || '').trim()
+  if (!code) throw new Error('Enter a team code')
+
+  const { data: team } = await supabase
+    .from('teams').select('id, club_id').eq('code', code).maybeSingle()
+  if (!team) throw new Error('Team not found — check the code and try again')
+
+  // Ensure user has a club-level membership (handles cross-club joining too)
+  const { data: existingMember } = await supabase
+    .from('club_members')
+    .select('id')
+    .eq('club_id', team.club_id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (!existingMember) {
+    const { error: clubErr } = await supabase.from('club_members').insert({
+      club_id: team.club_id, user_id: userId, role: 'coach'
+    })
+    if (clubErr) throw clubErr
+
+    // Update profile club_id if not set
+    await supabase.from('profiles').upsert({ id: userId, club_id: team.club_id })
+  }
+
+  // Join the team — UNIQUE constraint means re-joining is silently ignored
+  const { error } = await supabase.from('team_members').insert({
+    club_id: team.club_id, team_id: team.id, user_id: userId, role: 'coach'
+  })
+  if (error && error.code !== '23505') throw error  // 23505 = duplicate, already joined
+
+  await loadSubscription(userId)
+}
+
+// Leave a team
+export async function leaveTeam(teamId, userId) {
+  const { error } = await supabase
+    .from('team_members')
+    .delete()
+    .eq('team_id', teamId)
+    .eq('user_id', userId)
+  if (error) throw error
+
+  // If this was the active team, clear it
+  const stored = localStorage.getItem(ACTIVE_TEAM_KEY)
+  if (stored === teamId) localStorage.removeItem(ACTIVE_TEAM_KEY)
+
+  await loadSubscription(userId)
 }
 
 export async function createTeam(clubId, teamName) {

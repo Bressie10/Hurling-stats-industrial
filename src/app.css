@@ -59,3 +59,36 @@ button {
     font-size: 16px !important;
   }
 }
+
+/* ── Landing page (public marketing) shared tokens ── */
+.lp {
+  --lp-bg:        #05080F;
+  --lp-bg2:       #080D18;
+  --lp-surface:   #0C1422;
+  --lp-surface2:  #101C30;
+  --lp-border:    #1A2840;
+  --lp-lime:      #BAFF29;
+  --lp-lime-dim:  #8FCC00;
+  --lp-amber:     #FFB800;
+  --lp-amber-dim: #CC9200;
+  --lp-red:       #FF3A3A;
+  --lp-text:      #E4EDF8;
+  --lp-text2:     #8CA3BF;
+  --lp-text3:     #4A6280;
+  --lp-font-head: 'Bebas Neue', sans-serif;
+  --lp-font-sub:  'Barlow Condensed', sans-serif;
+  --lp-font-body: 'Outfit', sans-serif;
+
+  background: var(--lp-bg);
+  color: var(--lp-text);
+  font-family: var(--lp-font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+:global(html:has(.lp)) {
+  scroll-padding-top: 68px;
+}

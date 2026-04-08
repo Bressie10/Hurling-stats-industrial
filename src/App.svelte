@@ -2,6 +2,12 @@
 
 import { clearAllData } from './lib/db.js'
   import Landing from './lib/Landing.svelte'
+  import DocsPage from './lib/DocsPage.svelte'
+  import PricingPage from './lib/PricingPage.svelte'
+  import ChangelogPage from './lib/ChangelogPage.svelte'
+  import AboutPage from './lib/AboutPage.svelte'
+  import PrivacyPage from './lib/PrivacyPage.svelte'
+  import TermsPage from './lib/TermsPage.svelte'
   import Match from './lib/Match.svelte'
   import PlayerStats from './lib/PlayerStats.svelte'
   import TeamStats from './lib/TeamStats.svelte'
@@ -13,15 +19,24 @@ import { clearAllData } from './lib/db.js'
   import Auth from './lib/Auth.svelte'
   import Upgrade from './lib/Upgrade.svelte'
   import TeamSetup from './lib/TeamSetup.svelte'
+  import TeamPicker from './lib/TeamPicker.svelte'
   import LiveViewer from './lib/LiveViewer.svelte'
   import { user, authLoading, signOut } from './lib/auth-store.js'
   import { syncToSupabase, syncFromSupabase } from './lib/sync.js'
   import { settingsStore } from './lib/settings-store.js'
-  import { subscriptionStore, isPro, isClub, isClubPro, ensureProfile, loadSubscription, loadClubTeams } from './lib/subscription-store.js'
+  import { subscriptionStore, isPro, isClub, isClubPro, ensureProfile, loadSubscription, setActiveTeam } from './lib/subscription-store.js'
   import { supabase } from './lib/supabase.js'
   import { onMount } from 'svelte'
 
+  // Public page routing (when user not logged in)
+  let publicPage = 'home' // 'home' | 'docs' | 'pricing' | 'changelog' | 'about' | 'privacy' | 'terms'
+  function navigatePublic(page) {
+    publicPage = page
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+
   let needsTeamSetup = false
+  let needsTeamPick = false
   let liveSession = null
   let isPWA = false
 
@@ -129,20 +144,28 @@ import { clearAllData } from './lib/db.js'
           dataReady = true
         }
 
+        let subVal; subscriptionStore.subscribe(s => subVal = s)()
+
         // Club owners with no teams yet → show team setup
-        const sub = subscriptionStore
-        let subVal; sub.subscribe(s => subVal = s)()
-        if (subVal.isOwner && subVal.clubId) {
-          const teams = await loadClubTeams(subVal.clubId)
-          needsTeamSetup = teams.length === 0
+        if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
+          needsTeamSetup = true
         }
 
-        // Check for active live session on this team
-        if (subVal.teamId) {
+        // Multi-team users need to pick a team unless they've toggled rememberLastTeam
+        // Single-team users are auto-selected in loadSubscription — no picker needed
+        if (!needsTeamSetup && subVal.teams.length > 1 && !subVal.activeTeamId) {
+          const rememberLastTeam = $settingsStore.rememberLastTeam
+          if (!rememberLastTeam) {
+            needsTeamPick = true
+          }
+        }
+
+        // Check for active live session on the active team
+        if (subVal.activeTeamId) {
           const { data: sessions } = await supabase
             .from('live_sessions')
             .select('*')
-            .eq('team_id', subVal.teamId)
+            .eq('team_id', subVal.activeTeamId)
             .is('ended_at', null)
             .neq('host_user_id', u.id)
             .order('started_at', { ascending: false })
@@ -153,7 +176,13 @@ import { clearAllData } from './lib/db.js'
       if (!u) {
         lastUserId = null
         dataReady = false
-        subscriptionStore.set({ plan: 'free', status: 'active', clubId: null, clubCode: null, clubName: null, seatLimit: 1, currentPeriodEnd: null, loading: false })
+        needsTeamPick = false
+        subscriptionStore.set({
+          plan: 'free', status: 'active', cancelAtPeriodEnd: false,
+          clubId: null, clubName: null, clubRole: null, isOwner: false,
+          teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
+          currentPeriodEnd: null, loading: false
+        })
       }
     })
     return unsubscribe
@@ -183,6 +212,8 @@ import { clearAllData } from './lib/db.js'
     activePage = 'match'
     dataReady = false
     lastUserId = null
+    needsTeamSetup = false
+    needsTeamPick = false
   }
 </script>
 
@@ -194,8 +225,20 @@ import { clearAllData } from './lib/db.js'
 {:else if !$user}
   {#if isPWA}
     <Auth />
+  {:else if publicPage === 'docs'}
+    <DocsPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'pricing'}
+    <PricingPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'changelog'}
+    <ChangelogPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'about'}
+    <AboutPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'privacy'}
+    <PrivacyPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'terms'}
+    <TermsPage onNavigate={navigatePublic} />
   {:else}
-    <Landing />
+    <Landing onNavigate={navigatePublic} />
   {/if}
 
 {:else if !dataReady && !needsTeamSetup}
@@ -206,6 +249,9 @@ import { clearAllData } from './lib/db.js'
 
 {:else if needsTeamSetup}
   <TeamSetup onDone={() => { needsTeamSetup = false }} />
+
+{:else if needsTeamPick}
+  <TeamPicker onPicked={() => { needsTeamPick = false }} />
 
 {:else}
   <!-- Subscribe success toast -->
@@ -268,6 +314,12 @@ import { clearAllData } from './lib/db.js'
       </div>
 
       <div class="nav-actions">
+        {#if $subscriptionStore.teams.length > 1 || ($subscriptionStore.isOwner && $subscriptionStore.teams.length > 0)}
+          <button class="switch-team-btn" on:click={() => needsTeamPick = true} title="Switch team">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            {$subscriptionStore.activeTeamName ?? 'Pick team'}
+          </button>
+        {/if}
         <button class="sync-btn" class:syncing on:click={handleSync} disabled={syncing}>
           {#if syncing}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -505,6 +557,27 @@ import { clearAllData } from './lib/db.js'
     flex-shrink: 0;
     border-left: 1px solid var(--border);
   }
+  .switch-team-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1.5px solid var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.15s;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .switch-team-btn:hover { background: var(--primary); color: var(--primary-text); }
+
   .sync-btn {
     display: inline-flex;
     align-items: center;

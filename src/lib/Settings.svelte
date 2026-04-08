@@ -3,7 +3,7 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription } from './subscription-store.js'
+  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
 
@@ -111,6 +111,38 @@
   }
 
   $: if ($subscriptionStore.clubId) loadTeams()
+
+  // Join another team (existing users)
+  let joinCode = ''
+  let joiningTeam = false
+  let joinError = ''
+  let joinSuccess = ''
+
+  async function handleJoinTeam() {
+    if (!joinCode.trim()) { joinError = 'Enter a team code'; return }
+    joiningTeam = true
+    joinError = ''
+    joinSuccess = ''
+    try {
+      await joinTeam(joinCode, $user.id)
+      joinSuccess = 'Joined! You can switch to this team from the nav.'
+      joinCode = ''
+      setTimeout(() => joinSuccess = '', 4000)
+    } catch (e) {
+      joinError = e.message
+    }
+    joiningTeam = false
+  }
+
+  // Leave a team
+  async function handleLeaveTeam(teamId, teamName) {
+    if (!confirm(`Leave ${teamName}? You'll lose access to this team's live sessions.`)) return
+    try {
+      await leaveTeam(teamId, $user.id)
+    } catch (e) {
+      alert('Failed to leave team: ' + e.message)
+    }
+  }
 
   async function handleDeleteAccount() {
     const confirmed = confirm(
@@ -382,24 +414,65 @@
           <span class="member-info-val">{$subscriptionStore.clubName}</span>
         </div>
       {/if}
-      {#if $subscriptionStore.teamName}
-        <div class="member-info-row">
-          <span class="member-info-label">Team</span>
-          <span class="member-info-val">{$subscriptionStore.teamName}</span>
-        </div>
-      {/if}
-      {#if $subscriptionStore.teamCode}
-        <div class="member-info-row">
-          <span class="member-info-label">Team join code</span>
-          <span class="member-info-code">{$subscriptionStore.teamCode}</span>
-        </div>
-      {/if}
       <div class="member-info-row">
         <span class="member-info-label">Plan</span>
         <span class="member-info-val">
-          {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : $subscriptionStore.plan === 'club' ? 'Club' : 'Club'}
+          {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : 'Club'}
         </span>
       </div>
+    </div>
+  </div>
+
+  <!-- ── MY TEAMS ── -->
+  <div class="section-block">
+    <div class="section-title">My Teams</div>
+    <div class="card">
+      {#if $subscriptionStore.teams.length === 0}
+        <p class="card-desc">You are not assigned to any team yet. Enter a team code below to join one.</p>
+      {:else}
+        {#each $subscriptionStore.teams as team}
+          <div class="member-team-row">
+            <div class="member-team-info">
+              <span class="member-team-name">{team.name}</span>
+              <span class="member-info-code">{team.code}</span>
+            </div>
+            <button class="team-leave-btn" on:click={() => handleLeaveTeam(team.id, team.name)}>Leave</button>
+          </div>
+        {/each}
+      {/if}
+
+      <div class="join-divider"></div>
+      <div class="card-desc" style="margin-bottom:8px">Join another team using its 6-digit code.</div>
+      <div class="join-row">
+        <input
+          class="join-input"
+          bind:value={joinCode}
+          placeholder="Team code (e.g. 482910)"
+          maxlength="6"
+          on:keydown={e => e.key === 'Enter' && handleJoinTeam()}
+        />
+        <button class="join-btn" on:click={handleJoinTeam} disabled={joiningTeam}>
+          {joiningTeam ? 'Joining…' : 'Join'}
+        </button>
+      </div>
+      {#if joinError}<p class="join-error">{joinError}</p>{/if}
+      {#if joinSuccess}<p class="join-success">{joinSuccess}</p>{/if}
+
+      {#if $subscriptionStore.teams.length > 1}
+        <div class="divider-faint"></div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Remember last team</div>
+            <div class="toggle-sub">Skip the team picker on login and restore your last used team automatically</div>
+          </div>
+          <button
+            class="toggle-switch"
+            class:on={settings.rememberLastTeam}
+            on:click={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
+            aria-label="Toggle remember last team"
+          ><span class="toggle-thumb"></span></button>
+        </div>
+      {/if}
     </div>
   </div>
   {/if}
@@ -440,6 +513,22 @@
         <p class="team-limit-note">Maximum 4 teams reached</p>
       {/if}
       {#if teamError}<p class="team-error">{teamError}</p>{/if}
+
+      {#if teams.length > 1}
+        <div class="divider-faint"></div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Remember last team</div>
+            <div class="toggle-sub">Skip the team picker on login and restore your last used team automatically</div>
+          </div>
+          <button
+            class="toggle-switch"
+            class:on={settings.rememberLastTeam}
+            on:click={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
+            aria-label="Toggle remember last team"
+          ><span class="toggle-thumb"></span></button>
+        </div>
+      {/if}
     </div>
   </div>
   {/if}
@@ -1092,6 +1181,44 @@
     font-size: 18px; font-weight: 800; color: var(--primary);
     letter-spacing: 0.12em; font-family: monospace;
   }
+
+  /* ── My Teams ── */
+  .member-team-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--divider-faint);
+  }
+  .member-team-row:last-of-type { border-bottom: none; }
+  .member-team-info { display: flex; flex-direction: column; gap: 2px; }
+  .member-team-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .team-leave-btn {
+    padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted);
+    cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .team-leave-btn:hover { border-color: #e53935; color: #e53935; }
+
+  .join-divider { height: 1px; background: var(--divider-faint); margin: 12px 0; }
+  .join-row { display: flex; gap: 8px; }
+  .join-input {
+    flex: 1; padding: 10px 12px;
+    border: 1.5px solid var(--input-border); border-radius: 8px;
+    font-size: 14px; font-family: monospace; font-weight: 700; letter-spacing: 0.1em;
+    background: var(--surface-3); color: var(--text); transition: all 0.15s;
+  }
+  .join-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.08); }
+  .join-btn {
+    padding: 10px 16px; border-radius: 8px;
+    background: var(--primary); color: var(--primary-text);
+    border: none; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.15s;
+  }
+  .join-btn:hover { background: var(--primary-hover); }
+  .join-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .join-error { font-size: 12px; color: #c62828; margin-top: 6px; }
+  .join-success { font-size: 12px; color: #2d7a2d; font-weight: 600; margin-top: 6px; }
+
+  .divider-faint { height: 1px; background: var(--divider-faint); margin: 12px 0; }
 
   /* ── Club Teams ── */
   .team-row {
