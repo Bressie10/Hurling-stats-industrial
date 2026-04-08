@@ -411,7 +411,7 @@
 </div>
 
 <style>
-  .docs-page { font-family: var(--lp-font-body); }
+  .docs-page { font-family: var(--lp-font-body); overflow-x: hidden; width: 100%; }
   .lp-noise {
     position: fixed; inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
@@ -567,12 +567,19 @@
     .docs-content { padding: 40px 36px 60px; }
   }
 
-  /* ── Mobile (≤768px) ─────────────────────────────────────────────────── */
-  @media (max-width: 768px) {
-    .docs-layout { grid-template-columns: 1fr; padding-top: 68px; }
+  /* ── Mobile (≤900px) ─────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .docs-layout { grid-template-columns: 1fr; padding-top: 68px; width: 100%; }
     .docs-sidebar { display: none; }
     .docs-mob-toggle { display: flex; }
-    .docs-content { padding: 24px 16px 60px; max-width: 100%; }
+    .docs-content {
+      padding: 24px 16px 60px;
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
     .docs-two-col { grid-template-columns: 1fr; }
     .docs-section { margin-bottom: 56px; padding-bottom: 56px; scroll-margin-top: 136px; }
     .docs-section h1 { font-size: 26px; }
