@@ -487,52 +487,98 @@
     </div>
     <div class="pitch-mockup reveal reveal-delay-2">
       <div class="pitch-svg-wrap">
-        <svg class="pitch-svg" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
-          <rect width="360" height="220" rx="8" fill="#0D1F14"/>
-          <rect x="10" y="10" width="340" height="200" rx="4" fill="none" stroke="#1A3022" stroke-width="1.5"/>
-          <line x1="180" y1="10" x2="180" y2="210" stroke="#1A3022" stroke-width="1"/>
-          <circle cx="180" cy="110" r="22" fill="none" stroke="#1A3022" stroke-width="1"/>
-          <rect x="10" y="70" width="28" height="80" fill="none" stroke="#1A3022" stroke-width="1"/>
-          <rect x="10" y="52" width="55" height="116" fill="none" stroke="#1A3022" stroke-width="1"/>
-          <rect x="322" y="70" width="28" height="80" fill="none" stroke="#1A3022" stroke-width="1"/>
-          <rect x="295" y="52" width="55" height="116" fill="none" stroke="#1A3022" stroke-width="1"/>
-          <line x1="90" y1="10" x2="90" y2="210" stroke="#1A3022" stroke-width="0.5" stroke-dasharray="3,4"/>
-          <line x1="270" y1="10" x2="270" y2="210" stroke="#1A3022" stroke-width="0.5" stroke-dasharray="3,4"/>
-          <rect x="10" y="10" width="80" height="100" fill="rgba(45,122,45,0.22)" rx="2"/>
-          <rect x="10" y="110" width="80" height="100" fill="rgba(45,122,45,0.18)" rx="2"/>
-          <rect x="90" y="10" width="90" height="100" fill="rgba(255,184,0,0.15)" rx="2"/>
-          <rect x="90" y="110" width="90" height="100" fill="rgba(45,122,45,0.14)" rx="2"/>
-          <rect x="180" y="10" width="90" height="100" fill="rgba(255,58,58,0.15)" rx="2"/>
-          <rect x="180" y="110" width="90" height="100" fill="rgba(255,184,0,0.12)" rx="2"/>
-          <rect x="270" y="10" width="80" height="100" fill="rgba(255,58,58,0.12)" rx="2"/>
-          <rect x="270" y="110" width="80" height="100" fill="rgba(255,58,58,0.08)" rx="2"/>
-          <text x="50" y="62" text-anchor="middle" fill="#BAFF29" font-size="9" font-family="Barlow Condensed" font-weight="700">72%</text>
-          <text x="135" y="62" text-anchor="middle" fill="#FFB800" font-size="9" font-family="Barlow Condensed" font-weight="700">54%</text>
-          <text x="225" y="62" text-anchor="middle" fill="#FF3A3A" font-size="9" font-family="Barlow Condensed" font-weight="700">38%</text>
-          <text x="310" y="62" text-anchor="middle" fill="#FF3A3A" font-size="9" font-family="Barlow Condensed" font-weight="700">22%</text>
-          <circle cx="68" cy="92" r="5" fill="#BAFF29" opacity="0.9"/>
-          <circle cx="80" cy="75" r="5" fill="#BAFF29" opacity="0.8"/>
-          <circle cx="55" cy="108" r="5" fill="#BAFF29" opacity="0.85"/>
-          <circle cx="110" cy="88" r="4" fill="#BAFF29" opacity="0.7"/>
-          <circle cx="130" cy="68" r="5" fill="#BAFF29" opacity="0.75"/>
-          <circle cx="72" cy="140" r="4" fill="#BAFF29" opacity="0.6"/>
-          <circle cx="95" cy="155" r="5" fill="#FFB800" opacity="0.8"/>
-          <circle cx="82" cy="60" r="6" fill="#FFB800" opacity="0.9"/>
-          <path d="M 40 110 Q 120 60 180 110" fill="none" stroke="#BAFF29" stroke-width="1" opacity="0.3"/>
-          <path d="M 40 110 Q 160 40 225 95" fill="none" stroke="#BAFF29" stroke-width="1" opacity="0.25"/>
-          <path d="M 40 110 Q 100 80 135 88" fill="none" stroke="#BAFF29" stroke-width="1" opacity="0.35"/>
-          <rect x="14" y="195" width="8" height="8" rx="2" fill="rgba(45,122,45,0.6)"/>
-          <text x="25" y="202" fill="#8CA3BF" font-size="8" font-family="Barlow Condensed">High win rate</text>
-          <rect x="90" y="195" width="8" height="8" rx="2" fill="rgba(255,184,0,0.6)"/>
-          <text x="101" y="202" fill="#8CA3BF" font-size="8" font-family="Barlow Condensed">Mixed</text>
-          <rect x="148" y="195" width="8" height="8" rx="2" fill="rgba(255,58,58,0.6)"/>
-          <text x="159" y="202" fill="#8CA3BF" font-size="8" font-family="Barlow Condensed">Low win rate</text>
-          <circle cx="222" cy="199" r="4" fill="#BAFF29" opacity="0.9"/>
-          <text x="229" y="202" fill="#8CA3BF" font-size="8" font-family="Barlow Condensed">Score</text>
+        <!-- Matches the actual app puckout zone heatmap exactly:
+             5 cols (Short→Long) × 2 rows (Top/Bottom), green pitch,
+             white W/L + % labels, goal boxes, dividers. -->
+        <svg class="pitch-svg" viewBox="0 0 360 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Green pitch background -->
+          <rect width="360" height="130" rx="6" fill="#2d7a2d"/>
+          <!-- Left half slightly lighter (DB end) -->
+          <rect x="0" y="0" width="180" height="130" fill="rgba(255,255,255,0.04)" rx="6"/>
+
+          <!-- ── Zone fills (col×row) ─────────────────────────────── -->
+          <!-- Short top 89% → green -->
+          <rect x="5"   y="8" width="70" height="52" fill="rgba(45,200,45,0.38)"/>
+          <!-- Short bottom 88% → green -->
+          <rect x="5"   y="60" width="70" height="52" fill="rgba(45,200,45,0.34)"/>
+          <!-- Own-half top 70% → green -->
+          <rect x="75"  y="8" width="70" height="52" fill="rgba(45,200,45,0.22)"/>
+          <!-- Own-half bottom 60% → amber -->
+          <rect x="75"  y="60" width="70" height="52" fill="rgba(255,180,0,0.28)"/>
+          <!-- Midfield top 50% → amber -->
+          <rect x="145" y="8" width="70" height="52" fill="rgba(255,180,0,0.22)"/>
+          <!-- Midfield bottom 40% → amber -->
+          <rect x="145" y="60" width="70" height="52" fill="rgba(255,180,0,0.18)"/>
+          <!-- Opp-half top 29% → red -->
+          <rect x="215" y="8" width="70" height="52" fill="rgba(255,60,60,0.28)"/>
+          <!-- Opp-half bottom 33% → red -->
+          <rect x="215" y="60" width="70" height="52" fill="rgba(255,60,60,0.22)"/>
+          <!-- Long top 20% → red -->
+          <rect x="285" y="8" width="70" height="52" fill="rgba(255,60,60,0.18)"/>
+          <!-- Long bottom 25% → red -->
+          <rect x="285" y="60" width="70" height="52" fill="rgba(255,60,60,0.14)"/>
+
+          <!-- ── Pitch lines ──────────────────────────────────────── -->
+          <!-- Pitch outline -->
+          <rect x="5" y="8" width="350" height="104" fill="none" stroke="white" stroke-width="0.8" opacity="0.3" rx="2"/>
+          <!-- Horizontal centre (top/bottom row split) -->
+          <line x1="5" y1="60" x2="355" y2="60" stroke="white" stroke-width="1" opacity="0.5"/>
+          <!-- Vertical midfield dashed -->
+          <line x1="180" y1="8" x2="180" y2="112" stroke="white" stroke-width="0.8" opacity="0.35" stroke-dasharray="3,3"/>
+          <!-- Zone column dividers -->
+          <line x1="75"  y1="8" x2="75"  y2="112" stroke="white" stroke-width="0.5" opacity="0.25"/>
+          <line x1="145" y1="8" x2="145" y2="112" stroke="white" stroke-width="0.5" opacity="0.25"/>
+          <line x1="215" y1="8" x2="215" y2="112" stroke="white" stroke-width="0.5" opacity="0.25"/>
+          <line x1="285" y1="8" x2="285" y2="112" stroke="white" stroke-width="0.5" opacity="0.25"/>
+          <!-- Goal boxes -->
+          <rect x="5"   y="36" width="18" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+          <rect x="337" y="36" width="18" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+          <!-- End labels -->
+          <text x="40"  y="20" text-anchor="middle" fill="white" font-size="6" font-family="Barlow Condensed" font-weight="700" opacity="0.55">DB END</text>
+          <text x="320" y="20" text-anchor="middle" fill="white" font-size="6" font-family="Barlow Condensed" font-weight="700" opacity="0.55">OPP END</text>
+
+          <!-- ── Zone W/L + % labels ─────────────────────────────── -->
+          <!-- Short top: 8W 1L 89% -->
+          <text x="40"  y="31" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">8W 1L</text>
+          <text x="40"  y="42" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">89%</text>
+          <!-- Short bottom: 7W 1L 88% -->
+          <text x="40"  y="79" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">7W 1L</text>
+          <text x="40"  y="90" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">88%</text>
+          <!-- Own-half top: 7W 3L 70% -->
+          <text x="110" y="31" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">7W 3L</text>
+          <text x="110" y="42" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">70%</text>
+          <!-- Own-half bottom: 6W 4L 60% -->
+          <text x="110" y="79" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">6W 4L</text>
+          <text x="110" y="90" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">60%</text>
+          <!-- Midfield top: 5W 5L 50% -->
+          <text x="180" y="31" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">5W 5L</text>
+          <text x="180" y="42" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">50%</text>
+          <!-- Midfield bottom: 4W 6L 40% -->
+          <text x="180" y="79" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">4W 6L</text>
+          <text x="180" y="90" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">40%</text>
+          <!-- Opp-half top: 2W 5L 29% -->
+          <text x="250" y="31" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">2W 5L</text>
+          <text x="250" y="42" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">29%</text>
+          <!-- Opp-half bottom: 2W 4L 33% -->
+          <text x="250" y="79" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">2W 4L</text>
+          <text x="250" y="90" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">33%</text>
+          <!-- Long top: 1W 4L 20% -->
+          <text x="320" y="31" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">1W 4L</text>
+          <text x="320" y="42" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">20%</text>
+          <!-- Long bottom: 1W 3L 25% -->
+          <text x="320" y="79" text-anchor="middle" fill="white" font-size="8"   font-family="Barlow Condensed" font-weight="700">1W 3L</text>
+          <text x="320" y="90" text-anchor="middle" fill="white" font-size="9.5" font-family="Barlow Condensed" font-weight="700">25%</text>
+
+          <!-- ── Zone column name labels (bottom) ───────────────── -->
+          <text x="40"  y="123" text-anchor="middle" fill="white" font-size="6.5" font-family="Barlow Condensed" font-weight="600" opacity="0.65">SHORT</text>
+          <text x="110" y="123" text-anchor="middle" fill="white" font-size="6.5" font-family="Barlow Condensed" font-weight="600" opacity="0.65">OWN HALF</text>
+          <text x="180" y="123" text-anchor="middle" fill="white" font-size="6.5" font-family="Barlow Condensed" font-weight="600" opacity="0.65">MIDFIELD</text>
+          <text x="250" y="123" text-anchor="middle" fill="white" font-size="6.5" font-family="Barlow Condensed" font-weight="600" opacity="0.65">OPP HALF</text>
+          <text x="320" y="123" text-anchor="middle" fill="white" font-size="6.5" font-family="Barlow Condensed" font-weight="600" opacity="0.65">LONG</text>
         </svg>
         <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
-          <div class="pitch-badge lime">Puckouts 18W / 8L</div>
-          <div class="pitch-badge amber">69% Win Rate</div>
+          <div class="pitch-badge lime">Puckouts 42W / 36L</div>
+          <div class="pitch-badge amber">54% Win Rate</div>
           <div class="pitch-badge neutral">Full Match</div>
         </div>
       </div>
