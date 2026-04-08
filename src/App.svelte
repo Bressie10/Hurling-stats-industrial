@@ -4,7 +4,6 @@ import { clearAllData } from './lib/db.js'
   import Landing from './lib/Landing.svelte'
   import DocsPage from './lib/DocsPage.svelte'
   import PricingPage from './lib/PricingPage.svelte'
-  import ChangelogPage from './lib/ChangelogPage.svelte'
   import AboutPage from './lib/AboutPage.svelte'
   import PrivacyPage from './lib/PrivacyPage.svelte'
   import TermsPage from './lib/TermsPage.svelte'
@@ -29,7 +28,7 @@ import { clearAllData } from './lib/db.js'
   import { onMount } from 'svelte'
 
   // Public page routing (when user not logged in)
-  let publicPage = 'home' // 'home' | 'docs' | 'pricing' | 'changelog' | 'about' | 'privacy' | 'terms'
+  let publicPage = 'home' // 'home' | 'docs' | 'pricing' | 'about' | 'privacy' | 'terms'
   function navigatePublic(page) {
     publicPage = page
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -229,8 +228,6 @@ import { clearAllData } from './lib/db.js'
     <DocsPage onNavigate={navigatePublic} />
   {:else if publicPage === 'pricing'}
     <PricingPage onNavigate={navigatePublic} />
-  {:else if publicPage === 'changelog'}
-    <ChangelogPage onNavigate={navigatePublic} />
   {:else if publicPage === 'about'}
     <AboutPage onNavigate={navigatePublic} />
   {:else if publicPage === 'privacy'}
