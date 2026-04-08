@@ -51,7 +51,6 @@ hurling-stats/
 │   │   ├── LpFooter.svelte           # Shared footer for all public pages
 │   │   ├── DocsPage.svelte           # /docs — feature documentation with fixed sidebar
 │   │   ├── PricingPage.svelte        # /pricing — plan cards + feature comparison table
-│   │   ├── ChangelogPage.svelte      # /changelog — version timeline v1.0–v1.8
 │   │   ├── AboutPage.svelte          # /about — origin story, mission, values, tech stack
 │   │   ├── PrivacyPage.svelte        # /privacy — GDPR-compliant privacy policy
 │   │   ├── TermsPage.svelte          # /terms — terms of service
@@ -379,7 +378,6 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Public site — 7 pages with shared `LpNav` (Supabase-style CSS hover dropdowns) + `LpFooter`
 - [x] DocsPage — Supabase docs layout with fixed sidebar, 12 feature sections, IntersectionObserver active link tracking
 - [x] PricingPage — 5 plan cards + feature comparison table with 4 row groups + FAQ accordion
-- [x] ChangelogPage — timeline layout, v1.0–v1.8, New/Improved/Fixed tags, scroll-in animations
 - [x] AboutPage — origin story (Doora Barefield GAA), mission, 4 values, tech stack badges, CTA
 - [x] PrivacyPage — GDPR-compliant: data tables, sub-processors (Supabase EU, Stripe), retention periods, user rights, DPC link
 - [x] TermsPage — subscriptions, cancellation, Irish governing law, EU ODR link
@@ -463,7 +461,7 @@ The analytics section left panel shows an SVG of the actual match logging screen
 
 ---
 
-## Public Site (7 pages)
+## Public Site (6 pages)
 
 All public pages share:
 - `LpNav.svelte` — fixed nav, Supabase-style CSS hover dropdowns (no JS), mobile hamburger overlay
@@ -490,7 +488,7 @@ CSS-only hover dropdowns — no JS toggle needed:
 .dd-trigger:hover .dd-menu,
 .dd-menu:hover { opacity: 1; pointer-events: auto; transform: none; }
 ```
-Three dropdown groups: **Product** (6 items, 2-col grid), **Resources** (2 items), **Company** (3 items). Each item has a coloured icon box + title + description line. Arrow pointer via `::before` clip-path triangle.
+Three dropdown groups: **Product** (6 items, 2-col grid), **Resources** (Documentation + Quick Start, both link to /docs), **Company** (3 items). Each item has a coloured icon box + title + description line. Arrow pointer via `::before` clip-path triangle.
 
 ### Scroll reveal — IMPORTANT CSS GOTCHA (applies to all public pages)
 Elements with `.reveal` use `opacity: 0; transform: translateY(20px)` and animate when `.in` is added by IntersectionObserver. **Unlike `Landing.svelte`**, the public pages DO use `opacity: 0` on `.reveal` — this works because the styles are defined inline in each component's `<style>` block with Svelte scoping, and the `.in` class is added by JS at component scope. The 1.5s fallback timer ensures `.in` is always added even if the observer doesn't fire.
