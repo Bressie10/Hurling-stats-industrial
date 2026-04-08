@@ -55,7 +55,7 @@
         <li><button on:click={() => nav('about')}>About</button></li>
         <li><button on:click={() => nav('privacy')}>Privacy Policy</button></li>
         <li><button on:click={() => nav('terms')}>Terms of Service</button></li>
-        <li><a href="mailto:contact@gaastatsapp.com">Contact Us</a></li>
+        <li><button on:click={() => nav('contact')}>Contact Us</button></li>
       </ul>
     </div>
 

@@ -15,7 +15,7 @@ import { clearAllData } from './lib/db.js'
   import Timeline from './lib/Timeline.svelte'
   import Settings from './lib/Settings.svelte'
   import StatTargets from './lib/StatTargets.svelte'
-  import Auth from './lib/Auth.svelte'
+  import ContactPage from './lib/ContactPage.svelte'
   import Upgrade from './lib/Upgrade.svelte'
   import TeamSetup from './lib/TeamSetup.svelte'
   import TeamPicker from './lib/TeamPicker.svelte'
@@ -222,9 +222,7 @@ import { clearAllData } from './lib/db.js'
   </div>
 
 {:else if !$user}
-  {#if isPWA}
-    <Auth />
-  {:else if publicPage === 'docs'}
+  {#if publicPage === 'docs'}
     <DocsPage onNavigate={navigatePublic} />
   {:else if publicPage === 'pricing'}
     <PricingPage onNavigate={navigatePublic} />
@@ -234,6 +232,8 @@ import { clearAllData } from './lib/db.js'
     <PrivacyPage onNavigate={navigatePublic} />
   {:else if publicPage === 'terms'}
     <TermsPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'contact'}
+    <ContactPage onNavigate={navigatePublic} />
   {:else}
     <Landing onNavigate={navigatePublic} />
   {/if}

@@ -174,6 +174,15 @@
               <div class="dd-desc">Terms and conditions of use</div>
             </div>
           </button>
+          <button class="dd-item" on:click={() => nav('contact')}>
+            <div class="dd-icon dd-icon-blue">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div class="dd-text">
+              <div class="dd-title">Contact</div>
+              <div class="dd-desc">Get in touch with the team</div>
+            </div>
+          </button>
         </div>
       </div>
     </li>
@@ -251,6 +260,7 @@
             <button class="mob-item" on:click={() => nav('about')}>About</button>
             <button class="mob-item" on:click={() => nav('privacy')}>Privacy Policy</button>
             <button class="mob-item" on:click={() => nav('terms')}>Terms of Service</button>
+            <button class="mob-item" on:click={() => nav('contact')}>Contact</button>
           </div>
         {/if}
       </div>
