@@ -123,13 +123,13 @@
               <div class="dd-desc">Guides for every feature in the app</div>
             </div>
           </button>
-          <button class="dd-item" on:click={() => nav('changelog')}>
+          <button class="dd-item" on:click={() => nav('docs')}>
             <div class="dd-icon dd-icon-amber">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
             </div>
             <div class="dd-text">
-              <div class="dd-title">Changelog</div>
-              <div class="dd-desc">Latest updates and new features</div>
+              <div class="dd-title">Quick Start</div>
+              <div class="dd-desc">Get up and running in under 5 minutes</div>
             </div>
           </button>
         </div>
@@ -227,7 +227,7 @@
         {#if mobileExpanded === 'resources'}
           <div class="mob-items">
             <button class="mob-item" on:click={() => nav('docs')}>Documentation</button>
-            <button class="mob-item" on:click={() => nav('changelog')}>Changelog</button>
+            <button class="mob-item" on:click={() => nav('docs')}>Quick Start</button>
           </div>
         {/if}
       </div>
