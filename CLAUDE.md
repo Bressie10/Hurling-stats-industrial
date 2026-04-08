@@ -42,10 +42,20 @@ hurling-stats/
 │   │   ├── db.js                     # All IndexedDB operations
 │   │   ├── supabase.js               # Supabase client (URL + anon key)
 │   │   ├── auth-store.js             # Svelte writable store for auth state
-│   │   ├── settings-store.js         # Svelte writable store for app settings
+│   │   ├── settings-store.js         # Svelte writable store for app settings (includes rememberLastTeam)
+│   │   ├── subscription-store.js     # Club/team membership, active team, join/leave helpers
 │   │   ├── sync.js                   # Supabase sync logic (push/pull)
 │   │   ├── Auth.svelte               # Compact sign-in card — shown only when running as PWA (standalone)
 │   │   ├── Landing.svelte            # Full marketing landing page — shown to web (non-PWA) visitors; embeds sign-in form in hero
+│   │   ├── LpNav.svelte              # Shared nav for all public pages — Supabase-style CSS hover dropdowns
+│   │   ├── LpFooter.svelte           # Shared footer for all public pages
+│   │   ├── DocsPage.svelte           # /docs — feature documentation with fixed sidebar
+│   │   ├── PricingPage.svelte        # /pricing — plan cards + feature comparison table
+│   │   ├── ChangelogPage.svelte      # /changelog — version timeline v1.0–v1.8
+│   │   ├── AboutPage.svelte          # /about — origin story, mission, values, tech stack
+│   │   ├── PrivacyPage.svelte        # /privacy — GDPR-compliant privacy policy
+│   │   ├── TermsPage.svelte          # /terms — terms of service
+│   │   ├── TeamPicker.svelte         # Team selection overlay shown on login when multiple teams exist
 │   │   ├── Match.svelte              # Live match logging (main screen)
 │   │   ├── PlayerStats.svelte        # Individual player stats + charts
 │   │   ├── TeamStats.svelte          # Team stats + pitch map
@@ -53,7 +63,7 @@ hurling-stats/
 │   │   ├── Timeline.svelte           # Chronological match event feed
 │   │   ├── Squad.svelte              # Squad management — list view + pitch view
 │   │   ├── StatTargets.svelte        # Team performance targets
-│   │   └── Settings.svelte           # App settings + data export
+│   │   └── Settings.svelte           # App settings + data export (includes join/leave team)
 │   ├── app.css                       # Global reset + CSS custom properties (light theme)
 │   ├── App.svelte                    # Root component — nav + routing + auth gate
 │   └── main.js                       # Vite entry point
@@ -104,8 +114,27 @@ Project URL: `https://syikhsgovqogzkmmhuis.supabase.co`
 | `matches` | Cloud copy of all saved matches, per user |
 | `squad` | Cloud copy of squad, per user |
 | `profiles` | User profile (team name, age group) |
+| `club_members` | Club-level membership — roles: `'owner'` \| `'admin'` \| `'coach'` |
+| `team_members` | Team-level membership junction — `(club_id, team_id, user_id, role)` — unique per team+user |
+| `teams` | Sub-teams within a club (up to 4) — each has a shareable join code |
 
 All tables have Row Level Security (RLS) enabled. Every row has a `user_id` column tied to `auth.users`. Coaches only ever see their own data.
+
+#### Two-tier role model
+- **Club-level roles** (`club_members.role`): `'owner'` | `'admin'` | `'coach'`
+  - Owners have **implicit access to all teams** — no `team_members` row needed
+  - `isOwner` flag derived in `subscription-store.js`; used to gate owner-only UI
+- **Team-level roles** (`team_members.role`): `'coach'` | `'player'`
+  - Coaches/players can belong to **multiple teams** via multiple `team_members` rows
+  - `activeTeamId` persisted to `localStorage('active-team-id')` and validated on load
+
+#### Active team flow
+1. On login, `loadSubscription()` fetches all teams the user belongs to
+2. If `teams.length > 1` and no `activeTeamId` and `!rememberLastTeam` → `needsTeamPick = true` → `TeamPicker` shown
+3. User picks a team → `setActiveTeam(team)` persists to localStorage
+4. `rememberLastTeam` toggle in Settings skips the picker on subsequent logins
+5. Coaches can join additional teams from Settings without creating a new account (`joinTeam(code)`)
+6. `leaveTeam(teamId)` removes the `team_members` row and clears localStorage if it was the active team
 
 ---
 
@@ -344,6 +373,16 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Landing page analytics mockup — replaced generic bar chart with accurate match logging screen SVG showing live score, H1 timer, player rows with + stat buttons, and puckout/score/sub action bar
 
 - [x] Stripe subscription payments — Personal Pro (€7.99/mo), Club (€15/mo), Club Pro (€25/mo); Stripe Checkout hosted by Supabase Edge Functions; webhook syncs plan/status to DB; Stripe Customer Portal for managing card/invoices/cancellation
+- [x] Two-tier role model — `club_members` (owner/admin/coach) + `team_members` junction table for many-to-many user↔team; owners have implicit access to all teams
+- [x] Team Picker — coaches with multiple teams prompted to choose on login; "Remember last team" toggle in Settings skips picker
+- [x] Join another team from Settings — coaches can join additional teams by code without a new account; leave team button per team row
+- [x] Public site — 7 pages with shared `LpNav` (Supabase-style CSS hover dropdowns) + `LpFooter`
+- [x] DocsPage — Supabase docs layout with fixed sidebar, 12 feature sections, IntersectionObserver active link tracking
+- [x] PricingPage — 5 plan cards + feature comparison table with 4 row groups + FAQ accordion
+- [x] ChangelogPage — timeline layout, v1.0–v1.8, New/Improved/Fixed tags, scroll-in animations
+- [x] AboutPage — origin story (Doora Barefield GAA), mission, 4 values, tech stack badges, CTA
+- [x] PrivacyPage — GDPR-compliant: data tables, sub-processors (Supabase EU, Stripe), retention periods, user rights, DPC link
+- [x] TermsPage — subscriptions, cancellation, Irish governing law, EU ODR link
 
 ### Still To Build
 - [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
@@ -421,6 +460,40 @@ The analytics section left panel shows an SVG of the actual match logging screen
 - Score area showing `0-07 vs 0-05`
 - Three player rows (B. Murphy / S. Collins / C. Ryan) each with player name, stat label, count, and `+` button styled with lime green
 - Bottom action bar with PUCKOUT / OPP SCORE / SUB buttons
+
+---
+
+## Public Site (7 pages)
+
+All public pages share:
+- `LpNav.svelte` — fixed nav, Supabase-style CSS hover dropdowns (no JS), mobile hamburger overlay
+- `LpFooter.svelte` — 4-column grid footer
+- LP design tokens (defined in `app.css` under `.lp {}`) — dark theme separate from the app's light theme
+- `onNavigate(page)` prop — calls `navigatePublic(page)` in `App.svelte` to switch between public pages
+
+### Routing (`App.svelte`)
+`publicPage` string (`'home' | 'docs' | 'pricing' | 'changelog' | 'about' | 'privacy' | 'terms'`) drives `{#if}` blocks in the `{:else if !$user}` branch. `navigatePublic(page)` sets it and scrolls to top.
+
+### LP design tokens
+Defined in `app.css` scoped to `.lp {}`:
+```
+--lp-bg: #05080F   --lp-surface: #0C1422   --lp-border: #1e3a5f
+--lp-lime: #BAFF29   --lp-amber: #FFB800   --lp-red: #FF3A3A
+--lp-text: #E4EDF8   --lp-text2: #8CA3BF   --lp-text3: #4A6280
+--lp-font-head: 'Bebas Neue'   --lp-font-sub: 'Barlow Condensed'   --lp-font-body: 'Outfit'
+```
+
+### LpNav dropdowns
+CSS-only hover dropdowns — no JS toggle needed:
+```css
+.dd-menu { opacity: 0; pointer-events: none; transform: translateY(-6px); transition: ... }
+.dd-trigger:hover .dd-menu,
+.dd-menu:hover { opacity: 1; pointer-events: auto; transform: none; }
+```
+Three dropdown groups: **Product** (6 items, 2-col grid), **Resources** (2 items), **Company** (3 items). Each item has a coloured icon box + title + description line. Arrow pointer via `::before` clip-path triangle.
+
+### Scroll reveal — IMPORTANT CSS GOTCHA (applies to all public pages)
+Elements with `.reveal` use `opacity: 0; transform: translateY(20px)` and animate when `.in` is added by IntersectionObserver. **Unlike `Landing.svelte`**, the public pages DO use `opacity: 0` on `.reveal` — this works because the styles are defined inline in each component's `<style>` block with Svelte scoping, and the `.in` class is added by JS at component scope. The 1.5s fallback timer ensures `.in` is always added even if the observer doesn't fire.
 
 ---
 
