@@ -53,7 +53,7 @@
     <!-- Sidebar -->
     <aside class="docs-sidebar" class:open={sidebarOpen}>
       <div class="sidebar-head">
-        <div class="sidebar-label">Documentation</div>
+        <div class="sidebar-label">User Guide</div>
       </div>
       <nav class="sidebar-nav">
         {#each sections as s}
@@ -74,16 +74,26 @@
 
     <!-- Mobile sidebar toggle -->
     <button class="docs-mob-toggle" on:click={() => sidebarOpen = !sidebarOpen}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      {sections.find(s => s.id === activeSection)?.label ?? 'Contents'}
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <div class="mob-toggle-left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        Contents
+      </div>
+      <span class="mob-toggle-section">{sections.find(s => s.id === activeSection)?.label ?? ''}</span>
     </button>
     {#if sidebarOpen}
       <div class="docs-mob-overlay" on:click={() => sidebarOpen = false}></div>
-      <div class="docs-mob-menu">
-        {#each sections as s}
-          <button class="sidebar-link" class:active={activeSection === s.id} on:click={() => scrollTo(s.id)}>{s.label}</button>
-        {/each}
+      <div class="docs-mob-drawer">
+        <div class="drawer-head">
+          <span class="drawer-title">User Guide</span>
+          <button class="drawer-close" on:click={() => sidebarOpen = false}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <nav class="drawer-nav">
+          {#each sections as s}
+            <button class="sidebar-link" class:active={activeSection === s.id} on:click={() => scrollTo(s.id)}>{s.label}</button>
+          {/each}
+        </nav>
       </div>
     {/if}
 
@@ -417,7 +427,7 @@
     margin: 0 auto;
   }
 
-  /* Sidebar */
+  /* ── Sidebar ─────────────────────────────────────────────────────────── */
   .docs-sidebar {
     position: sticky; top: 68px; height: calc(100vh - 68px);
     overflow-y: auto; padding: 32px 0;
@@ -430,7 +440,8 @@
   .sidebar-link {
     background: none; border: none; cursor: pointer;
     font-family: var(--lp-font-body); font-size: 14px; color: var(--lp-text3);
-    text-align: left; padding: 8px 12px; border-radius: 8px; width: 100%;
+    text-align: left; padding: 10px 12px; border-radius: 8px; width: 100%;
+    min-height: 44px; display: flex; align-items: center;
     transition: background 0.12s, color 0.12s;
   }
   .sidebar-link:hover { background: rgba(255,255,255,0.05); color: var(--lp-text2); }
@@ -439,32 +450,68 @@
   .sidebar-help {
     display: flex; align-items: center; gap: 8px;
     font-size: 13px; color: var(--lp-text3); text-decoration: none;
-    transition: color 0.15s;
+    transition: color 0.15s; min-height: 44px;
   }
   .sidebar-help:hover { color: var(--lp-lime); }
 
-  /* Mobile toggle */
+  /* ── Mobile toggle bar ───────────────────────────────────────────────── */
   .docs-mob-toggle {
     display: none; position: sticky; top: 68px; z-index: 50;
-    width: 100%; padding: 12px 20px;
-    background: var(--lp-surface); border: none; border-bottom: 1px solid var(--lp-border);
-    font-family: var(--lp-font-body); font-size: 14px; font-weight: 600; color: var(--lp-text);
-    cursor: pointer; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; padding: 0 20px; height: 52px;
+    background: rgba(10,17,32,0.95);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: none; border-bottom: 1px solid var(--lp-border);
+    font-family: var(--lp-font-body); cursor: pointer;
+    align-items: center; justify-content: space-between; gap: 8px;
   }
-  .docs-mob-overlay {
-    position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.5);
+  .mob-toggle-left {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--lp-text2);
   }
-  .docs-mob-menu {
-    position: fixed; top: calc(68px + 45px); left: 0; right: 0; z-index: 70;
-    background: var(--lp-surface); border-bottom: 1px solid var(--lp-border);
-    padding: 8px; display: flex; flex-direction: column; gap: 2px;
-    max-height: 60vh; overflow-y: auto;
+  .mob-toggle-section {
+    font-size: 13px; font-weight: 600; color: var(--lp-lime);
+    max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  /* Content */
+  /* ── Mobile drawer (slide-in from left) ─────────────────────────────── */
+  .docs-mob-overlay {
+    position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  }
+  .docs-mob-drawer {
+    position: fixed; top: 68px; left: 0; bottom: 0; z-index: 70;
+    width: 280px; max-width: 85vw;
+    background: #0A1120; border-right: 1px solid var(--lp-border);
+    display: flex; flex-direction: column;
+    animation: drawerIn 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    overflow-y: auto;
+  }
+  @keyframes drawerIn {
+    from { transform: translateX(-100%); opacity: 0.5; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 16px; border-bottom: 1px solid var(--lp-border);
+    flex-shrink: 0; min-height: 56px;
+  }
+  .drawer-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--lp-text3); }
+  .drawer-close {
+    background: none; border: none; color: var(--lp-text3); cursor: pointer;
+    padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s, color 0.12s;
+  }
+  .drawer-close:hover { background: rgba(255,255,255,0.06); color: var(--lp-text); }
+  .drawer-nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+
+  /* ── Content ─────────────────────────────────────────────────────────── */
   .docs-content { padding: 48px 60px 80px; max-width: 760px; }
 
-  .docs-section { margin-bottom: 80px; padding-bottom: 80px; border-bottom: 1px solid var(--lp-border); }
+  .docs-section {
+    margin-bottom: 80px; padding-bottom: 80px;
+    border-bottom: 1px solid var(--lp-border);
+    scroll-margin-top: 120px;
+  }
   .docs-section:last-child { border-bottom: none; margin-bottom: 0; }
 
   .docs-tag {
@@ -514,11 +561,27 @@
   .docs-table td { padding: 11px 14px; border-bottom: 1px solid rgba(26,40,64,0.4); color: var(--lp-text2); }
   .docs-table tr:last-child td { border-bottom: none; }
 
-  @media (max-width: 900px) {
-    .docs-layout { grid-template-columns: 1fr; }
+  /* ── Tablet (≤1100px) ────────────────────────────────────────────────── */
+  @media (max-width: 1100px) {
+    .docs-layout { grid-template-columns: 210px 1fr; }
+    .docs-content { padding: 40px 36px 60px; }
+  }
+
+  /* ── Mobile (≤768px) ─────────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .docs-layout { grid-template-columns: 1fr; padding-top: 68px; }
     .docs-sidebar { display: none; }
     .docs-mob-toggle { display: flex; }
-    .docs-content { padding: 32px 20px 60px; }
+    .docs-content { padding: 24px 16px 60px; max-width: 100%; }
     .docs-two-col { grid-template-columns: 1fr; }
+    .docs-section { margin-bottom: 56px; padding-bottom: 56px; scroll-margin-top: 136px; }
+    .docs-section h1 { font-size: 26px; }
+    .docs-section h2 { font-size: 17px; margin: 22px 0 8px; }
+    .docs-lead { font-size: 15px; margin-bottom: 18px; }
+    .docs-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+    .docs-table { min-width: 480px; }
+    .docs-tip { font-size: 13px; }
+    .docs-step div { font-size: 14px; }
+    .docs-list li { font-size: 14px; }
   }
 </style>

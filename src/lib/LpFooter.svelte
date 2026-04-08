@@ -33,7 +33,7 @@
       <ul>
         <li><button on:click={() => nav('home')}>Features Overview</button></li>
         <li><button on:click={() => nav('pricing')}>Pricing</button></li>
-        <li><button on:click={() => nav('docs')}>Documentation</button></li>
+        <li><button on:click={() => nav('docs')}>User Guide</button></li>
       </ul>
     </div>
 
