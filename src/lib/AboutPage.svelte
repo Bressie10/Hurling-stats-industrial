@@ -274,8 +274,8 @@
   }
 
   /* Reveal animation */
-  .reveal { transform: translateY(20px); transition: transform 0.6s ease, opacity 0.6s ease; opacity: 0; }
-  .reveal.in { transform: none; opacity: 1; }
+  .reveal { transform: translateY(20px); transition: transform 0.6s ease; }
+  .reveal.in { transform: none; }
 
   /* Hero */
   .ab-hero {

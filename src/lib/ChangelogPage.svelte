@@ -188,9 +188,9 @@
   .entry {
     display: grid; grid-template-columns: 120px 1px 1fr;
     gap: 0 32px; margin-bottom: 56px; align-items: start;
-    opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease;
+    transform: translateY(16px); transition: transform 0.5s ease;
   }
-  .entry.in { opacity: 1; transform: none; }
+  .entry.in { transform: none; }
 
   .entry-meta { padding-top: 4px; }
   .entry-version { font-family: var(--lp-font-head); font-size: 22px; color: var(--lp-text); letter-spacing: 0.04em; }

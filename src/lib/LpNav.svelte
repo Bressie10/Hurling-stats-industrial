@@ -308,6 +308,10 @@
   .nav-dropdown-wrap {
     position: relative; list-style: none;
   }
+  /* Invisible bridge fills the gap between nav link and dropdown so hover isn't lost */
+  .nav-dropdown-wrap::after {
+    content: ''; position: absolute; top: 100%; left: -20px; right: -20px; height: 14px;
+  }
   .nav-dropdown-wrap:hover .drop-chevron { transform: rotate(180deg); }
 
   /* Dropdown panel */
