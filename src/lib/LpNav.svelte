@@ -40,6 +40,9 @@
   <!-- Desktop links -->
   <ul class="nav-links">
 
+    <!-- Home -->
+    <li><button class="nav-link" on:click={() => nav('home')}>Home</button></li>
+
     <!-- Product dropdown -->
     <li class="nav-dropdown-wrap">
       <button class="nav-link nav-link-drop">
@@ -199,6 +202,11 @@
 {#if mobileOpen}
   <div class="mobile-menu">
     <div class="mobile-menu-inner">
+
+      <!-- Home -->
+      <div class="mob-section">
+        <button class="mob-section-head" on:click={() => nav('home')}>Home</button>
+      </div>
 
       <!-- Product accordion -->
       <div class="mob-section">
