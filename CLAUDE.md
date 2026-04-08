@@ -337,13 +337,90 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Squad pitch view — List/Pitch toggle on Squad page; visual GAA formation with 15 slots; tap to assign players, inline new-player form, removable sub chips, reactive `$: slotMap` driving display
 - [x] Lineup auto-populated on match start — `Match.svelte` builds `lineup` from squad jersey numbers silently; saved with match for PDF export; no interactive builder on setup screen
 - [x] Landing page integrated into app — `Landing.svelte` is the full dark-themed marketing site shown to web (non-PWA) visitors who aren't signed in; sign-in/signup form is embedded directly in the hero; PWA users get the compact `Auth.svelte` card (detected via `matchMedia('(display-mode: standalone)')`)
-- [x] Pricing section on landing page — 4 tier cards (Free, Personal Pro €7.99/mo, Club €15/mo, Club Pro €25/mo) + Custom/Enterprise card with amber styling and contact CTA; correct info: no dark mode reference, CTA reflects real pricing
+- [x] Pricing section on landing page — 5 cards: Free, Personal Pro €7.99/mo, Club €15/mo, Club Pro €25/mo, Custom/Enterprise (contact CTA, amber styling); all plan buttons use `goToSignup(mode)` to set auth mode + smooth-scroll to hero sign-in card
 - [x] Google Fonts added to `index.html` — Bebas Neue, Barlow Condensed, Outfit; used by `Landing.svelte` only
+- [x] Landing page buttons fully wired — all CTAs use `goToSignup(mode)` helper; nav anchor links have `scroll-padding-top: 80px` offset for fixed nav; contact/enterprise button left as mailto link
+- [x] Landing page pitch map mockup — rebuilt to exactly match the real puckout zone heatmap: green pitch (`#2d7a2d`), 5 cols × 2 rows (Short/Own Half/Midfield/Opp Half/Long), white W/L + % labels in every zone, green/amber/red fills by win-rate threshold (≥67%/40–66%/<40%), goal boxes, centre line, dashed midfield line, zone dividers, DB END / OPP END labels
+- [x] Landing page analytics mockup — replaced generic bar chart with accurate match logging screen SVG showing live score, H1 timer, player rows with + stat buttons, and puckout/score/sub action bar
 
 - [x] Stripe subscription payments — Personal Pro (€7.99/mo), Club (€15/mo), Club Pro (€25/mo); Stripe Checkout hosted by Supabase Edge Functions; webhook syncs plan/status to DB; Stripe Customer Portal for managing card/invoices/cancellation
 
 ### Still To Build
 - [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
+
+---
+
+## Landing Page (`Landing.svelte`)
+
+### Overview
+`Landing.svelte` is a full dark-themed marketing site (~1550 lines) served to non-authenticated browser visitors. It has its own design system (fonts, colours, layout) completely separate from the app's light theme.
+
+### Design tokens
+All landing page CSS variables are scoped to the `.lp` root element — they do not bleed into the app:
+```css
+.lp {
+  --lp-bg: #05080F;  --lp-surface: #0C1422;
+  --lp-lime: #BAFF29;  --lp-amber: #FFB800;  --lp-red: #FF3A3A;
+  --lp-text: #E4EDF8;  --lp-text2: #8CA3BF;  --lp-text3: #4A6280;
+  --lp-font-head: 'Bebas Neue';  --lp-font-sub: 'Barlow Condensed';  --lp-font-body: 'Outfit';
+}
+```
+
+### Sections (in order)
+1. **Nav** — fixed top bar with anchor links + "Sign In" CTA → `#signin`
+2. **Hero** — 2-col grid: marketing copy left, dark auth card right (`id="signin"`)
+3. **Marquee strip** — scrolling feature list
+4. **Features** — 3-col grid of feature cards
+5. **Pitch map** (`id="pitch"`) — puckout zone heatmap SVG mockup
+6. **Offline** (`id="offline"`) — PWA/offline story
+7. **Stats showcase** — animated count-up numbers
+8. **Analytics** (`id="analytics"`) — match logging screen mockup + player season totals
+9. **Timeline** (`id="timeline"`) — match event feed mockup
+10. **Pricing** (`id="pricing"`) — 5 plan cards
+11. **CTA** — final sign-up push
+12. **Footer**
+
+### Auth card in hero
+The hero section contains a full sign-in/signup flow (`mode`: `'login'` | `'choose'` | `'personal'` | `'club'` | `'join'`). It shares the same `signIn`/`signUp` functions as `Auth.svelte` but uses dark-themed styles prefixed `auth-dark-*`.
+
+### Button pattern — `goToSignup(mode)`
+All CTA and pricing buttons call `goToSignup(mode)` which sets the auth card mode then smooth-scrolls to `#signin`:
+```javascript
+function goToSignup(m) {
+  setMode(m)
+  document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+```
+- Free / Personal Pro → `goToSignup('personal')`
+- Club / Club Pro → `goToSignup('club')`
+- Hero "Get Started Free" → `goToSignup('choose')` (shows account type picker)
+- Custom/Enterprise → `mailto:` link (no JS needed)
+
+### Scroll reveal — IMPORTANT CSS GOTCHA
+Elements with `.reveal` start at `transform: translateY(24px)` and animate to `translateY(0)` when the `in` class is added by `IntersectionObserver`.
+
+**Do NOT add `opacity: 0` to `.reveal`.** Svelte's scoped CSS compiles `.reveal.in` to `.reveal.in.svelte-xyz`, but the dynamically JS-added `in` class doesn't carry the Svelte scoping attribute, so the opacity rule never matches and content stays permanently invisible. The transform-only approach works because it doesn't require the `.in` class to restore visibility.
+
+A 1.5s fallback timer also force-adds `.in` to all reveals in case the observer doesn't fire:
+```javascript
+const fallback = setTimeout(() => revealEls.forEach(el => el.classList.add('in')), 1500)
+```
+
+### Pitch map mockup
+The "Spatial Intelligence" section SVG exactly replicates the real puckout zone heatmap from `Match.svelte`:
+- `viewBox="0 0 360 130"`, green background `#2d7a2d`
+- 5 columns: Short (x=5,w=70) / Own Half (x=75,w=70) / Midfield (x=145,w=70) / Opp Half (x=215,w=70) / Long (x=285,w=70)
+- 2 rows: top (y=8,h=52) / bottom (y=60,h=52), split by horizontal line at y=60
+- Zone fills: green overlay ≥67%, amber 40–66%, red <40%
+- Each zone shows `NW NL` on line 1 and `N%` on line 2, white text
+- Goal boxes at x=5 and x=337, DB END / OPP END labels, zone names along bottom
+
+### Analytics mockup
+The analytics section left panel shows an SVG of the actual match logging screen (`viewBox="0 0 300 200"`):
+- Top nav bar with team name, H1 timer, STATS button
+- Score area showing `0-07 vs 0-05`
+- Three player rows (B. Murphy / S. Collins / C. Ryan) each with player name, stat label, count, and `+` button styled with lime green
+- Bottom action bar with PUCKOUT / OPP SCORE / SUB buttons
 
 ---
 
