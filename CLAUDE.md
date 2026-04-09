@@ -391,6 +391,7 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Go Live gated to Club Pro — `startLive()` checks `activeTeamId` (fixed from broken `teamId`); Live button only shown to `$isClubPro` users
 - [x] Club ownership setup flows — Settings.svelte has "Set up your club" and "Activate team management" blocks; `setupClub()` and `claimClubOwnership()` helpers in `subscription-store.js`; `loadSubscription()` infers `isOwner` from `personalSub.club_id` as RLS fallback
 - [x] Live Viewer Quick Stats — `getLivePayload()` now broadcasts `puckouts`, `oppScores`, `subs_log`; `LiveViewer.svelte` shows collapsible accordions for Puckouts (W/L/%, by player with matchup lines, opp winners), Scores Conceded (by marker + by opp player), Player Stats table, and Substitutions
+- [x] Fix coaches seeing "Activate team management" — added `!$subscriptionStore.clubRole` guard to the claim-ownership block in `Settings.svelte`; coaches have `clubRole = 'coach'` so the block no longer renders for them
 
 ### Still To Build
 
