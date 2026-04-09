@@ -386,6 +386,11 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Payment-during-signup — Personal and Club signup flows now include a plan picker step; paid plans store `pending_checkout_plan` in localStorage and redirect to Stripe Checkout automatically on first login
 - [x] SW cache auto-versioning — `vite.config.js` plugin replaces `__CACHE_VERSION__` in the built `sw.js` with a build timestamp; cache version bumps automatically on every deploy
 - [x] Safe IndexedDB migrations — `db.js` upgrade handler uses `if (oldVersion < N)` pattern with a bumped `DB_VERSION` constant; add a new `if (oldVersion < N)` block for each future schema change, never remove old ones
+- [x] Consistent stat registration UI — all stats use sequential modal flow (step indicators, starters/subs split, identical opp player grid 1–25, single confirm button); mobile/tablet first
+- [x] InstallPage.svelte — "How to Install" public page with iOS/Android/Desktop steps, 8 common issues accordion, prominent amber warning that internet is required to sign in; linked from nav Resources dropdown and footer
+- [x] Go Live gated to Club Pro — `startLive()` checks `activeTeamId` (fixed from broken `teamId`); Live button only shown to `$isClubPro` users
+- [x] Club ownership setup flows — Settings.svelte has "Set up your club" and "Activate team management" blocks; `setupClub()` and `claimClubOwnership()` helpers in `subscription-store.js`; `loadSubscription()` infers `isOwner` from `personalSub.club_id` as RLS fallback
+- [x] Live Viewer Quick Stats — `getLivePayload()` now broadcasts `puckouts`, `oppScores`, `subs_log`; `LiveViewer.svelte` shows collapsible accordions for Puckouts (W/L/%, by player with matchup lines, opp winners), Scores Conceded (by marker + by opp player), Player Stats table, and Substitutions
 
 ### Still To Build
 
