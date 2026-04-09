@@ -117,6 +117,7 @@ Project URL: `https://syikhsgovqogzkmmhuis.supabase.co`
 | `club_members` | Club-level membership — roles: `'owner'` \| `'admin'` \| `'coach'` |
 | `team_members` | Team-level membership junction — `(club_id, team_id, user_id, role)` — unique per team+user |
 | `teams` | Sub-teams within a club (up to 4) — each has a shareable join code |
+| `subscriptions.custom_features` | JSONB column for per-club bespoke overrides — set in Supabase dashboard; keys: `isPro`, `isClub`, `isClubPro` (bool), `maxTeams` (int). Example: `{"isPro": true, "isClub": true, "maxTeams": 8}` |
 
 All tables have Row Level Security (RLS) enabled. Every row has a `user_id` column tied to `auth.users`. Coaches only ever see their own data.
 
@@ -381,8 +382,12 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] PrivacyPage — GDPR-compliant: data tables, sub-processors (Supabase EU, Stripe), retention periods, user rights, DPC link
 - [x] TermsPage — subscriptions, cancellation, Irish governing law, EU ODR link
 
+- [x] Custom plan support — `subscriptions.custom_features` JSONB column for per-club bespoke overrides; set directly in Supabase dashboard with no code deploy; `isPro`/`isClub`/`isClubPro` derived stores check it before plan logic
+- [x] Payment-during-signup — Personal and Club signup flows now include a plan picker step; paid plans store `pending_checkout_plan` in localStorage and redirect to Stripe Checkout automatically on first login
+- [x] SW cache auto-versioning — `vite.config.js` plugin replaces `__CACHE_VERSION__` in the built `sw.js` with a build timestamp; cache version bumps automatically on every deploy
+- [x] Safe IndexedDB migrations — `db.js` upgrade handler uses `if (oldVersion < N)` pattern with a bumped `DB_VERSION` constant; add a new `if (oldVersion < N)` block for each future schema change, never remove old ones
+
 ### Still To Build
-- [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
 
 ---
 
@@ -418,6 +423,12 @@ All landing page CSS variables are scoped to the `.lp` root element — they do 
 
 ### Auth card in hero
 The hero section contains a full sign-in/signup flow (`mode`: `'login'` | `'choose'` | `'personal'` | `'club'` | `'join'`). It shares the same `signIn`/`signUp` functions as `Auth.svelte` but uses dark-themed styles prefixed `auth-dark-*`.
+
+**Payment-during-signup flow:**
+- `personal` mode has two steps: (1) plan picker — Free or Personal Pro; (2) email/password form. Free goes straight through; Personal Pro stores `pending_checkout_plan: 'personal'` in localStorage before creating the account.
+- `club` mode has two steps: (1) plan picker — Club €15 or Club Pro €25 (no free tier); (2) club name + email/password form. Always stores `pending_checkout_plan: 'club'` or `'club_pro'` in localStorage.
+- `App.svelte` detects `pending_checkout_plan` on first login after `loadSubscription`, invokes `create-checkout-session`, and redirects to Stripe. The item is cleared from localStorage before redirecting.
+- `selectedPersonalPlan` (`null` | `'free'` | `'pro'`) and `selectedClubPlan` (`null` | `'club'` | `'club_pro'`) are reset to `null` in `reset()` whenever mode changes.
 
 ### Button pattern — `goToSignup(mode)`
 All CTA and pricing buttons call `goToSignup(mode)` which sets the auth card mode then smooth-scrolls to `#signin`:
