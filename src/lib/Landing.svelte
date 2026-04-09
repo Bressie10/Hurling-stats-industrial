@@ -12,6 +12,8 @@
   let loading = false
   let error = null
   let successMsg = null
+  let selectedPersonalPlan = null // null | 'free' | 'pro'
+  let selectedClubPlan = null     // null | 'club' | 'club_pro'
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
@@ -25,9 +27,14 @@
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
     try {
+      if (selectedPersonalPlan === 'pro') {
+        localStorage.setItem('pending_checkout_plan', 'personal')
+      }
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'personal' }))
       await signUp(email, password)
-      successMsg = 'Check your email to confirm your account, then sign in.'
+      successMsg = selectedPersonalPlan === 'pro'
+        ? 'Check your email to confirm your account. Once you sign in you\'ll be taken to payment.'
+        : 'Check your email to confirm your account, then sign in.'
     } catch (e) { error = e.message }
     loading = false
   }
@@ -37,9 +44,10 @@
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
     try {
+      localStorage.setItem('pending_checkout_plan', selectedClubPlan)
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'club', clubName: clubName.trim() }))
       await signUp(email, password)
-      successMsg = 'Check your email to confirm your account, then sign in to set up your teams.'
+      successMsg = 'Check your email to confirm your account. Once you sign in you\'ll be taken to payment.'
     } catch (e) { error = e.message }
     loading = false
   }
@@ -57,7 +65,7 @@
     loading = false
   }
 
-  function reset() { error = null; successMsg = null }
+  function reset() { error = null; successMsg = null; selectedPersonalPlan = null; selectedClubPlan = null }
   function setMode(m) { mode = m; reset() }
 
   function goToSignup(m) {
@@ -284,12 +292,49 @@
           {#if successMsg}
             <div class="auth-dark-success">{successMsg}</div>
             <button class="auth-dark-btn-primary" on:click={() => setMode('login')}>Go to sign in</button>
-          {:else}
+          {:else if !selectedPersonalPlan}
+            <!-- Step 1: pick a plan -->
             <div class="auth-dark-flow-header">
               <button class="auth-dark-back-btn" on:click={() => setMode('choose')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <span>Personal account</span>
+              <span>Choose your plan</span>
+            </div>
+            <div class="signup-plan-cards">
+              <button class="signup-plan-card" on:click={() => selectedPersonalPlan = 'free'}>
+                <div class="spc-name">Free</div>
+                <div class="spc-price">€0<span>/month</span></div>
+                <ul class="spc-features">
+                  <li>1 coach · 1 team</li>
+                  <li>Full match logging</li>
+                  <li>3 matches in history</li>
+                  <li>100% offline</li>
+                </ul>
+                <div class="spc-cta">Get started free</div>
+              </button>
+              <button class="signup-plan-card featured" on:click={() => selectedPersonalPlan = 'pro'}>
+                <div class="spc-badge">Most popular</div>
+                <div class="spc-name">Personal Pro</div>
+                <div class="spc-price">€7.99<span>/month</span></div>
+                <ul class="spc-features">
+                  <li>Unlimited match history</li>
+                  <li>Player stats &amp; charts</li>
+                  <li>Team stats &amp; pitch map</li>
+                  <li>Match timeline</li>
+                  <li>Stat targets</li>
+                  <li>PDF match reports</li>
+                </ul>
+                <div class="spc-cta primary">Start Personal Pro →</div>
+              </button>
+            </div>
+
+          {:else}
+            <!-- Step 2: email + password -->
+            <div class="auth-dark-flow-header">
+              <button class="auth-dark-back-btn" on:click={() => selectedPersonalPlan = null}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span>{selectedPersonalPlan === 'pro' ? 'Personal Pro' : 'Free account'}</span>
             </div>
             <div class="auth-dark-fields">
               <div class="auth-dark-field">
@@ -302,11 +347,19 @@
               </div>
               {#if error}<div class="auth-dark-error">{error}</div>{/if}
               <button class="auth-dark-btn-primary" on:click={handlePersonalSignup} disabled={loading}>
-                {loading ? 'Creating account…' : 'Create account'}
+                {#if loading}
+                  {selectedPersonalPlan === 'pro' ? 'Creating account…' : 'Creating account…'}
+                {:else if selectedPersonalPlan === 'pro'}
+                  Continue to payment →
+                {:else}
+                  Create free account
+                {/if}
               </button>
-              <div class="auth-dark-tier-note">
-                Free to start · Upgrade to <strong>Personal Pro at €7.99/month</strong> for full analytics
-              </div>
+              {#if selectedPersonalPlan === 'pro'}
+                <div class="auth-dark-tier-note">
+                  You'll be taken to payment after confirming your email. €7.99/month, cancel anytime.
+                </div>
+              {/if}
             </div>
           {/if}
 
@@ -315,12 +368,48 @@
           {#if successMsg}
             <div class="auth-dark-success">{successMsg}</div>
             <button class="auth-dark-btn-primary" on:click={() => setMode('login')}>Go to sign in</button>
-          {:else}
+          {:else if !selectedClubPlan}
+            <!-- Step 1: pick Club or Club Pro -->
             <div class="auth-dark-flow-header">
               <button class="auth-dark-back-btn" on:click={() => setMode('choose')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <span>Set up my club</span>
+              <span>Choose your plan</span>
+            </div>
+            <div class="signup-plan-cards">
+              <button class="signup-plan-card featured" on:click={() => selectedClubPlan = 'club'}>
+                <div class="spc-name">Club</div>
+                <div class="spc-price">€15<span>/month</span></div>
+                <ul class="spc-features">
+                  <li>Unlimited coaches</li>
+                  <li>Up to 4 teams</li>
+                  <li>Team join codes</li>
+                  <li>Full analytics</li>
+                  <li>100% offline</li>
+                </ul>
+                <div class="spc-cta primary">Set up Club →</div>
+              </button>
+              <button class="signup-plan-card" on:click={() => selectedClubPlan = 'club_pro'}>
+                <div class="spc-name">Club Pro</div>
+                <div class="spc-price">€25<span>/month</span></div>
+                <ul class="spc-features">
+                  <li>Everything in Club</li>
+                  <li>Live match sharing</li>
+                  <li>Live viewer mode</li>
+                  <li>Priority support</li>
+                  <li>Early access</li>
+                </ul>
+                <div class="spc-cta">Set up Club Pro →</div>
+              </button>
+            </div>
+
+          {:else}
+            <!-- Step 2: club details form -->
+            <div class="auth-dark-flow-header">
+              <button class="auth-dark-back-btn" on:click={() => selectedClubPlan = null}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span>{selectedClubPlan === 'club_pro' ? 'Club Pro' : 'Club'}</span>
             </div>
             <div class="auth-dark-fields">
               <div class="auth-dark-field">
@@ -337,11 +426,10 @@
               </div>
               {#if error}<div class="auth-dark-error">{error}</div>{/if}
               <button class="auth-dark-btn-primary" on:click={handleClubSignup} disabled={loading}>
-                {loading ? 'Creating club…' : 'Create club'}
+                {loading ? 'Creating club…' : 'Continue to payment →'}
               </button>
               <div class="auth-dark-tier-note">
-                After signing in you'll create your teams and get codes to share with your coaches.
-                Upgrade to <strong>Club at €15/month</strong> for all features.
+                {selectedClubPlan === 'club_pro' ? '€25/month' : '€15/month'} · Cancel anytime · Teams set up after payment
               </div>
             </div>
           {/if}
@@ -1306,6 +1394,41 @@
     border-radius: 8px; padding: 10px 12px; line-height: 1.6;
   }
   .auth-dark-tier-note strong { color: var(--lp-lime); }
+
+  /* ── SIGNUP PLAN CARDS ────────────────────────────────────────────────── */
+  .signup-plan-cards {
+    display: flex; gap: 10px; margin-top: 4px;
+  }
+  .signup-plan-card {
+    flex: 1; display: flex; flex-direction: column; gap: 8px;
+    background: rgba(255,255,255,0.04); border: 1.5px solid var(--lp-border);
+    border-radius: 14px; padding: 16px 14px;
+    text-align: left; cursor: pointer; font-family: inherit;
+    color: var(--lp-text); transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .signup-plan-card:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.07); }
+  .signup-plan-card.featured { border-color: var(--lp-lime); background: rgba(118,190,0,0.06); }
+  .signup-plan-card.featured:hover { background: rgba(118,190,0,0.1); }
+  .spc-badge {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    background: var(--lp-lime); color: #0f1a06;
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
+    padding: 2px 10px; border-radius: 20px; white-space: nowrap;
+  }
+  .spc-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lp-text2); }
+  .spc-price { font-size: 24px; font-weight: 800; color: var(--lp-text); letter-spacing: -0.03em; line-height: 1; }
+  .spc-price span { font-size: 12px; font-weight: 500; color: var(--lp-text3); }
+  .spc-features { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .spc-features li { font-size: 11px; color: var(--lp-text3); display: flex; align-items: center; gap: 5px; }
+  .spc-features li::before { content: '✓'; color: var(--lp-lime); font-size: 10px; font-weight: 700; }
+  .spc-cta {
+    font-size: 12px; font-weight: 700; text-align: center;
+    padding: 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.06); color: var(--lp-text2);
+    margin-top: 4px;
+  }
+  .spc-cta.primary { background: var(--lp-lime); color: #0f1a06; }
 
   /* ── STRIP ────────────────────────────────────────────────────────────── */
   .strip {

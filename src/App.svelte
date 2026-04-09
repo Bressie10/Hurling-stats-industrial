@@ -145,6 +145,14 @@ import { clearAllData } from './lib/db.js'
 
         let subVal; subscriptionStore.subscribe(s => subVal = s)()
 
+        // Personal Pro signup: redirect to Stripe on first login
+        const pendingPlan = localStorage.getItem('pending_checkout_plan')
+        if (pendingPlan && subVal.plan === 'free') {
+          localStorage.removeItem('pending_checkout_plan')
+          const { data } = await supabase.functions.invoke('create-checkout-session', { body: { plan: pendingPlan } })
+          if (data?.url) { window.location.href = data.url; return }
+        }
+
         // Club owners with no teams yet → show team setup
         if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
           needsTeamSetup = true
@@ -180,7 +188,7 @@ import { clearAllData } from './lib/db.js'
           plan: 'free', status: 'active', cancelAtPeriodEnd: false,
           clubId: null, clubName: null, clubRole: null, isOwner: false,
           teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
-          currentPeriodEnd: null, loading: false
+          currentPeriodEnd: null, customFeatures: {}, loading: false
         })
       }
     })

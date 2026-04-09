@@ -16,22 +16,25 @@ export const subscriptionStore = writable({
   activeTeamName: null,
   activeTeamCode: null,
   currentPeriodEnd: null,
+  customFeatures: {},    // per-subscription overrides set in Supabase dashboard
   loading: true
 })
 
+const isActiveStatus = s => s.status === 'active' || s.status === 'trialing'
+
 export const isPro = derived(subscriptionStore, $s =>
-  ($s.plan === 'personal' || $s.plan === 'club' || $s.plan === 'club_pro') &&
-  ($s.status === 'active' || $s.status === 'trialing')
+  $s.customFeatures?.isPro === true ||
+  (($s.plan === 'personal' || $s.plan === 'club' || $s.plan === 'club_pro') && isActiveStatus($s))
 )
 
 export const isClub = derived(subscriptionStore, $s =>
-  ($s.plan === 'club' || $s.plan === 'club_pro') &&
-  ($s.status === 'active' || $s.status === 'trialing')
+  $s.customFeatures?.isClub === true ||
+  (($s.plan === 'club' || $s.plan === 'club_pro') && isActiveStatus($s))
 )
 
 export const isClubPro = derived(subscriptionStore, $s =>
-  $s.plan === 'club_pro' &&
-  ($s.status === 'active' || $s.status === 'trialing')
+  $s.customFeatures?.isClubPro === true ||
+  ($s.plan === 'club_pro' && isActiveStatus($s))
 )
 
 function generateTeamCode() {
@@ -164,6 +167,7 @@ export async function loadSubscription(userId) {
       activeTeamName: activeTeam?.name ?? null,
       activeTeamCode: activeTeam?.code ?? null,
       currentPeriodEnd: sub?.current_period_end ?? null,
+      customFeatures: sub?.custom_features ?? {},
       loading: false
     })
   } catch (e) {
@@ -172,7 +176,7 @@ export async function loadSubscription(userId) {
       plan: 'free', status: 'active', cancelAtPeriodEnd: false,
       clubId: null, clubName: null, clubRole: null, isOwner: false,
       teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
-      currentPeriodEnd: null, loading: false
+      currentPeriodEnd: null, customFeatures: {}, loading: false
     })
   }
 }

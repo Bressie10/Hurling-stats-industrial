@@ -1,4 +1,6 @@
-const CACHE = 'gaa-industrial-v4'
+// __CACHE_VERSION__ is replaced with a build timestamp by vite.config.js at build time.
+// In dev (served directly from /public), the literal string is used — that's fine.
+const CACHE = 'gaa-industrial-__CACHE_VERSION__'
 
 const PRECACHE = [
   '/',

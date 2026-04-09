@@ -1,17 +1,27 @@
 import { openDB } from 'idb'
 
 const DB_NAME = 'doora-stats'
+// IMPORTANT: bump DB_VERSION whenever you add a new store or index.
+// Add a `case N:` block in the upgrade switch below — never remove old cases.
+// idb runs all cases from oldVersion+1 up to newVersion, so migrations are cumulative.
 const DB_VERSION = 1
 
 export async function getDB() {
   return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains('squad')) {
-        db.createObjectStore('squad', { keyPath: 'id' })
+    upgrade(db, oldVersion) {
+      // case 0 → 1: initial schema
+      if (oldVersion < 1) {
+        if (!db.objectStoreNames.contains('squad')) {
+          db.createObjectStore('squad', { keyPath: 'id' })
+        }
+        if (!db.objectStoreNames.contains('matches')) {
+          db.createObjectStore('matches', { keyPath: 'id' })
+        }
       }
-      if (!db.objectStoreNames.contains('matches')) {
-        db.createObjectStore('matches', { keyPath: 'id' })
-      }
+      // To add a new store in future:
+      //   1. bump DB_VERSION above to 2
+      //   2. add: if (oldVersion < 2) { db.createObjectStore('newStore', { keyPath: 'id' }) }
+      // Existing data in 'squad' and 'matches' is untouched.
     }
   })
 }
