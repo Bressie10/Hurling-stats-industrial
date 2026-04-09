@@ -3,7 +3,7 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub } from './subscription-store.js'
+  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
 
@@ -128,6 +128,21 @@
       setupClubError = e.message
     }
     settingUpClub = false
+  }
+
+  // Claim ownership (Club/Club Pro users who have a clubId but no owner row)
+  let claimingOwnership = false
+  let claimError = ''
+
+  async function handleClaimOwnership() {
+    claimingOwnership = true
+    claimError = ''
+    try {
+      await claimClubOwnership($user.id, $subscriptionStore.clubId)
+    } catch (e) {
+      claimError = e.message
+    }
+    claimingOwnership = false
   }
 
   // Join another team (existing users)
@@ -513,6 +528,20 @@
         </button>
       </div>
       {#if setupClubError}<p class="team-error">{setupClubError}</p>{/if}
+    </div>
+  </div>
+  {/if}
+
+  <!-- ── CLAIM OWNERSHIP (Club/Club Pro with clubId but no owner row) ── -->
+  {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId}
+  <div class="section-block">
+    <div class="section-title">Club Teams</div>
+    <div class="card">
+      <p class="card-desc">Your plan includes team management but your account isn't set up as club owner yet. Click below to activate it.</p>
+      <button class="team-save-btn" style="margin-top:12px" on:click={handleClaimOwnership} disabled={claimingOwnership}>
+        {claimingOwnership ? 'Activating…' : 'Activate team management'}
+      </button>
+      {#if claimError}<p class="team-error">{claimError}</p>{/if}
     </div>
   </div>
   {/if}

@@ -245,6 +245,15 @@ export async function leaveTeam(teamId, userId) {
   await loadSubscription(userId)
 }
 
+// Called when a Club/Club Pro user has a clubId but no owner row — claims ownership
+export async function claimClubOwnership(userId, clubId) {
+  const { error } = await supabase
+    .from('club_members')
+    .upsert({ club_id: clubId, user_id: userId, role: 'owner' }, { onConflict: 'club_id,user_id' })
+  if (error) throw error
+  await loadSubscription(userId)
+}
+
 // Called when a Club/Club Pro user has no club yet — creates one and makes them owner
 export async function setupClub(userId, clubName) {
   const clubCode = generateClubCode()
