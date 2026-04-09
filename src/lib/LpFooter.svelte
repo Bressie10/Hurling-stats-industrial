@@ -34,6 +34,7 @@
         <li><button on:click={() => nav('home')}>Features Overview</button></li>
         <li><button on:click={() => nav('pricing')}>Pricing</button></li>
         <li><button on:click={() => nav('docs')}>User Guide</button></li>
+        <li><button on:click={() => nav('install')}>How to Install</button></li>
       </ul>
     </div>
 

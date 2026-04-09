@@ -41,7 +41,7 @@
       teamName: $settingsStore.teamName,
       opposition,
       period,
-      score,
+      score: matchScore,
       stats,
       events,
       players
@@ -82,6 +82,7 @@
   // ── PUCKOUT TRACKING ─────────────────────────
   let puckouts = []
   let showPuckoutModal = false
+  let puckoutStep = 1         // 1=outcome, 2=our player, 3=zone, 4=opp player
   let puckoutOutcome = null   // 'won' | 'lost'
   let puckoutOurPlayer = null // player name string
   let puckoutOppPlayer = ''   // text input
@@ -89,6 +90,7 @@
   // ── OPPOSITION SCORE TRACKING ─────────────────
   let oppScores = []
   let showOppScoreModal = false
+  let oppScoreStep = 1        // 1=opp player number, 2=our marker
   let oppScoreType = null     // 'goal' | 'point'
   let oppScorePlayerNum = ''
   let oppScoreMarker = null   // player name string
@@ -220,7 +222,7 @@
     if (events.length === 0) return null
     const last = events[events.length - 1]
     const player = players.find(p => p.id === last.playerId)
-    return `${last.stat} — ${player?.name || '#' + player?.number}`
+    return `${last.stat} — ${player?.name || (player ? '#' + player.number : '#' + last.playerId)}`
   })()
 
   function undoLastStat() {
@@ -490,6 +492,7 @@
 
   // ── PUCKOUT FUNCTIONS ────────────────────────
   function openPuckoutModal() {
+    puckoutStep = 1
     puckoutOutcome = null
     puckoutOurPlayer = null
     puckoutOppPlayer = ''
@@ -530,24 +533,23 @@
   }
 
   function openOppScoreModal(type) {
+    oppScoreStep = 1
     oppScoreType = type
     oppScorePlayerNum = ''
     oppScoreMarker = null
     showOppScoreModal = true
   }
 
-  function confirmOppScore(withDetails) {
+  function confirmOppScore() {
     if (oppScoreType === 'point') matchScore.away.points++
     if (oppScoreType === 'goal') matchScore.away.goals++
-    if (withDetails) {
-      oppScores = [...oppScores, {
-        type: oppScoreType,
-        oppPlayerNum: oppScorePlayerNum.trim() || null,
-        marker: oppScoreMarker,
-        time: timerSeconds,
-        period
-      }]
-    }
+    oppScores = [...oppScores, {
+      type: oppScoreType,
+      oppPlayerNum: oppScorePlayerNum.trim() || null,
+      marker: oppScoreMarker,
+      time: timerSeconds,
+      period
+    }]
     matchScore = matchScore
     showOppScoreModal = false
     saveDraft()
@@ -1089,147 +1091,230 @@
     <button class="cancel-match-btn" on:click={cancelMatch}>Cancel Match</button>
   </div>
 
-  <!-- PUCKOUT MODAL -->
+  <!-- PUCKOUT MODAL — 4 sequential steps -->
   {#if showPuckoutModal}
     <div class="modal-backdrop" on:click={() => showPuckoutModal = false}>
       <div class="modal" on:click|stopPropagation>
-        <div class="modal-title">Log Puckout</div>
 
-        <div class="puckout-outcome-row">
-          <button
-            class="outcome-btn won"
-            class:selected={puckoutOutcome === 'won'}
-            on:click={() => puckoutOutcome = 'won'}
-          >We Won</button>
-          <button
-            class="outcome-btn lost"
-            class:selected={puckoutOutcome === 'lost'}
-            on:click={() => puckoutOutcome = 'lost'}
-          >They Won</button>
-        </div>
-
-        <div class="modal-section-label">Our player involved (optional)</div>
-        <div class="player-grid">
-          {#each players as player}
-            {@const label = player.name?.trim() || `#${player.number}`}
-            <button
-              class="player-btn"
-              class:selected-player={puckoutOurPlayer === label}
-              on:click={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
-            >
-              <span class="player-num">#{player.number}</span>
-              {#if player.name?.trim()}<span class="player-name">{player.name}</span>{/if}
-            </button>
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          {#each [1,2,3,4] as s}
+            <div class="step-dot" class:active={puckoutStep === s} class:done={puckoutStep > s}></div>
           {/each}
         </div>
 
-        <div class="modal-section-label">Where did it land? (optional) {#if puckoutSection}<span class="zone-hint">— {formatZoneLabel(puckoutSection)} selected</span>{/if}</div>
-        <div class="puckout-pitch-wrap">
-          <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
-            <!-- Pitch background -->
-            <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
-            <!-- 10 clickable zones (5 cols × 2 rows) -->
-            {#each puckoutRows as row}
-              {#each puckoutCols as col}
-                {@const zkey = col.key + '-' + row.key}
-                <rect
-                  x={col.x} y={row.y} width={col.w} height={row.h}
-                  fill={puckoutSection === zkey ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)'}
-                  stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
-                  stroke-width={puckoutSection === zkey ? '2' : '0.5'}
-                  style="cursor:pointer"
-                  on:click={() => puckoutSection = puckoutSection === zkey ? null : zkey}
-                />
-                <text
-                  x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
-                  text-anchor="middle"
-                  fill="white"
-                  font-size="6.5"
-                  font-weight={puckoutSection === zkey ? 'bold' : 'normal'}
-                  opacity={puckoutSection === zkey ? '1' : '0.65'}
-                  style="pointer-events:none"
-                >{col.label}</text>
+        {#if puckoutStep === 1}
+          <!-- Step 1: Outcome -->
+          <div class="modal-title">Log Puckout</div>
+          <div class="modal-section-label">Result</div>
+          <div class="outcome-row">
+            <button
+              class="outcome-btn won"
+              class:selected={puckoutOutcome === 'won'}
+              on:click={() => puckoutOutcome = 'won'}
+            >We Won</button>
+            <button
+              class="outcome-btn lost"
+              class:selected={puckoutOutcome === 'lost'}
+              on:click={() => puckoutOutcome = 'lost'}
+            >They Won</button>
+          </div>
+          <button
+            class="confirm-log-btn"
+            disabled={!puckoutOutcome}
+            on:click={() => puckoutStep = 2}
+          >Next</button>
+          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+
+        {:else if puckoutStep === 2}
+          <!-- Step 2: Our player -->
+          <div class="modal-title">Our player involved</div>
+          <div class="modal-section-label">Starters</div>
+          <div class="player-grid">
+            {#each starters as player}
+              {@const label = player.name?.trim() || `#${player.number}`}
+              <button
+                class="player-btn"
+                class:selected-player={puckoutOurPlayer === label}
+                on:click={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
+              >
+                <span class="player-num">#{player.number}</span>
+                <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
+              </button>
+            {/each}
+          </div>
+          {#if subs.length > 0}
+            <div class="modal-section-label">Subs</div>
+            <div class="player-grid">
+              {#each subs as player}
+                {@const label = player.name?.trim() || `#${player.number}`}
+                <button
+                  class="player-btn sub"
+                  class:selected-player={puckoutOurPlayer === label}
+                  on:click={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
+                >
+                  <span class="player-num">#{player.number}</span>
+                  <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
+                </button>
               {/each}
-            {/each}
-            <!-- Vertical zone dividers -->
-            {#each [62, 120, 180, 238] as dx}
-              <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
-            {/each}
-            <!-- Horizontal mid-pitch divider (widthways split) -->
-            <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
-            <!-- Halfway length line (dashed) -->
-            <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
-            <!-- Goal areas -->
-            <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-            <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-            <!-- End labels -->
-            <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">DB END</text>
-            <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">OPP END</text>
-          </svg>
-        </div>
+            </div>
+          {/if}
+          <div class="step-nav">
+            <button class="step-back-btn" on:click={() => puckoutStep = 1}>← Back</button>
+            <button class="confirm-log-btn step-next" on:click={() => puckoutStep = 3}>
+              {puckoutOurPlayer ? 'Next' : 'Skip'}
+            </button>
+          </div>
+          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
 
-        <div class="modal-section-label">
-          {puckoutOutcome === 'lost' ? 'Which opposition player won it?' : 'Opposition player number'} (optional)
-        </div>
-        <div class="opp-num-grid">
-          {#each Array.from({length: 25}, (_, i) => String(i + 1)) as num}
-            <button
-              class="opp-num-btn"
-              class:selected-player={puckoutOppPlayer === num}
-              on:click={() => puckoutOppPlayer = puckoutOppPlayer === num ? '' : num}
-            >{num}</button>
-          {/each}
-        </div>
+        {:else if puckoutStep === 3}
+          <!-- Step 3: Zone picker -->
+          <div class="modal-title">Where did it land?</div>
+          {#if puckoutSection}
+            <div class="selected-zone-badge">{formatZoneLabel(puckoutSection)}</div>
+          {/if}
+          <div class="puckout-pitch-wrap">
+            <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
+              <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
+              {#each puckoutRows as row}
+                {#each puckoutCols as col}
+                  {@const zkey = col.key + '-' + row.key}
+                  <rect
+                    x={col.x} y={row.y} width={col.w} height={row.h}
+                    fill={puckoutSection === zkey ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)'}
+                    stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
+                    stroke-width={puckoutSection === zkey ? '2' : '0.5'}
+                    style="cursor:pointer"
+                    on:click={() => puckoutSection = puckoutSection === zkey ? null : zkey}
+                  />
+                  <text
+                    x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
+                    text-anchor="middle" fill="white"
+                    font-size="6.5"
+                    font-weight={puckoutSection === zkey ? 'bold' : 'normal'}
+                    opacity={puckoutSection === zkey ? '1' : '0.65'}
+                    style="pointer-events:none"
+                  >{col.label}</text>
+                {/each}
+              {/each}
+              {#each [62, 120, 180, 238] as dx}
+                <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
+              {/each}
+              <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
+              <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
+              <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+              <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+              <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">DB END</text>
+              <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">OPP END</text>
+            </svg>
+          </div>
+          <div class="step-nav">
+            <button class="step-back-btn" on:click={() => puckoutStep = 2}>← Back</button>
+            <button class="confirm-log-btn step-next" on:click={() => puckoutStep = 4}>
+              {puckoutSection ? 'Next' : 'Skip'}
+            </button>
+          </div>
+          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
 
-        <button
-          class="confirm-log-btn"
-          class:disabled={!puckoutOutcome}
-          on:click={logPuckout}
-          disabled={!puckoutOutcome}
-        >Log Puckout</button>
-        <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+        {:else if puckoutStep === 4}
+          <!-- Step 4: Opposition player number -->
+          <div class="modal-title">
+            {puckoutOutcome === 'lost' ? 'Which opposition player won it?' : 'Opposition player number'}
+          </div>
+          <div class="modal-section-label">Opposition jersey number <span class="optional-tag">(optional)</span></div>
+          <div class="opp-num-grid">
+            {#each Array.from({length: 25}, (_, i) => String(i + 1)) as num}
+              <button
+                class="opp-num-btn"
+                class:selected-player={puckoutOppPlayer === num}
+                on:click={() => puckoutOppPlayer = puckoutOppPlayer === num ? '' : num}
+              >{num}</button>
+            {/each}
+          </div>
+          <div class="step-nav">
+            <button class="step-back-btn" on:click={() => puckoutStep = 3}>← Back</button>
+            <button class="confirm-log-btn step-next" on:click={logPuckout}>Log Puckout</button>
+          </div>
+          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+        {/if}
+
       </div>
     </div>
   {/if}
 
-  <!-- OPPOSITION SCORE MODAL -->
+  <!-- OPPOSITION SCORE MODAL — 2 sequential steps -->
   {#if showOppScoreModal}
     <div class="modal-backdrop" on:click={() => showOppScoreModal = false}>
       <div class="modal" on:click|stopPropagation>
-        <div class="modal-title">
-          Opposition {oppScoreType === 'goal' ? 'Goal' : 'Point'}
-          <span class="optional-tag">vs {opposition}</span>
-        </div>
 
-        <div class="modal-section-label">Opposition player number (optional)</div>
-        <div class="opp-num-grid">
-          {#each Array.from({length: 25}, (_, i) => String(i + 1)) as num}
-            <button
-              class="opp-num-btn"
-              class:selected-player={oppScorePlayerNum === num}
-              on:click={() => oppScorePlayerNum = oppScorePlayerNum === num ? '' : num}
-            >{num}</button>
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          {#each [1,2] as s}
+            <div class="step-dot" class:active={oppScoreStep === s} class:done={oppScoreStep > s}></div>
           {/each}
         </div>
 
-        <div class="modal-section-label">Which of our players was marking? (optional)</div>
-        <div class="player-grid">
-          {#each players as player}
-            {@const label = player.name?.trim() || `#${player.number}`}
-            <button
-              class="player-btn"
-              class:selected-player={oppScoreMarker === label}
-              on:click={() => oppScoreMarker = oppScoreMarker === label ? null : label}
-            >
-              <span class="player-num">#{player.number}</span>
-              {#if player.name?.trim()}<span class="player-name">{player.name}</span>{/if}
-            </button>
-          {/each}
-        </div>
+        {#if oppScoreStep === 1}
+          <!-- Step 1: Opposition player number -->
+          <div class="modal-title">
+            Opposition {oppScoreType === 'goal' ? 'Goal' : 'Point'}
+            <span class="optional-tag">vs {opposition}</span>
+          </div>
+          <div class="modal-section-label">Opposition jersey number <span class="optional-tag">(optional)</span></div>
+          <div class="opp-num-grid">
+            {#each Array.from({length: 25}, (_, i) => String(i + 1)) as num}
+              <button
+                class="opp-num-btn"
+                class:selected-player={oppScorePlayerNum === num}
+                on:click={() => oppScorePlayerNum = oppScorePlayerNum === num ? '' : num}
+              >{num}</button>
+            {/each}
+          </div>
+          <button class="confirm-log-btn" style="margin-top:1rem" on:click={() => oppScoreStep = 2}>
+            {oppScorePlayerNum ? 'Next' : 'Skip'}
+          </button>
+          <button class="cancel-btn" on:click={() => showOppScoreModal = false}>Cancel</button>
 
-        <button class="confirm-log-btn" on:click={() => confirmOppScore(true)}>Log Score + Details</button>
-        <button class="ghost-btn" style="margin-top:8px" on:click={() => confirmOppScore(false)}>Just add score (no details)</button>
-        <button class="cancel-btn" on:click={() => showOppScoreModal = false}>Cancel</button>
+        {:else if oppScoreStep === 2}
+          <!-- Step 2: Our marker -->
+          <div class="modal-title">Which of our players was marking?</div>
+          <div class="modal-section-label">Starters</div>
+          <div class="player-grid">
+            {#each starters as player}
+              {@const label = player.name?.trim() || `#${player.number}`}
+              <button
+                class="player-btn"
+                class:selected-player={oppScoreMarker === label}
+                on:click={() => oppScoreMarker = oppScoreMarker === label ? null : label}
+              >
+                <span class="player-num">#{player.number}</span>
+                <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
+              </button>
+            {/each}
+          </div>
+          {#if subs.length > 0}
+            <div class="modal-section-label">Subs</div>
+            <div class="player-grid">
+              {#each subs as player}
+                {@const label = player.name?.trim() || `#${player.number}`}
+                <button
+                  class="player-btn sub"
+                  class:selected-player={oppScoreMarker === label}
+                  on:click={() => oppScoreMarker = oppScoreMarker === label ? null : label}
+                >
+                  <span class="player-num">#{player.number}</span>
+                  <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+          <div class="step-nav">
+            <button class="step-back-btn" on:click={() => oppScoreStep = 1}>← Back</button>
+            <button class="confirm-log-btn step-next" on:click={confirmOppScore}>Log Score</button>
+          </div>
+          <button class="cancel-btn" on:click={() => showOppScoreModal = false}>Cancel</button>
+        {/if}
+
       </div>
     </div>
   {/if}
@@ -1805,8 +1890,14 @@
     .mode-row { flex-wrap: wrap; }
     .mode-toggle { flex: 1; }
     .mode-toggle button { flex: 1; }
-    .player-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+    .player-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+    .player-btn { padding: 12px 6px; min-height: 60px; }
+    .opp-num-grid { grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 8px; }
+    .opp-num-btn { padding: 14px 4px; font-size: 16px; min-height: 52px; }
+    .outcome-btn { padding: 18px 12px; font-size: 15px; }
+    .step-nav { grid-template-columns: 80px 1fr; }
     .modal { padding: 1.25rem; padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); }
+    .modal-title { font-size: 18px; }
     .mini-val { font-size: 15px; min-width: 22px; }
     .action-btns { flex-wrap: wrap; }
     .ht-breakdown-row { flex-wrap: wrap; }
@@ -1815,9 +1906,15 @@
   }
   @media (min-width: 481px) and (max-width: 768px) {
     .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    .player-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .opp-num-grid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+    .opp-num-btn { padding: 14px 4px; min-height: 52px; }
   }
   @media (min-width: 769px) {
     .stat-grid { grid-template-columns: repeat(4, 1fr); }
+    .player-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+    .opp-num-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+    .modal { max-height: 80vh; }
   }
 
   /* ── ACTION BUTTONS ── */
@@ -1904,24 +2001,65 @@
   .conceded-point { background: rgba(224,160,32,0.12); color: #9a6000; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
   .conceded-opp { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
 
+  /* ── STEP INDICATOR ── */
+  .step-indicator { display: flex; justify-content: center; gap: 8px; margin-bottom: 1.25rem; }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--divider); transition: background 0.2s;
+  }
+  .step-dot.active { background: var(--primary); width: 24px; border-radius: 4px; }
+  .step-dot.done { background: rgba(var(--primary-rgb), 0.35); }
+
+  /* ── STEP NAVIGATION ── */
+  .step-nav { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 1rem; align-items: stretch; }
+  .step-back-btn {
+    padding: 15px 18px;
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: none;
+    color: var(--text-muted);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 50px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .step-back-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .step-next { margin-top: 0; }
+
   /* ── MODAL ADDITIONS ── */
-  .puckout-outcome-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem; }
+  .outcome-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem; }
   .outcome-btn {
-    padding: 18px 12px;
+    padding: 20px 12px;
     border-radius: 10px;
     border: 2px solid var(--input-border);
     background: var(--surface);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.15s;
+    min-height: 64px;
   }
   .outcome-btn.won { color: #2d7a2d; }
   .outcome-btn.won.selected { background: #2d7a2d; color: white; border-color: #2d7a2d; }
   .outcome-btn.lost { color: #e53935; }
   .outcome-btn.lost.selected { background: #e53935; color: white; border-color: #e53935; }
   .outcome-btn:not(.selected):hover { border-color: var(--primary); }
+
+  .selected-zone-badge {
+    display: inline-block;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(var(--primary-rgb), 0.25);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    margin-bottom: 0.75rem;
+  }
 
   .modal-input {
     width: 100%;
@@ -1957,21 +2095,7 @@
   .confirm-log-btn:hover:not(:disabled) { background: var(--primary-hover); }
   .confirm-log-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── HALFTIME SCREEN ── */
-  .ht-header { text-align: center; padding: 1rem 0 0.5rem; }
-  .ht-badge {
-    display: inline-block;
-    background: var(--primary);
-    color: white;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 5px 14px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .ht-title { font-size: 22px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+  /* ── QUICK VIEW STATS SCREEN ── */
   .ht-meta { font-size: 13px; color: var(--text-muted); }
 
   .ht-score-card { text-align: center; }

@@ -16,6 +16,7 @@ import { clearAllData } from './lib/db.js'
   import Settings from './lib/Settings.svelte'
   import StatTargets from './lib/StatTargets.svelte'
   import ContactPage from './lib/ContactPage.svelte'
+  import InstallPage from './lib/InstallPage.svelte'
   import Upgrade from './lib/Upgrade.svelte'
   import TeamSetup from './lib/TeamSetup.svelte'
   import TeamPicker from './lib/TeamPicker.svelte'
@@ -242,6 +243,8 @@ import { clearAllData } from './lib/db.js'
     <TermsPage onNavigate={navigatePublic} />
   {:else if publicPage === 'contact'}
     <ContactPage onNavigate={navigatePublic} />
+  {:else if publicPage === 'install'}
+    <InstallPage onNavigate={navigatePublic} />
   {:else}
     <Landing onNavigate={navigatePublic} />
   {/if}

@@ -135,6 +135,15 @@
               <div class="dd-desc">Get up and running in under 5 minutes</div>
             </div>
           </button>
+          <button class="dd-item" on:click={() => nav('install')}>
+            <div class="dd-icon dd-icon-blue">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div class="dd-text">
+              <div class="dd-title">How to Install</div>
+              <div class="dd-desc">iOS, Android, and desktop setup guide</div>
+            </div>
+          </button>
         </div>
       </div>
     </li>
@@ -245,6 +254,7 @@
           <div class="mob-items">
             <button class="mob-item" on:click={() => nav('docs')}>User Guide</button>
             <button class="mob-item" on:click={() => nav('docs')}>Quick Start</button>
+            <button class="mob-item" on:click={() => nav('install')}>How to Install</button>
           </div>
         {/if}
       </div>
