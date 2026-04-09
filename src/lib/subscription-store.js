@@ -109,24 +109,31 @@ export async function ensureProfile(userId) {
 
 export async function loadSubscription(userId) {
   try {
-    const { data: profile } = await supabase
-      .from('profiles').select('club_id').eq('id', userId).maybeSingle()
-    const { data: member } = await supabase
-      .from('club_members').select('role, club_id').eq('user_id', userId).maybeSingle()
+    // Fetch profile, club membership, and personal subscription in parallel
+    const [profileRes, memberRes, subRes] = await Promise.all([
+      supabase.from('profiles').select('club_id').eq('id', userId).maybeSingle(),
+      supabase.from('club_members').select('role, club_id').eq('user_id', userId).maybeSingle(),
+      supabase.from('subscriptions').select('*').eq('user_id', userId).maybeSingle()
+    ])
 
-    const clubId = profile?.club_id ?? member?.club_id ?? null
+    const profile = profileRes.data
+    const member = memberRes.data
+    const personalSub = subRes.data
+
+    // Determine clubId — fall back to the subscription's own club_id if
+    // profiles/club_members are blocked by RLS (e.g. missing SELECT policy)
+    const clubId = profile?.club_id ?? member?.club_id ?? personalSub?.club_id ?? null
+
     const clubRole = member?.role ?? null
-    const isOwner = clubRole === 'owner' || clubRole === 'admin'
+    // If club_members row came back, use it. Otherwise, if the personal subscription
+    // has a club_id set, this user is the club owner (coaches don't have personal subs).
+    const isOwner = clubRole === 'owner' || clubRole === 'admin' ||
+      (!member && !!personalSub?.club_id)
 
-    let sub = null
+    let sub = personalSub ?? null
     let clubName = null
     let teams = []
 
-    const { data: personalSub } = await supabase
-      .from('subscriptions').select('*').eq('user_id', userId).maybeSingle()
-    if (personalSub) {
-      sub = personalSub
-    }
     if (!sub && clubId) {
       const { data: clubSub } = await supabase
         .rpc('get_club_subscription', { p_club_id: clubId })
