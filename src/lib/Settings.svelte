@@ -533,7 +533,7 @@
   {/if}
 
   <!-- ── CLAIM OWNERSHIP (Club/Club Pro with clubId but no owner row) ── -->
-  {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId}
+  {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId && !$subscriptionStore.clubRole}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">
