@@ -9,36 +9,36 @@
 
   const issues = [
     {
-      q: "I don't see "Add to Home Screen" on iOS",
-      a: "You must use Safari — not Chrome, Firefox, or any other browser. Chrome on iOS cannot install PWAs. Open the app URL in Safari, then tap the Share button at the bottom of the screen."
+      q: `I don't see "Add to Home Screen" on iOS`,
+      a: `You must use Safari — not Chrome, Firefox, or any other browser. Chrome on iOS cannot install PWAs. Open the app URL in Safari, then tap the Share button at the bottom of the screen.`
     },
     {
-      q: "The app says it needs internet, but I'm at the pitch",
-      a: "The app needs one successful load with internet to cache itself. Sign in and open the app fully before you leave for the ground — once cached, it works with zero signal. The cache survives phone restarts and switching to airplane mode."
+      q: `The app says it needs internet, but I'm at the pitch`,
+      a: `The app needs one successful load with internet to cache itself. Sign in and open the app fully before you leave for the ground — once cached, it works with zero signal. The cache survives phone restarts and switching to airplane mode.`
     },
     {
-      q: "My stats disappeared after I cleared my browser or updated my phone",
-      a: "Match data is stored in your browser's local storage. Clearing site data or a full phone reset will erase it. To prevent data loss: go to Settings inside the app and tap Sync to Supabase before clearing anything. Signed-in users are backed up automatically after each match."
+      q: `My stats disappeared after I cleared my browser or updated my phone`,
+      a: `Match data is stored in your browser's local storage. Clearing site data or a full phone reset will erase it. To prevent data loss: go to Settings inside the app and tap Sync to Supabase before clearing anything. Signed-in users are backed up automatically after each match.`
     },
     {
-      q: "The app looks out of date or isn't showing the latest version",
-      a: "On iOS: delete the app from your home screen and reinstall from Safari. On Android and desktop: close all browser tabs with the app open, wait 30 seconds, then reopen — the service worker will fetch the new version automatically."
+      q: `The app looks out of date or isn't showing the latest version`,
+      a: `On iOS: delete the app from your home screen and reinstall from Safari. On Android and desktop: close all browser tabs with the app open, wait 30 seconds, then reopen — the service worker will fetch the new version automatically.`
     },
     {
-      q: "I get logged out every time I open the app",
-      a: "This usually happens if you installed the app from a different browser than the one you signed in with, or if your browser is set to clear storage on close. On iOS, always install and open via Safari. Check that Safari's settings don't have \"Clear History and Website Data\" set to run automatically."
+      q: `I get logged out every time I open the app`,
+      a: `This usually happens if you installed the app from a different browser than the one you signed in with, or if your browser is set to clear storage on close. On iOS, always install and open via Safari. Check that Safari's settings don't have "Clear History and Website Data" set to run automatically.`
     },
     {
-      q: "Two coaches on the same team can't see each other's stats",
-      a: "This is by design — each coach has their own private account and data. To share live data during a match, use the Live Match feature (Club Pro plan). After a match, stats are tied to the coach who logged them; team-wide dashboards are on the roadmap."
+      q: `Two coaches on the same team can't see each other's stats`,
+      a: `This is by design — each coach has their own private account and data. To share live data during a match, use the Live Match feature (Club Pro plan). After a match, stats are tied to the coach who logged them; team-wide dashboards are on the roadmap.`
     },
     {
-      q: "The install prompt doesn't appear on Android",
-      a: "Chrome on Android shows the install prompt automatically after you visit the app a couple of times. If it hasn't appeared, tap the three-dot menu (⋮) in Chrome and look for \"Add to Home screen\" or \"Install app\". Make sure you're on Chrome and not a third-party browser."
+      q: `The install prompt doesn't appear on Android`,
+      a: `Chrome on Android shows the install prompt automatically after you visit the app a couple of times. If it hasn't appeared, tap the three-dot menu (⋮) in Chrome and look for "Add to Home screen" or "Install app". Make sure you're on Chrome and not a third-party browser.`
     },
     {
-      q: "The app installed but opens in the browser, not as a standalone app",
-      a: "On iOS this means it was added to the home screen from a non-Safari browser. Delete the icon, open the app URL in Safari, and reinstall from there. On Android, make sure you used the \"Install app\" prompt rather than just bookmarking the URL."
+      q: `The app installed but opens in the browser, not as a standalone app`,
+      a: `On iOS this means it was added to the home screen from a non-Safari browser. Delete the icon, open the app URL in Safari, and reinstall from there. On Android, make sure you used the "Install app" prompt rather than just bookmarking the URL.`
     }
   ]
 </script>
