@@ -44,7 +44,10 @@
       score: matchScore,
       stats,
       events,
-      players
+      players,
+      puckouts,
+      oppScores,
+      subs_log
     }
   }
 
