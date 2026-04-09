@@ -14,10 +14,10 @@
   let liveError = null
 
   async function startLive() {
-    if (!$subscriptionStore.teamId) { liveError = 'No team set up'; return }
+    if (!$subscriptionStore.activeTeamId) { liveError = 'No team set up'; return }
     const { data, error } = await supabase
       .from('live_sessions')
-      .insert({ team_id: $subscriptionStore.teamId, host_user_id: $user.id, match_data: getLivePayload() })
+      .insert({ team_id: $subscriptionStore.activeTeamId, host_user_id: $user.id, match_data: getLivePayload() })
       .select().single()
     if (error) { liveError = error.message; return }
     liveSessionId = data.id
