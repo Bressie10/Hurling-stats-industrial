@@ -3,7 +3,7 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam } from './subscription-store.js'
+  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
 
@@ -111,6 +111,24 @@
   }
 
   $: if ($subscriptionStore.clubId) loadTeams()
+
+  // Set up club (Club/Club Pro users with no club yet)
+  let setupClubName = ''
+  let settingUpClub = false
+  let setupClubError = ''
+
+  async function handleSetupClub() {
+    if (!setupClubName.trim()) { setupClubError = 'Enter a club name'; return }
+    settingUpClub = true
+    setupClubError = ''
+    try {
+      await setupClub($user.id, setupClubName)
+      setupClubName = ''
+    } catch (e) {
+      setupClubError = e.message
+    }
+    settingUpClub = false
+  }
 
   // Join another team (existing users)
   let joinCode = ''
@@ -473,6 +491,28 @@
           ><span class="toggle-thumb"></span></button>
         </div>
       {/if}
+    </div>
+  </div>
+  {/if}
+
+  <!-- ── CLUB SETUP (Club/Club Pro with no club yet) ── -->
+  {#if $isClub && !$subscriptionStore.isOwner && !$subscriptionStore.clubId}
+  <div class="section-block">
+    <div class="section-title">Club Teams</div>
+    <div class="card">
+      <p class="card-desc">Your plan includes team management. Set up your club to start creating teams and inviting coaches.</p>
+      <div class="team-add-row" style="margin-top:12px">
+        <input
+          class="team-name-input"
+          bind:value={setupClubName}
+          placeholder="Club name (e.g. Doora Barefield GAA)"
+          on:keydown={e => e.key === 'Enter' && handleSetupClub()}
+        />
+        <button class="team-save-btn" on:click={handleSetupClub} disabled={settingUpClub}>
+          {settingUpClub ? 'Setting up…' : 'Set up club'}
+        </button>
+      </div>
+      {#if setupClubError}<p class="team-error">{setupClubError}</p>{/if}
     </div>
   </div>
   {/if}

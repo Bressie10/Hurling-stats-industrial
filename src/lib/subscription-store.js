@@ -245,6 +245,24 @@ export async function leaveTeam(teamId, userId) {
   await loadSubscription(userId)
 }
 
+// Called when a Club/Club Pro user has no club yet — creates one and makes them owner
+export async function setupClub(userId, clubName) {
+  const clubCode = generateClubCode()
+  const { data: club, error: clubErr } = await supabase
+    .from('clubs')
+    .insert({ name: clubName.trim(), code: clubCode, owner_id: userId })
+    .select().single()
+  if (clubErr) throw clubErr
+
+  await supabase.from('club_members').insert({ club_id: club.id, user_id: userId, role: 'owner' })
+  await supabase.from('profiles').update({ club_id: club.id }).eq('id', userId)
+
+  // Link existing subscription to this club
+  await supabase.from('subscriptions').update({ club_id: club.id }).eq('user_id', userId)
+
+  await loadSubscription(userId)
+}
+
 export async function createTeam(clubId, teamName) {
   const code = generateTeamCode()
   const { data, error } = await supabase
