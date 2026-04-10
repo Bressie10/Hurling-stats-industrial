@@ -2,19 +2,19 @@
   import { onMount, onDestroy } from 'svelte'
   import { saveSquad, loadSquad, clearAllData } from './db.js'
 
-  let players = []
-  let nextId = 21
-  let saved = false
-  let saving = false
-  let saveError = false
-  let loading = true
-  let viewMode = 'list' // 'list' | 'pitch'
+  let players = $state([])
+  let nextId = $state(21)
+  let saved = $state(false)
+  let saving = $state(false)
+  let saveError = $state(false)
+  let loading = $state(true)
+  let viewMode = $state('list') // 'list' | 'pitch'
 
   // Pitch slot state
-  let pitchSlotTarget = null
-  let showPitchModal = false
-  let addingNewPlayer = false   // inline "new player" form inside the slot modal
-  let newPlayerName = ''        // bound to the new player name input
+  let pitchSlotTarget = $state(null)
+  let showPitchModal = $state(false)
+  let addingNewPlayer = $state(false)   // inline "new player" form inside the slot modal
+  let newPlayerName = $state('')        // bound to the new player name input
 
   const positions = ['GK', 'FB', 'HB', 'MF', 'HF', 'FF', 'Sub']
 
@@ -179,24 +179,22 @@
     saved = false
   }
 
-  $: starters = players.filter(p => p.number >= 1 && p.number <= 15 && p.position !== 'Sub')
-  $: subs = players.filter(p => p.position === 'Sub' || p.number > 15)
+  let starters = $derived(players.filter(p => p.number >= 1 && p.number <= 15 && p.position !== 'Sub'))
+  let subs = $derived(players.filter(p => p.position === 'Sub' || p.number > 15))
 
   // A player "occupies a pitch slot" only if they have number 1-15 AND position !== Sub
   function isInPitchSlot(p) { return p.number >= 1 && p.number <= 15 && p.position !== 'Sub' }
 
   // Reactive slot map: slotNum → player — drives the pitch display.
-  // Using $: ensures it recomputes whenever players changes (avoids Svelte 5
-  // legacy-mode issue where template function calls don't track dependencies).
-  $: slotMap = (() => {
+  let slotMap = $derived((() => {
     const map = {}
     players.forEach(p => {
       if (isInPitchSlot(p) && p.name.trim()) map[p.number] = p
     })
     return map
-  })()
+  })())
 
-  $: pitchModalPlayers = players
+  let pitchModalPlayers = $derived(players
     .filter(p => p.name.trim())
     .sort((a, b) => {
       // Unplaced players come first (easiest to assign)
@@ -204,7 +202,7 @@
       const bInSlot = isInPitchSlot(b)
       if (aInSlot === bInSlot) return a.number - b.number
       return aInSlot ? 1 : -1
-    })
+    }))
 </script>
 
 <div class="screen">
@@ -217,16 +215,16 @@
     </div>
     <div class="header-right">
       <div class="view-toggle">
-        <button class:active={viewMode === 'list'} on:click={() => viewMode = 'list'}>
+        <button class:active={viewMode === 'list'} onclick={() => viewMode = 'list'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           List
         </button>
-        <button class:active={viewMode === 'pitch'} on:click={() => viewMode = 'pitch'}>
+        <button class:active={viewMode === 'pitch'} onclick={() => viewMode = 'pitch'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="3"/></svg>
           Pitch
         </button>
       </div>
-      <button class="save-btn" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
+      <button class="save-btn" class:saved class:error={saveError} disabled={saving} onclick={handleSave}>
         {#if saving}Saving…
         {:else if saved}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved
         {:else if saveError}Failed — retry
@@ -258,12 +256,12 @@
       </div>
       {#each starters as player (player.id)}
         <div class="squad-row">
-          <input class="input-num" type="number" bind:value={player.number} min="1" max="99" on:input={markChanged} />
-          <input class="input-name" bind:value={player.name} placeholder="Player name" on:input={markChanged} />
-          <select class="input-pos" bind:value={player.position} on:change={markChanged}>
+          <input class="input-num" type="number" bind:value={player.number} min="1" max="99" oninput={markChanged} />
+          <input class="input-name" bind:value={player.name} placeholder="Player name" oninput={markChanged} />
+          <select class="input-pos" bind:value={player.position} onchange={markChanged}>
             {#each positions as pos}<option value={pos}>{pos}</option>{/each}
           </select>
-          <button class="delete-btn" on:click={() => removePlayer(player.id)} title="Remove">
+          <button class="delete-btn" onclick={() => removePlayer(player.id)} title="Remove">
             <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -283,12 +281,12 @@
         </div>
         {#each subs as player (player.id)}
           <div class="squad-row is-sub">
-            <input class="input-num" type="number" bind:value={player.number} min="1" max="99" on:input={markChanged} />
-            <input class="input-name" bind:value={player.name} placeholder="Player name" on:input={markChanged} />
-            <select class="input-pos" bind:value={player.position} on:change={markChanged}>
+            <input class="input-num" type="number" bind:value={player.number} min="1" max="99" oninput={markChanged} />
+            <input class="input-name" bind:value={player.name} placeholder="Player name" oninput={markChanged} />
+            <select class="input-pos" bind:value={player.position} onchange={markChanged}>
               {#each positions as pos}<option value={pos}>{pos}</option>{/each}
             </select>
-            <button class="delete-btn" on:click={() => removePlayer(player.id)} title="Remove">
+            <button class="delete-btn" onclick={() => removePlayer(player.id)} title="Remove">
               <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -296,7 +294,7 @@
       {/if}
     </div>
 
-    <button class="add-player-btn" on:click={addPlayer}>
+    <button class="add-player-btn" onclick={addPlayer}>
       <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Add Player
     </button>
@@ -324,7 +322,7 @@
       </div>
     </div>
 
-    <button class="save-btn-full" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
+    <button class="save-btn-full" class:saved class:error={saveError} disabled={saving} onclick={handleSave}>
       {#if saving}Saving…
       {:else if saved}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Squad Saved!
       {:else if saveError}Save failed — tap to retry
@@ -354,7 +352,7 @@
                 class="pos-slot"
                 class:slot-filled={!!slotMap[slotNum]}
                 class:slot-gk={slotNum === 1}
-                on:click={() => openPitchSlot(slotNum)}
+                onclick={() => openPitchSlot(slotNum)}
               >
                 <span class="slot-jersey">#{slotNum}</span>
                 {#if slotMap[slotNum]}
@@ -394,20 +392,20 @@
             <div class="sub-chip">
               <span class="sub-chip-num">#{p.number}</span>
               <span class="sub-chip-name">{p.name}</span>
-              <button class="sub-chip-remove" on:click={() => removeSubFromPitch(p.id)} title="Remove">
+              <button class="sub-chip-remove" onclick={() => removeSubFromPitch(p.id)} title="Remove">
                 <svg style="width:11px;height:11px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           {/each}
         </div>
       {/if}
-      <button class="subs-add-btn" on:click={() => { pitchSlotTarget = null; addingNewPlayer = true; showPitchModal = true }}>
+      <button class="subs-add-btn" onclick={() => { pitchSlotTarget = null; addingNewPlayer = true; showPitchModal = true }}>
         <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add player to squad
       </button>
     </div>
 
-    <button class="save-btn-full" class:saved class:error={saveError} disabled={saving} on:click={handleSave}>
+    <button class="save-btn-full" class:saved class:error={saveError} disabled={saving} onclick={handleSave}>
       {#if saving}Saving…
       {:else if saved}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Squad Saved!
       {:else if saveError}Save failed — tap to retry
@@ -427,7 +425,7 @@
         <div class="danger-title">Clear all data</div>
         <div class="danger-sub">Deletes all matches, stats and squad data permanently.</div>
       </div>
-      <button class="danger-btn" on:click={async () => {
+      <button class="danger-btn" onclick={async () => {
         if (confirm('Are you sure? This will delete everything permanently.')) {
           await clearAllData()
           players = []
@@ -442,8 +440,8 @@
 
 <!-- PITCH SLOT PICKER MODAL -->
 {#if showPitchModal}
-  <div class="modal-backdrop" on:click={() => { showPitchModal = false; addingNewPlayer = false; newPlayerName = '' }}>
-    <div class="modal" on:click|stopPropagation>
+  <div class="modal-backdrop" onclick={() => { showPitchModal = false; addingNewPlayer = false; newPlayerName = '' }}>
+    <div class="modal" onclick={(e) => e.stopPropagation()}>
       <div class="modal-header">
         <div>
           <div class="modal-title">
@@ -453,7 +451,7 @@
             {#if addingNewPlayer}Enter a name for the new player{:else}Choose a player or add a new one{/if}
           </div>
         </div>
-        <button class="modal-close" on:click={() => { showPitchModal = false; addingNewPlayer = false; newPlayerName = '' }}>
+        <button class="modal-close" onclick={() => { showPitchModal = false; addingNewPlayer = false; newPlayerName = '' }}>
           <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -466,12 +464,12 @@
             type="text"
             placeholder="Player name"
             bind:value={newPlayerName}
-            on:keydown={(e) => e.key === 'Enter' && addNewPlayerToSlot()}
+            onkeydown={(e) => e.key === 'Enter' && addNewPlayerToSlot()}
             autofocus
           />
           <div class="new-player-actions">
-            <button class="new-player-cancel" on:click={() => { addingNewPlayer = false; newPlayerName = '' }}>Cancel</button>
-            <button class="new-player-submit" disabled={!newPlayerName.trim()} on:click={addNewPlayerToSlot}>
+            <button class="new-player-cancel" onclick={() => { addingNewPlayer = false; newPlayerName = '' }}>Cancel</button>
+            <button class="new-player-submit" disabled={!newPlayerName.trim()} onclick={addNewPlayerToSlot}>
               <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               {pitchSlotTarget ? 'Add & assign' : 'Add to squad'}
             </button>
@@ -489,7 +487,7 @@
                 class="modal-player-row"
                 class:modal-player-active={isCurrentlyInSlot}
                 class:modal-player-placed={isInOtherSlot}
-                on:click={() => pitchSlotTarget ? assignPlayerToSlot(p.id) : null}
+                onclick={() => pitchSlotTarget ? assignPlayerToSlot(p.id) : null}
               >
                 <span class="modal-num" class:num-sub={!isInPitchSlot(p)}>#{p.number}</span>
                 <span class="modal-name">{p.name}</span>
@@ -506,7 +504,7 @@
         {/if}
 
         <!-- Add new player row -->
-        <button class="add-new-player-row" on:click={() => addingNewPlayer = true}>
+        <button class="add-new-player-row" onclick={() => addingNewPlayer = true}>
           <span class="add-new-icon">
             <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </span>
@@ -514,7 +512,7 @@
         </button>
 
         {#if pitchSlotTarget && slotMap[pitchSlotTarget]}
-          <button class="clear-slot-btn" on:click={() => assignPlayerToSlot(null)}>
+          <button class="clear-slot-btn" onclick={() => assignPlayerToSlot(null)}>
             <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Clear this position
           </button>
