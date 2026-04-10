@@ -7,11 +7,11 @@
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
 
-  let deletingAccount = false
-  let cancellingSubscription = false
-  let cancelSuccess = false
-  let portalLoading = false
-  let checkoutLoading = null
+  let deletingAccount = $state(false)
+  let cancellingSubscription = $state(false)
+  let cancelSuccess = $state(false)
+  let portalLoading = $state(false)
+  let checkoutLoading = $state(null)
 
   async function openPortal() {
     portalLoading = true
@@ -62,12 +62,12 @@
   }
 
   // Teams management
-  let teams = []
-  let newTeamName = ''
-  let addingTeam = false
-  let teamError = ''
-  let editingTeamId = null
-  let editingTeamName = ''
+  let teams = $state([])
+  let newTeamName = $state('')
+  let addingTeam = $state(false)
+  let teamError = $state('')
+  let editingTeamId = $state(null)
+  let editingTeamName = $state('')
 
   async function loadTeams() {
     if ($subscriptionStore.clubId) {
@@ -110,12 +110,12 @@
     await navigator.clipboard.writeText(code)
   }
 
-  $: if ($subscriptionStore.clubId) loadTeams()
+  $effect(() => { if ($subscriptionStore.clubId) loadTeams() })
 
   // Set up club (Club/Club Pro users with no club yet)
-  let setupClubName = ''
-  let settingUpClub = false
-  let setupClubError = ''
+  let setupClubName = $state('')
+  let settingUpClub = $state(false)
+  let setupClubError = $state('')
 
   async function handleSetupClub() {
     if (!setupClubName.trim()) { setupClubError = 'Enter a club name'; return }
@@ -131,8 +131,8 @@
   }
 
   // Claim ownership (Club/Club Pro users who have a clubId but no owner row)
-  let claimingOwnership = false
-  let claimError = ''
+  let claimingOwnership = $state(false)
+  let claimError = $state('')
 
   async function handleClaimOwnership() {
     claimingOwnership = true
@@ -146,10 +146,10 @@
   }
 
   // Join another team (existing users)
-  let joinCode = ''
-  let joiningTeam = false
-  let joinError = ''
-  let joinSuccess = ''
+  let joinCode = $state('')
+  let joiningTeam = $state(false)
+  let joinError = $state('')
+  let joinSuccess = $state('')
 
   async function handleJoinTeam() {
     if (!joinCode.trim()) { joinError = 'Enter a team code'; return }
@@ -200,12 +200,12 @@
     }
   }
 
-  let settings = { ...$settingsStore, quickViewSections: { ...$settingsStore.quickViewSections } }
-  let savedFlash = false
-  let saveTimer = null
-  let exportSuccess = false
-  let newCustomStat = ''
-  let newPeriod = ''
+  let settings = $state({ ...$settingsStore, quickViewSections: { ...$settingsStore.quickViewSections } })
+  let savedFlash = $state(false)
+  let saveTimer = $state(null)
+  let exportSuccess = $state(false)
+  let newCustomStat = $state('')
+  let newPeriod = $state('')
 
   const PRESET_COLORS = [
     { label: 'Lime (Default)', color: '#5A8A00' },
@@ -253,8 +253,8 @@
     autoSave()
   }
 
-  $: builtInStats = allPossibleStats
-  $: customDefaultStats = settings.defaultStats.filter(s => !allPossibleStats.includes(s))
+  const builtInStats = $derived(allPossibleStats)
+  const customDefaultStats = $derived(settings.defaultStats.filter(s => !allPossibleStats.includes(s)))
 
   // ── Periods ──
   function isPeriodActive(p) { return settings.periods.includes(p) }
@@ -293,10 +293,10 @@
     autoSave()
   }
 
-  $: customPeriods = settings.periods.filter(p => !PRESET_PERIODS.includes(p))
+  const customPeriods = $derived(settings.periods.filter(p => !PRESET_PERIODS.includes(p)))
 
   // ── Club colours ──
-  let customColorInput = settings.clubPrimaryColor || ''
+  let customColorInput = $state(settings.clubPrimaryColor || '')
 
   function getContrastPreview(hex) {
     if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return '#ffffff'
@@ -387,7 +387,7 @@
               <span class="sub-code">{$subscriptionStore.clubCode}</span>
             </div>
           {/if}
-          <button class="manage-btn" on:click={openPortal} disabled={portalLoading}>
+          <button class="manage-btn" onclick={openPortal} disabled={portalLoading}>
             {portalLoading ? 'Opening…' : 'Manage billing'}
           </button>
         </div>
@@ -407,7 +407,7 @@
                 <strong>Personal Pro</strong>
                 <span>Full analytics, 1 coach</span>
               </div>
-              <button class="upgrade-btn" on:click={() => handleUpgrade('personal')} disabled={checkoutLoading !== null}>
+              <button class="upgrade-btn" onclick={() => handleUpgrade('personal')} disabled={checkoutLoading !== null}>
                 {checkoutLoading === 'personal' ? 'Redirecting…' : '€7.99/mo — Upgrade'}
               </button>
             </div>
@@ -416,7 +416,7 @@
                 <strong>Club — €15/mo</strong>
                 <span>4 teams, unlimited coaches, join codes</span>
               </div>
-              <button class="upgrade-btn featured" on:click={() => handleUpgrade('club')} disabled={checkoutLoading !== null}>
+              <button class="upgrade-btn featured" onclick={() => handleUpgrade('club')} disabled={checkoutLoading !== null}>
                 {checkoutLoading === 'club' ? 'Redirecting…' : 'Upgrade to Club'}
               </button>
             </div>
@@ -425,7 +425,7 @@
                 <strong>Club Pro — €25/mo</strong>
                 <span>Everything in Club + live match sharing</span>
               </div>
-              <button class="upgrade-btn featured" on:click={() => handleUpgrade('club_pro')} disabled={checkoutLoading !== null}>
+              <button class="upgrade-btn featured" onclick={() => handleUpgrade('club_pro')} disabled={checkoutLoading !== null}>
                 {checkoutLoading === 'club_pro' ? 'Redirecting…' : 'Upgrade to Club Pro'}
               </button>
             </div>
@@ -469,7 +469,7 @@
               <span class="member-team-name">{team.name}</span>
               <span class="member-info-code">{team.code}</span>
             </div>
-            <button class="team-leave-btn" on:click={() => handleLeaveTeam(team.id, team.name)}>Leave</button>
+            <button class="team-leave-btn" onclick={() => handleLeaveTeam(team.id, team.name)}>Leave</button>
           </div>
         {/each}
       {/if}
@@ -482,9 +482,9 @@
           bind:value={joinCode}
           placeholder="Team code (e.g. 482910)"
           maxlength="6"
-          on:keydown={e => e.key === 'Enter' && handleJoinTeam()}
+          onkeydown={e => e.key === 'Enter' && handleJoinTeam()}
         />
-        <button class="join-btn" on:click={handleJoinTeam} disabled={joiningTeam}>
+        <button class="join-btn" onclick={handleJoinTeam} disabled={joiningTeam}>
           {joiningTeam ? 'Joining…' : 'Join'}
         </button>
       </div>
@@ -501,7 +501,7 @@
           <button
             class="toggle-switch"
             class:on={settings.rememberLastTeam}
-            on:click={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
+            onclick={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
             aria-label="Toggle remember last team"
           ><span class="toggle-thumb"></span></button>
         </div>
@@ -521,9 +521,9 @@
           class="team-name-input"
           bind:value={setupClubName}
           placeholder="Club name (e.g. Doora Barefield GAA)"
-          on:keydown={e => e.key === 'Enter' && handleSetupClub()}
+          onkeydown={e => e.key === 'Enter' && handleSetupClub()}
         />
-        <button class="team-save-btn" on:click={handleSetupClub} disabled={settingUpClub}>
+        <button class="team-save-btn" onclick={handleSetupClub} disabled={settingUpClub}>
           {settingUpClub ? 'Setting up…' : 'Set up club'}
         </button>
       </div>
@@ -538,7 +538,7 @@
     <div class="section-title">Club Teams</div>
     <div class="card">
       <p class="card-desc">Your plan includes team management but your account isn't set up as club owner yet. Click below to activate it.</p>
-      <button class="team-save-btn" style="margin-top:12px" on:click={handleClaimOwnership} disabled={claimingOwnership}>
+      <button class="team-save-btn" style="margin-top:12px" onclick={handleClaimOwnership} disabled={claimingOwnership}>
         {claimingOwnership ? 'Activating…' : 'Activate team management'}
       </button>
       {#if claimError}<p class="team-error">{claimError}</p>{/if}
@@ -554,18 +554,18 @@
       {#each teams as team}
         <div class="team-row">
           {#if editingTeamId === team.id}
-            <input class="team-name-input" bind:value={editingTeamName} on:keydown={e => e.key === 'Enter' && handleRenameTeam(team.id)} />
-            <button class="team-save-btn" on:click={() => handleRenameTeam(team.id)}>Save</button>
-            <button class="team-cancel-btn" on:click={() => { editingTeamId = null }}>Cancel</button>
+            <input class="team-name-input" bind:value={editingTeamName} onkeydown={e => e.key === 'Enter' && handleRenameTeam(team.id)} />
+            <button class="team-save-btn" onclick={() => handleRenameTeam(team.id)}>Save</button>
+            <button class="team-cancel-btn" onclick={() => { editingTeamId = null }}>Cancel</button>
           {:else}
             <div class="team-info">
               <span class="team-name">{team.name}</span>
               <span class="team-code-badge">Code: {team.code}</span>
             </div>
             <div class="team-actions">
-              <button class="team-copy-btn" on:click={() => copyCode(team.code)}>Copy code</button>
-              <button class="team-edit-btn" on:click={() => { editingTeamId = team.id; editingTeamName = team.name }}>Rename</button>
-              <button class="team-delete-btn" on:click={() => handleDeleteTeam(team.id)}>Delete</button>
+              <button class="team-copy-btn" onclick={() => copyCode(team.code)}>Copy code</button>
+              <button class="team-edit-btn" onclick={() => { editingTeamId = team.id; editingTeamName = team.name }}>Rename</button>
+              <button class="team-delete-btn" onclick={() => handleDeleteTeam(team.id)}>Delete</button>
             </div>
           {/if}
         </div>
@@ -573,8 +573,8 @@
 
       {#if teams.length < 4}
         <div class="team-add-row">
-          <input class="team-name-input" bind:value={newTeamName} placeholder="New team name" on:keydown={e => e.key === 'Enter' && handleAddTeam()} />
-          <button class="team-save-btn" on:click={handleAddTeam} disabled={addingTeam}>
+          <input class="team-name-input" bind:value={newTeamName} placeholder="New team name" onkeydown={e => e.key === 'Enter' && handleAddTeam()} />
+          <button class="team-save-btn" onclick={handleAddTeam} disabled={addingTeam}>
             {addingTeam ? 'Adding…' : 'Add team'}
           </button>
         </div>
@@ -593,7 +593,7 @@
           <button
             class="toggle-switch"
             class:on={settings.rememberLastTeam}
-            on:click={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
+            onclick={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
             aria-label="Toggle remember last team"
           ><span class="toggle-thumb"></span></button>
         </div>
@@ -609,7 +609,7 @@
     <div class="card">
       <div class="field-group">
         <label>Club name</label>
-        <input bind:value={settings.teamName} on:input={autoSave} placeholder="e.g. Doora Barefield" />
+        <input bind:value={settings.teamName} oninput={autoSave} placeholder="e.g. Doora Barefield" />
       </div>
     </div>
   </div>
@@ -629,7 +629,7 @@
         <button
           class="toggle-switch"
           class:on={settings.showVenueField}
-          on:click={() => { settings.showVenueField = !settings.showVenueField; autoSave() }}
+          onclick={() => { settings.showVenueField = !settings.showVenueField; autoSave() }}
           aria-label="Toggle venue field"
         ><span class="toggle-thumb"></span></button>
       </div>
@@ -642,14 +642,14 @@
         <button
           class="toggle-switch"
           class:on={settings.showCompetitionField}
-          on:click={() => { settings.showCompetitionField = !settings.showCompetitionField; autoSave() }}
+          onclick={() => { settings.showCompetitionField = !settings.showCompetitionField; autoSave() }}
           aria-label="Toggle competition field"
         ><span class="toggle-thumb"></span></button>
       </div>
 
       <div class="field-group" style="margin-top:4px">
         <label>Default starting period</label>
-        <select bind:value={settings.defaultPeriod} on:change={autoSave}>
+        <select bind:value={settings.defaultPeriod} onchange={autoSave}>
           {#each settings.periods as p}
             <option value={p}>{p}</option>
           {/each}
@@ -672,7 +672,7 @@
               class="period-check"
               class:checked={isPeriodActive(p)}
               class:locked={isPeriodRequired(p)}
-              on:click={() => togglePeriod(p)}
+              onclick={() => togglePeriod(p)}
               disabled={isPeriodRequired(p)}
             >
               {#if isPeriodActive(p)}
@@ -690,7 +690,7 @@
               <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
             </button>
             <span class="period-name">{p}</span>
-            <button class="remove-period-btn" on:click={() => removeCustomPeriod(p)}>
+            <button class="remove-period-btn" onclick={() => removeCustomPeriod(p)}>
               <svg style="width:13px;height:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -701,9 +701,9 @@
         <input
           bind:value={newPeriod}
           placeholder="Add custom period (e.g. Penalties)"
-          on:keydown={e => e.key === 'Enter' && addCustomPeriod()}
+          onkeydown={e => e.key === 'Enter' && addCustomPeriod()}
         />
-        <button class="add-small-btn" on:click={addCustomPeriod}>Add</button>
+        <button class="add-small-btn" onclick={addCustomPeriod}>Add</button>
       </div>
     </div>
   </div>
@@ -719,7 +719,7 @@
           <button
             class="stat-toggle"
             class:active={settings.defaultStats.includes(stat)}
-            on:click={() => toggleStat(stat)}
+            onclick={() => toggleStat(stat)}
           >
             <span class="toggle-check">
               {#if settings.defaultStats.includes(stat)}
@@ -735,9 +735,9 @@
         <input
           bind:value={newCustomStat}
           placeholder="Add a custom stat..."
-          on:keydown={e => e.key === 'Enter' && addCustomDefaultStat()}
+          onkeydown={e => e.key === 'Enter' && addCustomDefaultStat()}
         />
-        <button class="add-small-btn" on:click={addCustomDefaultStat}>Add</button>
+        <button class="add-small-btn" onclick={addCustomDefaultStat}>Add</button>
       </div>
 
       {#if customDefaultStats.length > 0}
@@ -746,7 +746,7 @@
           {#each customDefaultStats as stat}
             <div class="custom-list-row">
               <span>{stat}</span>
-              <button class="remove-text-btn" on:click={() => toggleStat(stat)}>Remove</button>
+              <button class="remove-text-btn" onclick={() => toggleStat(stat)}>Remove</button>
             </div>
           {/each}
         </div>
@@ -768,7 +768,7 @@
         <button
           class="toggle-switch"
           class:on={settings.trackPuckouts}
-          on:click={() => { settings.trackPuckouts = !settings.trackPuckouts; autoSave() }}
+          onclick={() => { settings.trackPuckouts = !settings.trackPuckouts; autoSave() }}
           aria-label="Toggle puckout tracking"
         ><span class="toggle-thumb"></span></button>
       </div>
@@ -781,7 +781,7 @@
         <button
           class="toggle-switch"
           class:on={settings.trackOppScores}
-          on:click={() => { settings.trackOppScores = !settings.trackOppScores; autoSave() }}
+          onclick={() => { settings.trackOppScores = !settings.trackOppScores; autoSave() }}
           aria-label="Toggle opposition score tracking"
         ><span class="toggle-thumb"></span></button>
       </div>
@@ -794,7 +794,7 @@
         <button
           class="toggle-switch"
           class:on={settings.trackPitchCoords}
-          on:click={() => { settings.trackPitchCoords = !settings.trackPitchCoords; autoSave() }}
+          onclick={() => { settings.trackPitchCoords = !settings.trackPitchCoords; autoSave() }}
           aria-label="Toggle pitch coordinates"
         ><span class="toggle-thumb"></span></button>
       </div>
@@ -821,7 +821,7 @@
           <button
             class="toggle-switch"
             class:on={settings.quickViewSections[section.key]}
-            on:click={() => {
+            onclick={() => {
               settings.quickViewSections = { ...settings.quickViewSections, [section.key]: !settings.quickViewSections[section.key] }
               autoSave()
             }}
@@ -845,7 +845,7 @@
             max="40"
             step="5"
             bind:value={settings.periodLength}
-            on:input={autoSave}
+            oninput={autoSave}
           />
           <span class="period-val">{settings.periodLength} min</span>
         </div>
@@ -867,7 +867,7 @@
             class="color-swatch"
             class:selected={settings.clubPrimaryColor === preset.color}
             style="--swatch-color: {preset.color}"
-            on:click={() => {
+            onclick={() => {
               settings = { ...settings, clubPrimaryColor: settings.clubPrimaryColor === preset.color ? null : preset.color }
               autoSave()
             }}
@@ -887,13 +887,13 @@
             <input
               type="color"
               bind:value={customColorInput}
-              on:input={handleCustomColor}
+              oninput={handleCustomColor}
               class="color-picker"
             />
             <input
               type="text"
               bind:value={customColorInput}
-              on:input={handleCustomColorText}
+              oninput={handleCustomColorText}
               placeholder="#BAFF29"
               class="color-text-input"
               maxlength="7"
@@ -901,7 +901,7 @@
           </div>
         </div>
         {#if settings.clubPrimaryColor}
-          <button class="reset-color-btn" on:click={() => { settings = { ...settings, clubPrimaryColor: null }; customColorInput = ''; autoSave() }}>
+          <button class="reset-color-btn" onclick={() => { settings = { ...settings, clubPrimaryColor: null }; customColorInput = ''; autoSave() }}>
             Reset to default
           </button>
         {/if}
@@ -925,7 +925,7 @@
     <div class="section-title">Data Backup</div>
     <div class="card">
       <div class="card-desc">Download a full backup of all your matches, squad, and settings as a JSON file.</div>
-      <button class="export-btn" class:success={exportSuccess} on:click={exportData}>
+      <button class="export-btn" class:success={exportSuccess} onclick={exportData}>
         {#if exportSuccess}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>
           Backup downloaded
@@ -971,7 +971,7 @@
             <p>You'll keep access until the end of your billing period.</p>
             {#if cancelSuccess}<span class="cancel-success">Cancelled — you keep access until your billing period ends.</span>{/if}
           </div>
-          <button class="cancel-sub-btn" on:click={handleCancelSubscription} disabled={cancellingSubscription}>
+          <button class="cancel-sub-btn" onclick={handleCancelSubscription} disabled={cancellingSubscription}>
             {cancellingSubscription ? 'Cancelling…' : 'Cancel subscription'}
           </button>
         </div>
@@ -982,7 +982,7 @@
           <strong>Delete account</strong>
           <p>Permanently deletes your account and all data. Cannot be undone.</p>
         </div>
-        <button class="delete-account-btn" on:click={handleDeleteAccount} disabled={deletingAccount}>
+        <button class="delete-account-btn" onclick={handleDeleteAccount} disabled={deletingAccount}>
           {deletingAccount ? 'Deleting…' : 'Delete account'}
         </button>
       </div>
