@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { signIn, signUp } from './auth-store.js'
+  import { goto } from '$app/navigation'
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
 
@@ -18,7 +19,7 @@
   async function handleLogin() {
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
-    try { await signIn(email, password) }
+    try { await signIn(email, password); goto('/app/match') }
     catch (e) { error = e.message }
     loading = false
   }

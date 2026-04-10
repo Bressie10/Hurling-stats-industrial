@@ -68,6 +68,7 @@
 
   $: isAppRoute = $page.url.pathname.startsWith('/app/')
   $: moreActive = ['/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes($page.url.pathname)
+  $: if (!$authLoading && $user && $page.url.pathname === '/') goto('/app/match')
 
   function navigateTo(routeName) {
     goto('/app/' + routeName)
