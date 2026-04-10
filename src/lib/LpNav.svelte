@@ -156,15 +156,6 @@
       </button>
       <div class="dropdown dropdown-narrow">
         <div class="dropdown-inner">
-          <button class="dd-item" on:click={() => nav('about')}>
-            <div class="dd-icon dd-icon-blue">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <div class="dd-text">
-              <div class="dd-title">About</div>
-              <div class="dd-desc">Our story and the team behind the app</div>
-            </div>
-          </button>
           <button class="dd-item" on:click={() => nav('privacy')}>
             <div class="dd-icon dd-icon-lime">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -267,7 +258,6 @@
         </button>
         {#if mobileExpanded === 'company'}
           <div class="mob-items">
-            <button class="mob-item" on:click={() => nav('about')}>About</button>
             <button class="mob-item" on:click={() => nav('privacy')}>Privacy Policy</button>
             <button class="mob-item" on:click={() => nav('terms')}>Terms of Service</button>
             <button class="mob-item" on:click={() => nav('contact')}>Contact</button>
