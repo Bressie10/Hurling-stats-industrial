@@ -43,7 +43,7 @@
   <LiveViewer {session} {onClose} />
 {:else if loading}
   <div class="loading">
-    <img src="/doora-barefield.png" alt="" class="loading-logo">
+    <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
   </div>
 {/if}
 

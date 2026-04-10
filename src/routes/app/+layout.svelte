@@ -9,7 +9,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="/doora-barefield.png" alt="Doora Barefield GAA" class="loading-logo">
+    <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
   </div>
 {:else if $user}
   <slot />

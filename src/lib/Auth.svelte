@@ -63,7 +63,7 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <img src="/doora-barefield.png" alt="GAA Stats" class="auth-logo" />
+      <img src="/gaastat-icon.svg" alt="GAAstat" class="auth-logo" />
       <h1>GAA Stats</h1>
       <p>Hurling match analytics</p>
     </div>
