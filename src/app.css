@@ -1,24 +1,23 @@
 :root {
-  --bg: #F4F6F3;
-  --surface: #FFFFFF;
-  --surface-2: #F1F4EF;
-  --surface-3: #F7F9F6;
-  --border: #DDE4D8;
-  --input-border: #CDD6C8;
-  --divider: #EBF0E7;
-  --divider-faint: #F2F5F0;
-  --text: #1A2015;
-  --text-2: #4A5E40;
-  --text-muted: #7A8E70;
-  --text-faint: #A8BCA2;
-  --primary: #5A8A00;
-  --primary-hover: #487000;
-  --primary-rgb: 90, 138, 0;
-  --primary-text: #ffffff;
+  --bg: #0D0D0D;
+  --surface: #1A1A1A;
+  --surface-2: #222222;
+  --surface-3: #2A2A2A;
+  --border: #2E2E2E;
+  --divider: #252525;
+  --input-bg: #1E1E1E;
+  --input-border: #333333;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
 
-  --shadow-sm: 0 1px 3px rgba(26,32,21,0.07), 0 1px 2px rgba(26,32,21,0.05);
-  --shadow-md: 0 4px 12px rgba(26,32,21,0.08), 0 2px 4px rgba(26,32,21,0.05);
-  --shadow-lg: 0 8px 24px rgba(26,32,21,0.10), 0 4px 8px rgba(26,32,21,0.06);
+  --text: #FFFFFF;
+  --text-2: #CCCCCC;
+  --text-muted: #888888;
+  --text-faint: #555555;
+
+  --primary: #A8E63D;
+  --primary-hover: #96CF2A;
+  --primary-rgb: 168, 230, 61;
+  --primary-text: #0D0D0D;
 }
 
 html {
