@@ -9,7 +9,7 @@
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
   import { goto } from '$app/navigation'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { onMount } from 'svelte'
 
   function hexToRgbString(hex) {
@@ -33,7 +33,7 @@
     return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.5 ? '#1A2015' : '#ffffff'
   }
 
-  $: {
+  $effect(() => {
     if (typeof document !== 'undefined') {
       const name = $settingsStore.teamName || 'GAA Stats'
       document.title = name
@@ -52,23 +52,23 @@
         document.documentElement.style.removeProperty('--primary-text')
       }
     }
-  }
+  })
 
   const LAST_USER_KEY = 'doora_last_user_id'
 
-  let syncing = false
-  let syncMsg = ''
-  let dataReady = false
-  let lastUserId = null
-  let showMoreSheet = false
-  let subscribeToast = ''
-  let needsTeamSetup = false
-  let needsTeamPick = false
-  let liveSession = null
+  let syncing = $state(false)
+  let syncMsg = $state('')
+  let dataReady = $state(false)
+  let lastUserId = $state(null)
+  let showMoreSheet = $state(false)
+  let subscribeToast = $state('')
+  let needsTeamSetup = $state(false)
+  let needsTeamPick = $state(false)
+  let liveSession = $state(null)
 
-  $: isAppRoute = $page.url.pathname.startsWith('/app/')
-  $: moreActive = ['/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes($page.url.pathname)
-  $: if (!$authLoading && $user && $page.url.pathname === '/') goto('/app/match')
+  const isAppRoute = $derived(page.url.pathname.startsWith('/app/'))
+  const moreActive = $derived(['/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(page.url.pathname))
+  $effect(() => { if (!$authLoading && $user && page.url.pathname === '/') goto('/app/match') })
 
   function navigateTo(routeName) {
     goto('/app/' + routeName)
@@ -234,11 +234,11 @@
 
     <!-- Live session banner -->
     {#if liveSession}
-      <div class="live-banner" on:click={() => goto('/app/live')}>
+      <div class="live-banner" onclick={() => goto('/app/live')}>
         <span class="live-dot-sm"></span>
         <strong>Live match in progress</strong>
         <span>Tap to watch</span>
-        <button class="live-banner-close" on:click|stopPropagation={() => liveSession = null}>✕</button>
+        <button class="live-banner-close" onclick={(e) => { e.stopPropagation(); liveSession = null }}>✕</button>
       </div>
     {/if}
 
@@ -252,35 +252,35 @@
 
         <!-- Desktop-only tab row -->
         <div class="desk-tabs">
-          <button class:active={$page.url.pathname === '/app/match'} on:click={() => navigateTo('match')}>
+          <button class:active={page.url.pathname === '/app/match'} onclick={() => navigateTo('match')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Match
           </button>
-          <button class:active={$page.url.pathname === '/app/timeline'} on:click={() => navigateTo('timeline')}>
+          <button class:active={page.url.pathname === '/app/timeline'} onclick={() => navigateTo('timeline')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
             Timeline
           </button>
-          <button class:active={$page.url.pathname === '/app/player'} on:click={() => navigateTo('player')}>
+          <button class:active={page.url.pathname === '/app/player'} onclick={() => navigateTo('player')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             Players
           </button>
-          <button class:active={$page.url.pathname === '/app/team'} on:click={() => navigateTo('team')}>
+          <button class:active={page.url.pathname === '/app/team'} onclick={() => navigateTo('team')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Team Stats
           </button>
-          <button class:active={$page.url.pathname === '/app/history'} on:click={() => navigateTo('history')}>
+          <button class:active={page.url.pathname === '/app/history'} onclick={() => navigateTo('history')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             History
           </button>
-          <button class:active={$page.url.pathname === '/app/squad'} on:click={() => navigateTo('squad')}>
+          <button class:active={page.url.pathname === '/app/squad'} onclick={() => navigateTo('squad')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Squad
           </button>
-          <button class:active={$page.url.pathname === '/app/targets'} on:click={() => navigateTo('targets')}>
+          <button class:active={page.url.pathname === '/app/targets'} onclick={() => navigateTo('targets')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
             Targets
           </button>
-          <button class:active={$page.url.pathname === '/app/settings'} on:click={() => navigateTo('settings')}>
+          <button class:active={page.url.pathname === '/app/settings'} onclick={() => navigateTo('settings')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Settings
           </button>
@@ -288,12 +288,12 @@
 
         <div class="nav-actions">
           {#if $subscriptionStore.teams.length > 1 || ($subscriptionStore.isOwner && $subscriptionStore.teams.length > 0)}
-            <button class="switch-team-btn" on:click={() => needsTeamPick = true} title="Switch team">
+            <button class="switch-team-btn" onclick={() => needsTeamPick = true} title="Switch team">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               {$subscriptionStore.activeTeamName ?? 'Pick team'}
             </button>
           {/if}
-          <button class="sync-btn" class:syncing on:click={handleSync} disabled={syncing}>
+          <button class="sync-btn" class:syncing onclick={handleSync} disabled={syncing}>
             {#if syncing}
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
               Syncing…
@@ -304,7 +304,7 @@
               Sync
             {/if}
           </button>
-          <button class="signout-btn" on:click={handleSignOut}>
+          <button class="signout-btn" onclick={handleSignOut}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign out
           </button>
@@ -318,23 +318,23 @@
 
     <!-- Mobile bottom nav (hidden on desktop via CSS) -->
     <nav class="mob-nav">
-      <button class="mob-tab" class:active={$page.url.pathname === '/app/match'} on:click={() => navigateTo('match')}>
+      <button class="mob-tab" class:active={page.url.pathname === '/app/match'} onclick={() => navigateTo('match')}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         <span>Match</span>
       </button>
-      <button class="mob-tab" class:active={$page.url.pathname === '/app/history'} on:click={() => navigateTo('history')}>
+      <button class="mob-tab" class:active={page.url.pathname === '/app/history'} onclick={() => navigateTo('history')}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         <span>History</span>
       </button>
-      <button class="mob-tab" class:active={$page.url.pathname === '/app/player'} on:click={() => navigateTo('player')}>
+      <button class="mob-tab" class:active={page.url.pathname === '/app/player'} onclick={() => navigateTo('player')}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Players</span>
       </button>
-      <button class="mob-tab" class:active={$page.url.pathname === '/app/team'} on:click={() => navigateTo('team')}>
+      <button class="mob-tab" class:active={page.url.pathname === '/app/team'} onclick={() => navigateTo('team')}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span>Team</span>
       </button>
-      <button class="mob-tab" class:active={showMoreSheet || moreActive} on:click={() => showMoreSheet = !showMoreSheet}>
+      <button class="mob-tab" class:active={showMoreSheet || moreActive} onclick={() => showMoreSheet = !showMoreSheet}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
         <span>More</span>
       </button>
@@ -342,30 +342,30 @@
 
     <!-- More bottom sheet -->
     {#if showMoreSheet}
-      <div class="more-backdrop" on:click={() => showMoreSheet = false}>
-        <div class="more-sheet" on:click|stopPropagation>
+      <div class="more-backdrop" onclick={() => showMoreSheet = false}>
+        <div class="more-sheet" onclick={(e) => e.stopPropagation()}>
           <div class="more-handle"></div>
           <div class="more-sheet-title">More</div>
           <div class="more-grid">
-            <button class="more-item" class:active={$page.url.pathname === '/app/timeline'} on:click={() => navigateTo('timeline')}>
+            <button class="more-item" class:active={page.url.pathname === '/app/timeline'} onclick={() => navigateTo('timeline')}>
               <div class="more-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </div>
               <span>Timeline</span>
             </button>
-            <button class="more-item" class:active={$page.url.pathname === '/app/squad'} on:click={() => navigateTo('squad')}>
+            <button class="more-item" class:active={page.url.pathname === '/app/squad'} onclick={() => navigateTo('squad')}>
               <div class="more-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <span>Squad</span>
             </button>
-            <button class="more-item" class:active={$page.url.pathname === '/app/targets'} on:click={() => navigateTo('targets')}>
+            <button class="more-item" class:active={page.url.pathname === '/app/targets'} onclick={() => navigateTo('targets')}>
               <div class="more-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
               </div>
               <span>Targets</span>
             </button>
-            <button class="more-item" class:active={$page.url.pathname === '/app/settings'} on:click={() => navigateTo('settings')}>
+            <button class="more-item" class:active={page.url.pathname === '/app/settings'} onclick={() => navigateTo('settings')}>
               <div class="more-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               </div>
@@ -374,10 +374,10 @@
           </div>
           <!-- Sync + sign out in more sheet on mobile -->
           <div class="more-actions">
-            <button class="more-sync-btn" class:syncing on:click={handleSync} disabled={syncing}>
+            <button class="more-sync-btn" class:syncing onclick={handleSync} disabled={syncing}>
               {#if syncing}Syncing…{:else if syncMsg}{syncMsg}{:else}↑ Sync to cloud{/if}
             </button>
-            <button class="more-signout-btn" on:click={handleSignOut}>Sign out</button>
+            <button class="more-signout-btn" onclick={handleSignOut}>Sign out</button>
           </div>
         </div>
       </div>
