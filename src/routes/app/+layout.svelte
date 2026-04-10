@@ -10,6 +10,13 @@
 {#if $authLoading}
   <div class="loading-screen">
     <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+    <div class="loading-tagline">
+      <p class="loading-tagline-top">Coach Smarter.</p>
+      <p class="loading-tagline-bottom">Win More.</p>
+    </div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar"></div>
+    </div>
   </div>
 {:else if $user}
   <slot />

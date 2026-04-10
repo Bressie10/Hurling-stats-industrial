@@ -64,6 +64,52 @@ input[type="date"] {
   }
 }
 
+/* ── Loading screen ── */
+.loading-tagline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.loading-tagline-top {
+  font-family: 'Arial Black', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.loading-tagline-bottom {
+  font-family: 'Arial Black', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  color: #A8E63D;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.loading-bar-wrap {
+  width: 160px;
+  height: 3px;
+  background: #222222;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.loading-bar {
+  height: 100%;
+  width: 40%;
+  background: #A8E63D;
+  border-radius: 2px;
+  animation: loading-slide 1.6s ease-in-out infinite;
+}
+@keyframes loading-slide {
+  0% { transform: translateX(-100%); width: 40%; }
+  50% { width: 60%; }
+  100% { transform: translateX(300%); width: 40%; }
+}
+
 /* ── Landing page (public marketing) shared tokens ── */
 .lp {
   --lp-bg:        #05080F;
