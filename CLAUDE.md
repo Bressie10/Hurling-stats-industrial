@@ -1,11 +1,3 @@
-## Project Configuration
-
-- **Language**: None
-- **Package Manager**: npm
-- **Add-ons**: none
-
----
-
 # CLAUDE.md — Hurling Stats App
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -23,47 +15,50 @@ grounds with no internet.
 
 | Layer | Technology |
 |---|---|
-| Framework | Svelte 5 + Vite |
+| Framework | SvelteKit + adapter-vercel (migrated from Vite) |
 | Language | JavaScript (no TypeScript) |
 | Local storage | IndexedDB via `idb` library |
 | Cloud sync | Supabase (PostgreSQL + Auth) |
 | Charts | Chart.js |
 | Styling | Scoped CSS inside Svelte components |
-| PWA | Service worker (`sw.js` + `manifest.json`) |
+| PWA | Service worker (`sw.js` + `manifest.json`) in `static/` |
 | Package manager | npm |
+| Deployment | Vercel (via `@sveltejs/adapter-vercel`) |
 
 **Svelte version note:** The app runs Svelte 5 but uses the legacy API (`let`, `$:`, `on:click`, etc.) throughout — not runes (`$state`, `$derived`, `$effect`). Do not mix rune syntax into existing components.
+
+**SvelteKit note:** Migrated from a plain Vite + Svelte SPA to SvelteKit with file-based routing. All routes use `export const ssr = false` (client-side rendering only — no server-side rendering). Public static assets moved from `public/` → `static/`.
 
 ---
 
 ## File & Folder Structure
 ```
-hurling-stats/
-├── public/
+hurling-stats-industrial/
+├── static/                           # Public static assets (was public/ in Vite)
+│   ├── doora-barefield.png           # Club crest
 │   ├── favicon.svg
-│   ├── manifest.json             # PWA manifest
-│   └── sw.js                     # Service worker (cache-first assets, network-first Supabase)
+│   ├── manifest.json                 # PWA manifest
+│   ├── robots.txt
+│   └── sw.js                         # Service worker
 ├── src/
-│   ├── assets/
-│   │   └── doora-barefield.png       # Club crest — used in nav + setup screen
+│   ├── app.html                      # HTML shell (replaces index.html)
+│   ├── app.css                       # Global reset + CSS custom properties (light theme)
 │   ├── lib/
+│   │   ├── assets/
+│   │   │   └── favicon.svg
+│   │   ├── index.js                  # Barrel export (SvelteKit convention)
 │   │   ├── db.js                     # All IndexedDB operations
-│   │   ├── supabase.js               # Supabase client (URL + anon key)
+│   │   ├── supabase.js               # Supabase client (reads from env variables)
 │   │   ├── auth-store.js             # Svelte writable store for auth state
 │   │   ├── settings-store.js         # Svelte writable store for app settings (includes rememberLastTeam)
 │   │   ├── subscription-store.js     # Club/team membership, active team, join/leave helpers
 │   │   ├── sync.js                   # Supabase sync logic (push/pull)
-│   │   ├── Auth.svelte               # Compact sign-in card — kept in codebase but no longer used in routing
-│   │   ├── Landing.svelte            # Full marketing landing page — shown to ALL unauthenticated visitors (web + PWA); embeds sign-in form in hero
-│   │   ├── LpNav.svelte              # Shared nav for all public pages — CSS hover dropdowns + Home link + mobile hamburger overlay
+│   │   ├── Auth.svelte               # Compact sign-in card — kept but not used in routing
+│   │   ├── Landing.svelte            # Full marketing landing page — shown to all unauthenticated visitors
+│   │   ├── LpNav.svelte              # Shared nav for all public pages
 │   │   ├── LpFooter.svelte           # Shared footer for all public pages
-│   │   ├── DocsPage.svelte           # /docs — "User Guide" (renamed from Documentation); fixed sidebar, 12 feature sections, slide-in mobile drawer, minmax(0,1fr) grid fix
-│   │   ├── PricingPage.svelte        # /pricing — plan cards + feature comparison table
-│   │   ├── AboutPage.svelte          # /about — origin story, mission, values, tech stack
-│   │   ├── PrivacyPage.svelte        # /privacy — GDPR-compliant privacy policy
-│   │   ├── TermsPage.svelte          # /terms — terms of service
-│   │   ├── ContactPage.svelte        # /contact — email card, help topics list, User Guide nudge
-│   │   ├── TeamPicker.svelte         # Team selection overlay shown on login when multiple teams exist
+│   │   ├── TeamPicker.svelte         # Team selection overlay shown on login with multiple teams
+│   │   ├── TeamSetup.svelte          # Club/team setup flow
 │   │   ├── Match.svelte              # Live match logging (main screen)
 │   │   ├── PlayerStats.svelte        # Individual player stats + charts
 │   │   ├── TeamStats.svelte          # Team stats + pitch map
@@ -72,12 +67,34 @@ hurling-stats/
 │   │   ├── Squad.svelte              # Squad management — list view + pitch view
 │   │   ├── StatTargets.svelte        # Team performance targets
 │   │   └── Settings.svelte           # App settings + data export (includes join/leave team)
-│   ├── app.css                       # Global reset + CSS custom properties (light theme)
-│   ├── App.svelte                    # Root component — nav + routing + auth gate
-│   └── main.js                       # Vite entry point
-├── index.html                        # HTML shell — viewport meta tag is here
+│   └── routes/                       # SvelteKit file-based routing
+│       ├── +layout.svelte            # Root layout — auth gate, nav, global state, CSS import
+│       ├── +layout.server.js         # prerender = false (all routes are CSR)
+│       ├── +page.svelte              # / → Landing.svelte (unauthenticated) or app redirect
+│       ├── +page.server.js
+│       ├── about/+page.svelte        # /about
+│       ├── contact/+page.svelte      # /contact
+│       ├── docs/+page.svelte         # /docs (User Guide)
+│       ├── install/+page.svelte      # /install
+│       ├── pricing/+page.svelte      # /pricing
+│       ├── privacy/+page.svelte      # /privacy
+│       ├── terms/+page.svelte        # /terms
+│       └── app/                      # Authenticated app routes
+│           ├── +layout.svelte        # App shell layout
+│           ├── +layout.server.js
+│           ├── +page.svelte          # /app → default dashboard
+│           ├── history/+page.svelte  # /app/history
+│           ├── live/+page.svelte     # /app/live — LiveViewer
+│           ├── match/+page.svelte    # /app/match
+│           ├── player/+page.svelte   # /app/player
+│           ├── settings/+page.svelte # /app/settings
+│           ├── squad/+page.svelte    # /app/squad
+│           ├── targets/+page.svelte  # /app/targets
+│           ├── team/+page.svelte     # /app/team
+│           └── timeline/+page.svelte # /app/timeline
+├── svelte.config.js                  # adapter-vercel, a11y warnings suppressed
 ├── vite.config.js
-├── svelte.config.js
+├── jsconfig.json
 ├── package.json
 └── CLAUDE.md                         # This file
 ```
@@ -87,7 +104,7 @@ hurling-stats/
 ## Key Commands
 ```bash
 # Start dev server
-cd ~/hurling-stats && npm run dev
+cd ~/Downloads/hurling-stats-industrial && npm run dev
 
 # Build for production
 npm run build
@@ -95,6 +112,15 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+### Environment variables
+Supabase credentials are now in environment variables (not hardcoded in `supabase.js`).
+Required in `.env` (not committed to git):
+```
+PUBLIC_SUPABASE_URL=https://syikhsgovqogzkmmhuis.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=<anon key>
+```
+For production, set these in the Vercel project dashboard.
 
 ---
 
@@ -169,9 +195,13 @@ All unauthenticated users — whether on the web or installed as a PWA — see t
 ## Patterns & Conventions
 
 ### Routing
-No router library. `App.svelte` uses a single `activePage` string variable and `{#if}` / `{:else if}` blocks to switch between pages.
+SvelteKit file-based routing. Public pages live at `/routes/<page>/+page.svelte`. Authenticated app pages live under `/routes/app/<page>/+page.svelte`.
+
+All routes set `export const ssr = false` via their `+page.server.js` (`export const prerender = false`) — the app is fully client-side rendered. Navigation uses SvelteKit's `goto()` from `$app/navigation`.
 
 `Match.svelte` uses its own internal `screen` variable (`'setup'` | `'match'` | `'stats'`) to switch between the setup form, live match logging, and the Quick View Stats panel.
+
+The root `+layout.svelte` acts as the old `App.svelte` — it handles auth state, global stores, nav, and renders `<slot />` for the active route.
 
 ### State
 - Local component state: Svelte `let` variables
@@ -249,7 +279,7 @@ The draft saves `screen: 'stats' | 'match'` so the Quick View Stats panel is als
 The timer uses `timerStartedAt = Date.now()` (epoch ms) rather than a pure counter. On app restore, elapsed time since close is calculated: `elapsed = floor((Date.now() - timerStartedAt) / 1000)`. This means the timer is always accurate even if the device was off for 20 minutes.
 
 ### Logo paths
-All logo references use the public-folder relative path `doora-barefield.png` (not `/src/assets/doora-barefield.png`). This applies to `Auth.svelte` and `App.svelte`.
+All logo references use the static-folder relative path `doora-barefield.png` (not `/src/assets/doora-barefield.png`). In SvelteKit, `static/` is the public folder — files there are served from the root. This applies to `Auth.svelte` and `+layout.svelte`.
 
 ---
 
@@ -327,7 +357,9 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - **`saveDraft()` on every state change** — removing any of these calls means match data can be lost if the app closes
 - **Auto-resume draft** — do not add a "Resume or Discard?" screen back; the draft should restore silently
 - **`timerStartedAt` wall-clock pattern** — do not revert to a pure counter; the wall-clock approach is what keeps the timer accurate after app close
-- **Logo path `doora-barefield.png`** — always use this public-folder path, never `/src/assets/doora-barefield.png`
+- **Logo path `doora-barefield.png`** — always use this static-folder path, never `/src/assets/doora-barefield.png` (SvelteKit serves `static/` from root)
+- **`export const ssr = false` / `prerender = false`** — all routes are CSR-only; do not remove these or SvelteKit will attempt SSR and break Supabase auth + IndexedDB
+- **Env variables for Supabase** — `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` must be set in `.env` (dev) and Vercel dashboard (prod); never hardcode them back into `supabase.js`
 - **`ourPlayer` + `oppPlayer` on puckouts** — both fields are needed for the marking matchup breakdown; do not remove either
 - **`$: slotMap` in Squad.svelte** — must stay a reactive declaration; converting to a plain function call in the template breaks pitch view updates in Svelte 5
 - **`nextAvailableNumber()` for free jersey numbers** — never use `players.length + 1`; it produces duplicates after deletions
@@ -401,7 +433,12 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Live Viewer Quick Stats — `getLivePayload()` now broadcasts `puckouts`, `oppScores`, `subs_log`; `LiveViewer.svelte` shows collapsible accordions for Puckouts (W/L/%, by player with matchup lines, opp winners), Scores Conceded (by marker + by opp player), Player Stats table, and Substitutions
 - [x] Fix coaches seeing "Activate team management" — added `!$subscriptionStore.clubRole` guard to the claim-ownership block in `Settings.svelte`; coaches have `clubRole = 'coach'` so the block no longer renders for them
 
+- [x] SvelteKit migration — Phase 1: scaffold + adapter-vercel; Phase 2: file-based routing for all public + app pages; `+layout.svelte` replaces `App.svelte`; `static/` replaces `public/`; all routes set `ssr = false`
+- [x] Supabase credentials moved to env variables — `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY` via SvelteKit's `$env/static/public`; not hardcoded
+
 ### Still To Build
+
+- [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
 
 ---
 
@@ -493,8 +530,8 @@ All public pages share:
 - LP design tokens (defined in `app.css` under `.lp {}`) — dark theme separate from the app's light theme
 - `onNavigate(page)` prop — calls `navigatePublic(page)` in `App.svelte` to switch between public pages
 
-### Routing (`App.svelte`)
-`publicPage` string (`'home' | 'docs' | 'pricing' | 'changelog' | 'about' | 'privacy' | 'terms'`) drives `{#if}` blocks in the `{:else if !$user}` branch. `navigatePublic(page)` sets it and scrolls to top.
+### Routing (SvelteKit)
+Public pages are now proper SvelteKit routes under `src/routes/`. Each public page (e.g. `/docs`, `/pricing`) has its own `+page.svelte` that renders the corresponding `*Page.svelte` component from `src/lib/`. Navigation uses `goto()` from `$app/navigation`. The old `publicPage` string + `navigatePublic()` pattern in `App.svelte` has been replaced by real URL-based routing.
 
 ### LP design tokens
 Defined in `app.css` scoped to `.lp {}`:
