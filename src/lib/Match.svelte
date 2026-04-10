@@ -1772,7 +1772,7 @@
   .field-group input { padding: 13px 14px; border: 1.5px solid var(--input-border); border-radius: 10px; font-size: 16px; font-family: inherit; width: 100%; background: var(--surface-3); transition: all 0.15s; min-height: 46px; }
   .field-group input:focus { outline: none; border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.08); }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .squad-preview-card { background: var(--primary); border-radius: 14px; padding: 1.25rem; color: white; }
+  .squad-preview-card { background: rgba(168, 230, 61, 0.12); border-radius: 14px; padding: 1.25rem; color: var(--text); }
   .squad-preview-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; opacity: 0.85; margin-bottom: 1rem; }
   .squad-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 0 2px rgba(76,175,80,0.3); }
   .squad-preview-stats { display: flex; align-items: center; justify-content: space-around; margin-bottom: 1rem; }
@@ -1781,7 +1781,7 @@
   .squad-stat-label { font-size: 12px; opacity: 0.7; margin-top: 4px; }
   .squad-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.2); }
   .squad-preview-hint { font-size: 12px; opacity: 0.6; text-align: center; }
-  .start-btn { width: 100%; padding: 16px; background: var(--text); color: var(--bg); border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: background 0.15s; }
+  .start-btn { width: 100%; padding: 16px; background: var(--primary); color: var(--primary-text); border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: background 0.15s; }
   .start-btn:hover { opacity: 0.85; }
   .start-arrow { font-size: 20px; }
   .match-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
