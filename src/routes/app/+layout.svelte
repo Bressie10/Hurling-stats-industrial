@@ -2,9 +2,11 @@
   import { user, authLoading } from '$lib/auth-store.js'
   import { goto } from '$app/navigation'
 
-  $: if (!$authLoading && !$user) {
-    goto('/')
-  }
+  $effect(() => {
+    if (!$authLoading && !$user) {
+      goto('/')
+    }
+  })
 </script>
 
 {#if $authLoading}
