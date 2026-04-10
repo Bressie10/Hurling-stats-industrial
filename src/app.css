@@ -52,6 +52,11 @@ button {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
+input[type="date"] {
+  color-scheme: dark;
+  color: var(--text);
+}
+
 /* Prevent iOS from zooming on input focus */
 @media (max-width: 768px) {
   input, select, textarea {
