@@ -2,11 +2,11 @@
   export const prerender = true
 
   import { goto } from '$app/navigation'
-  import Landing from '$lib/Landing.svelte'
+  import TermsPage from '$lib/TermsPage.svelte'
 
   function onNavigate(page) {
     goto(page === 'home' ? '/' : '/' + page)
   }
 </script>
 
-<Landing {onNavigate} />
+<TermsPage {onNavigate} />
