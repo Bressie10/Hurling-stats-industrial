@@ -2,16 +2,15 @@
   import { onMount, onDestroy } from 'svelte'
   import { supabase } from './supabase.js'
 
-  export let session    // { id, host_user_id, match_data }
-  export let onClose = () => {}
+  const { session, onClose = () => {} } = $props()
 
-  let matchData = session.match_data || null
-  let channel = null
-  let connected = false
-  let lastUpdate = null
+  let matchData = $state(session.match_data || null)
+  let channel = $state(null)
+  let connected = $state(false)
+  let lastUpdate = $state(null)
 
-  let openSections = { puckouts: true, conceded: true, players: false, subs: true }
-  function toggleSection(k) { openSections[k] = !openSections[k]; openSections = openSections }
+  let openSections = $state({ puckouts: true, conceded: true, players: false, subs: true })
+  function toggleSection(k) { openSections[k] = !openSections[k] }
 
   onMount(() => {
     channel = supabase.channel(`live:${session.id}`)
@@ -41,12 +40,12 @@
     return `${m}:${String(sec).padStart(2,'0')}`
   }
 
-  $: home = matchData?.score?.home
-  $: away = matchData?.score?.away
-  $: homePts = totalPts(home)
-  $: awayPts = totalPts(away)
+  let home = $derived(matchData?.score?.home)
+  let away = $derived(matchData?.score?.away)
+  let homePts = $derived(totalPts(home))
+  let awayPts = $derived(totalPts(away))
 
-  $: topPlayers = (() => {
+  let topPlayers = $derived((() => {
     if (!matchData?.stats) return []
     const stats = matchData.stats
     const players = matchData.players || []
@@ -60,17 +59,17 @@
       .filter(p => p.total > 0)
       .sort((a, b) => b.pts - a.pts || b.total - a.total)
       .slice(0, 5)
-  })()
+  })())
 
-  $: recentEvents = (matchData?.events || []).slice(-5).reverse()
+  let recentEvents = $derived((matchData?.events || []).slice(-5).reverse())
 
   // ── Puckout derived ──
-  $: puckouts = matchData?.puckouts || []
-  $: puckoutWins = puckouts.filter(p => p.outcome === 'won').length
-  $: puckoutLosses = puckouts.filter(p => p.outcome === 'lost').length
-  $: puckoutWinPct = puckouts.length ? Math.round((puckoutWins / puckouts.length) * 100) : 0
+  let puckouts = $derived(matchData?.puckouts || [])
+  let puckoutWins = $derived(puckouts.filter(p => p.outcome === 'won').length)
+  let puckoutLosses = $derived(puckouts.filter(p => p.outcome === 'lost').length)
+  let puckoutWinPct = $derived(puckouts.length ? Math.round((puckoutWins / puckouts.length) * 100) : 0)
 
-  $: puckoutsByPlayer = (() => {
+  let puckoutsByPlayer = $derived((() => {
     const map = {}
     puckouts.forEach(p => {
       const key = p.ourPlayer || 'Unknown'
@@ -84,9 +83,9 @@
       }
     })
     return Object.values(map).sort((a, b) => (b.won + b.lost) - (a.won + a.lost))
-  })()
+  })())
 
-  $: puckoutByOppPlayer = (() => {
+  let puckoutByOppPlayer = $derived((() => {
     const map = {}
     puckouts.filter(p => p.outcome === 'lost' && p.oppPlayer).forEach(p => {
       const k = '#' + p.oppPlayer
@@ -95,18 +94,18 @@
       if (p.ourPlayer) map[k].beatPlayers.push(p.ourPlayer)
     })
     return Object.values(map).sort((a, b) => b.count - a.count)
-  })()
+  })())
 
-  $: bestPuckoutPlayer = puckoutsByPlayer.length
+  let bestPuckoutPlayer = $derived(puckoutsByPlayer.length
     ? puckoutsByPlayer.reduce((best, p) => (p.won > (best?.won ?? -1) ? p : best), null)
-    : null
+    : null)
 
   // ── Conceded derived ──
-  $: oppScores = matchData?.oppScores || []
-  $: concededGoals = oppScores.filter(s => s.type === 'goal').length
-  $: concededPoints = oppScores.filter(s => s.type === 'point').length
+  let oppScores = $derived(matchData?.oppScores || [])
+  let concededGoals = $derived(oppScores.filter(s => s.type === 'goal').length)
+  let concededPoints = $derived(oppScores.filter(s => s.type === 'point').length)
 
-  $: concededByMarker = (() => {
+  let concededByMarker = $derived((() => {
     const map = {}
     oppScores.forEach(s => {
       const key = s.marker || 'Unknown'
@@ -115,9 +114,9 @@
       else map[key].points++
     })
     return Object.values(map).sort((a, b) => (b.goals * 3 + b.points) - (a.goals * 3 + a.points))
-  })()
+  })())
 
-  $: concededByOppPlayer = (() => {
+  let concededByOppPlayer = $derived((() => {
     const map = {}
     oppScores.forEach(s => {
       const k = s.oppPlayerNum ? '#' + s.oppPlayerNum : 'Unknown'
@@ -126,10 +125,10 @@
       else map[k].points++
     })
     return Object.values(map).sort((a, b) => (b.goals * 3 + b.points) - (a.goals * 3 + a.points))
-  })()
+  })())
 
   // ── Player stats derived ──
-  $: playerStatsRows = (() => {
+  let playerStatsRows = $derived((() => {
     if (!matchData?.stats || !matchData?.players) return []
     const stats = matchData.stats
     const players = matchData.players
@@ -145,17 +144,17 @@
         return tb - ta
       })
       .map(p => ({ name: p.name, stats: statKeys.map(k => ({ k, v: p.s[k] || 0 })) }))
-  })()
+  })())
 
-  $: allStatKeys = (() => {
+  let allStatKeys = $derived((() => {
     if (!matchData?.stats) return []
     const all = new Set()
     Object.values(matchData.stats).forEach(s => Object.keys(s).forEach(k => all.add(k)))
     return [...all]
-  })()
+  })())
 
   // ── Subs ──
-  $: subsLog = matchData?.subs_log || []
+  let subsLog = $derived(matchData?.subs_log || [])
 </script>
 
 <div class="viewer-wrap">
@@ -168,7 +167,7 @@
       {matchData?.opposition ? `vs ${matchData.opposition}` : 'Match in progress'}
       {#if matchData?.period} · {matchData.period}{/if}
     </div>
-    <button class="close-btn" on:click={onClose}>
+    <button class="close-btn" onclick={onClose}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
@@ -226,7 +225,7 @@
     <!-- ── Puckouts accordion ── -->
     {#if puckouts.length > 0}
       <div class="accordion-card">
-        <button class="accordion-header" on:click={() => toggleSection('puckouts')}>
+        <button class="accordion-header" onclick={() => toggleSection('puckouts')}>
           <div class="accordion-title">
             <span class="accordion-name">Puckouts</span>
             <span class="accordion-summary">
@@ -289,7 +288,7 @@
     <!-- ── Scores Conceded accordion ── -->
     {#if oppScores.length > 0}
       <div class="accordion-card">
-        <button class="accordion-header" on:click={() => toggleSection('conceded')}>
+        <button class="accordion-header" onclick={() => toggleSection('conceded')}>
           <div class="accordion-title">
             <span class="accordion-name">Scores Conceded</span>
             <span class="accordion-summary">
@@ -339,7 +338,7 @@
     <!-- ── Player Stats accordion ── -->
     {#if playerStatsRows.length > 0}
       <div class="accordion-card">
-        <button class="accordion-header" on:click={() => toggleSection('players')}>
+        <button class="accordion-header" onclick={() => toggleSection('players')}>
           <div class="accordion-title">
             <span class="accordion-name">Player Stats</span>
             <span class="accordion-summary"><span class="badge-pts">{playerStatsRows.length} players</span></span>
@@ -374,7 +373,7 @@
     <!-- ── Substitutions accordion ── -->
     {#if subsLog.length > 0}
       <div class="accordion-card">
-        <button class="accordion-header" on:click={() => toggleSection('subs')}>
+        <button class="accordion-header" onclick={() => toggleSection('subs')}>
           <div class="accordion-title">
             <span class="accordion-name">Substitutions</span>
             <span class="accordion-summary"><span class="badge-pts">{subsLog.length} made</span></span>
