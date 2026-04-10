@@ -187,7 +187,7 @@
     <div class="hero-auth" id="signin">
       <div class="auth-card-dark">
         <div class="auth-dark-header">
-          <div class="auth-dark-logo-mark">G</div>
+          <img src="/gaastat-icon.svg" alt="GAAstat" class="auth-dark-logo-mark">
           <div>
             <div class="auth-dark-title">GAA Stats App</div>
             <div class="auth-dark-sub">Hurling match analytics</div>
@@ -1302,10 +1302,9 @@
     padding-bottom: 4px;
   }
   .auth-dark-logo-mark {
-    width: 44px; height: 44px; background: var(--lp-lime);
-    border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    font-family: var(--lp-font-head); font-size: 22px; color: var(--lp-bg);
-    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
   }
   .auth-dark-title { font-family: var(--lp-font-sub); font-size: 18px; font-weight: 700; color: var(--lp-text); text-transform: uppercase; letter-spacing: 0.06em; }
   .auth-dark-sub { font-size: 12px; color: var(--lp-text3); margin-top: 2px; }

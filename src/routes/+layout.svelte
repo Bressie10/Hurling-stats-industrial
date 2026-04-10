@@ -194,7 +194,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="/doora-barefield.png" alt="Doora Barefield GAA" class="loading-logo">
+    <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
   </div>
 
 {:else if !$user}
@@ -203,7 +203,7 @@
 {:else if isAppRoute}
   {#if !dataReady && !needsTeamSetup}
     <div class="loading-screen">
-      <img src="/doora-barefield.png" alt="Doora Barefield GAA" class="loading-logo">
+      <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
       <p class="loading-text">Loading your data…</p>
     </div>
 
@@ -233,7 +233,7 @@
       <!-- Top bar: brand + desktop tabs + actions -->
       <nav class="top-nav">
         <div class="brand">
-          <img class="brand-logo" src="/doora-barefield.png" alt="Doora Barefield GAA">
+          <img class="brand-logo" src="/gaastat-icon.svg" alt="GAAstat">
           <span class="brand-name">{$settingsStore.teamName || 'GAA Stats'}</span>
         </div>
 
