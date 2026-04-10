@@ -2,11 +2,11 @@
   import { onMount } from 'svelte'
   import { loadMatches } from './db.js'
 
-  let matches = []
-  let targets = {}
-  let saved = false
-  let newCustomStat = ''
-  let showAddStat = false
+  let matches = $state([])
+  let targets = $state({})
+  let saved = $state(false)
+  let newCustomStat = $state('')
+  let showAddStat = $state(false)
 
   const TARGETS_KEY = 'doora-team-targets'
 
@@ -21,7 +21,7 @@
     { key: 'Free Won', label: 'Frees won' },
   ]
 
-  let customTargetStats = []
+  let customTargetStats = $state([])
 
   onMount(async () => {
     matches = await loadMatches()
@@ -36,10 +36,10 @@
     }
   })
 
-  $: allStats = [
+  const allStats = $derived([
     ...trackableStats,
     ...customTargetStats.map(s => ({ key: s, label: s, custom: true }))
-  ]
+  ])
 
   function getTeamTotal(stat, match) {
     return Object.values(match.stats || {}).reduce((sum, s) => sum + (s[stat] || 0), 0)
@@ -115,9 +115,9 @@
     setTimeout(() => saved = false, 3000)
   }
 
-  $: targetsSet = Object.values(targets).filter(v => v !== null && v !== '' && v > 0).length
-  $: targetsMet = allStats.filter(s => getStatus(s.key, s.lowerIsBetter) === 'met').length
-  $: statsWithTargets = allStats.filter(s => targets[s.key])
+  const targetsSet = $derived(Object.values(targets).filter(v => v !== null && v !== '' && v > 0).length)
+  const targetsMet = $derived(allStats.filter(s => getStatus(s.key, s.lowerIsBetter) === 'met').length)
+  const statsWithTargets = $derived(allStats.filter(s => targets[s.key]))
 </script>
 
 <div class="screen">
@@ -127,7 +127,7 @@
       <h2>Team Targets</h2>
       <p>Set performance goals for the team and track how each match measures up</p>
     </div>
-    <button class="save-btn" class:saved on:click={saveTargets}>
+    <button class="save-btn" class:saved onclick={saveTargets}>
       {#if saved}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved{:else}Save Targets{/if}
     </button>
   </div>
@@ -161,14 +161,14 @@
           <input
             bind:value={newCustomStat}
             placeholder="Stat name..."
-            on:keydown={e => e.key === 'Enter' && addCustomStat()}
+            onkeydown={e => e.key === 'Enter' && addCustomStat()}
             autofocus
           />
-          <button class="confirm-btn" on:click={addCustomStat}>Add</button>
-          <button class="cancel-small" on:click={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="confirm-btn" onclick={addCustomStat}>Add</button>
+          <button class="cancel-small" onclick={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {:else}
-        <button class="add-stat-btn" on:click={() => showAddStat = true}>+ Custom stat</button>
+        <button class="add-stat-btn" onclick={() => showAddStat = true}>+ Custom stat</button>
       {/if}
     </div>
 
@@ -189,7 +189,7 @@
             <span class="lower-badge">lower = better</span>
           {/if}
           {#if stat.custom}
-            <button class="remove-custom" on:click={() => removeCustomStat(stat.key)}><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            <button class="remove-custom" onclick={() => removeCustomStat(stat.key)}><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           {/if}
         </div>
         <span>
@@ -200,7 +200,7 @@
             max="999"
             placeholder="—"
             value={targets[stat.key] ?? ''}
-            on:input={e => {
+            oninput={e => {
               targets[stat.key] = e.target.value === '' ? null : parseInt(e.target.value)
               targets = targets
             }}
@@ -276,7 +276,7 @@
     </div>
   {/if}
 
-  <button class="save-btn-full" class:saved on:click={saveTargets}>
+  <button class="save-btn-full" class:saved onclick={saveTargets}>
     {#if saved}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Targets Saved!{:else}Save Targets{/if}
   </button>
 
