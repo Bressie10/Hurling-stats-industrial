@@ -198,7 +198,7 @@
 
   async function startMatch() {
     if (!opposition.trim()) { alert('Please enter the opposition team name.'); return }
-    await saveSquad(players)
+    await saveSquad($state.snapshot(players))
     players.forEach(p => {
       if (!stats[p.id]) {
         stats[p.id] = {}
@@ -308,7 +308,7 @@
 
   async function saveDraft() {
     try {
-      await saveDraftMatch({
+      await saveDraftMatch($state.snapshot({
         date: matchDate,
         opposition,
         venue,
@@ -327,7 +327,7 @@
         timerSeconds,
         timerStartedAt: timerRunning ? timerStartedAt : null,
         screen: screen === 'stats' ? 'stats' : 'match'
-      })
+      }))
     } catch (e) {
       console.warn('Draft save failed:', e)
     }
@@ -344,12 +344,12 @@
     clearInterval(timerInterval)
     timerRunning = false
     try {
-      await saveMatch({
+      await saveMatch($state.snapshot({
         id: Date.now(), date: matchDate, opposition, venue, competition,
         period, score: matchScore, stats, notes, customStats, events,
         subs_log, puckouts, oppScores, lineup,
         players: players.map(p => ({ ...p }))
-      })
+      }))
       // FIX: Poison the draft immediately after saveMatch succeeds.
       // If clearDraftMatch throws or the app crashes before it runs, the _saved
       // flag prevents the already-saved match from being auto-resumed and duplicated.
