@@ -2,9 +2,9 @@
   import { onMount } from 'svelte'
   import { loadMatches } from './db.js'
 
-  let matches = []
-  let selectedMatch = null
-  let filter = 'all'  // 'all' | 'puckouts'
+  let matches = $state([])
+  let selectedMatch = $state(null)
+  let filter = $state('all')  // 'all' | 'puckouts'
 
   onMount(async () => {
     matches = await loadMatches()
@@ -32,7 +32,7 @@
     return 'gray'
   }
 
-  $: timeline = (() => {
+  let timeline = $derived((() => {
     if (!selectedMatch) return []
     const items = []
     ;(selectedMatch.events || []).forEach(e => {
@@ -67,13 +67,13 @@
     })
     items.sort((a, b) => a.time - b.time)
     return items
-  })()
+  })())
 
-  $: filteredItems = filter === 'puckouts'
+  let filteredItems = $derived(filter === 'puckouts'
     ? timeline.filter(i => i.type === 'puckout')
-    : timeline
+    : timeline)
 
-  $: grouped = (() => {
+  let grouped = $derived((() => {
     const order = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
     const groups = {}
     filteredItems.forEach(item => {
@@ -86,7 +86,7 @@
       const bi = order.indexOf(b[0])
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
     })
-  })()
+  })())
 </script>
 
 <div class="screen">
@@ -165,7 +165,7 @@
       {#if (selectedMatch.puckouts || []).length > 0}
         {@const pw = (selectedMatch.puckouts || []).filter(p => p.outcome === 'won').length}
         {@const pt = (selectedMatch.puckouts || []).length}
-        <div class="stat-pill clickable" class:pill-active={filter === 'puckouts'} on:click={() => filter = filter === 'puckouts' ? 'all' : 'puckouts'}>
+        <div class="stat-pill clickable" class:pill-active={filter === 'puckouts'} onclick={() => filter = filter === 'puckouts' ? 'all' : 'puckouts'}>
           <div class="stat-pill-icon green">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           </div>
@@ -183,9 +183,9 @@
     </div>
 
     <div class="filter-row">
-      <button class="filter-pill" class:active={filter === 'all'} on:click={() => filter = 'all'}>All events</button>
+      <button class="filter-pill" class:active={filter === 'all'} onclick={() => filter = 'all'}>All events</button>
       {#if (selectedMatch.puckouts || []).length > 0}
-        <button class="filter-pill" class:active={filter === 'puckouts'} on:click={() => filter = 'puckouts'}>Puckouts only</button>
+        <button class="filter-pill" class:active={filter === 'puckouts'} onclick={() => filter = 'puckouts'}>Puckouts only</button>
       {/if}
     </div>
 
