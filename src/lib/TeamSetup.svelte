@@ -2,15 +2,15 @@
   import { subscriptionStore, createTeam, loadClubTeams, deleteTeam, loadSubscription } from './subscription-store.js'
   import { user } from './auth-store.js'
 
-  export let onDone = () => {}
+  const { onDone = () => {} } = $props()
 
   const MAX_TEAMS = 4
 
-  let teams = []
-  let newTeamName = ''
-  let adding = false
-  let addError = null
-  let loading = true
+  let teams = $state([])
+  let newTeamName = $state('')
+  let adding = $state(false)
+  let addError = $state(null)
+  let loading = $state(true)
 
   async function load() {
     if (!$subscriptionStore.clubId) { loading = false; return }
@@ -18,7 +18,7 @@
     loading = false
   }
 
-  $: if ($subscriptionStore.clubId && loading) load()
+  $effect(() => { if ($subscriptionStore.clubId && loading) load() })
 
   async function addTeam() {
     if (!newTeamName.trim()) { addError = 'Enter a team name'; return }
@@ -81,15 +81,15 @@
                 <div class="team-code">{team.code}</div>
               </div>
               <div class="team-actions">
-                <button class="copy-btn" on:click={() => copyCode(team.code)} title="Copy code">
+                <button class="copy-btn" onclick={() => copyCode(team.code)} title="Copy code">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   Copy code
                 </button>
-                <button class="wa-btn" on:click={() => shareWhatsApp(team)}>
+                <button class="wa-btn" onclick={() => shareWhatsApp(team)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.563 4.14 1.535 5.875L0 24l6.283-1.501A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.002-1.37l-.36-.214-3.727.89.931-3.618-.235-.372A9.818 9.818 0 1 1 12 21.818z"/></svg>
                   WhatsApp
                 </button>
-                <button class="delete-team-btn" on:click={() => removeTeam(team.id)}>
+                <button class="delete-team-btn" onclick={() => removeTeam(team.id)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                 </button>
               </div>
@@ -104,9 +104,9 @@
           <input
             type="text" bind:value={newTeamName}
             placeholder="e.g. Senior, Minor, U21…"
-            on:keydown={e => e.key === 'Enter' && addTeam()}
+            onkeydown={e => e.key === 'Enter' && addTeam()}
           />
-          <button class="add-btn" on:click={addTeam} disabled={adding}>
+          <button class="add-btn" onclick={addTeam} disabled={adding}>
             {adding ? '…' : '+ Add'}
           </button>
         </div>
@@ -120,14 +120,14 @@
         class="done-btn"
         class:disabled={teams.length === 0}
         disabled={teams.length === 0}
-        on:click={handleDone}
+        onclick={handleDone}
       >
         {teams.length === 0 ? 'Add at least one team to continue' : 'Enter the app →'}
       </button>
 
       {#if teams.length === 0}
         <p class="skip-hint">You can also set up teams later in Settings</p>
-        <button class="skip-btn" on:click={handleDone}>Skip for now</button>
+        <button class="skip-btn" onclick={handleDone}>Skip for now</button>
       {/if}
 
     {/if}
