@@ -1,6 +1,4 @@
 <script>
-  export const ssr = false
-
   import '../app.css'
   import { clearAllData } from '$lib/db.js'
   import TeamSetup from '$lib/TeamSetup.svelte'

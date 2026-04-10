@@ -1,6 +1,4 @@
 <script>
-  export const prerender = true
-
   import { goto } from '$app/navigation'
   import AboutPage from '$lib/AboutPage.svelte'
 

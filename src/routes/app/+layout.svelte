@@ -1,6 +1,4 @@
 <script>
-  export const ssr = false
-
   import { user, authLoading } from '$lib/auth-store.js'
   import { goto } from '$app/navigation'
 
