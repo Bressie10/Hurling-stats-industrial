@@ -1,5 +1,5 @@
 <script>
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
 
   const messages = {
     404: 'Page not found — it may have moved or never existed',
@@ -7,8 +7,8 @@
     403: 'You don\'t have permission to view this page',
   }
 
-  $: message = messages[$page.status] ?? 'An unexpected error occurred'
-  $: is500 = $page.status === 500
+  const message = $derived(messages[page.status] ?? 'An unexpected error occurred')
+  const is500 = $derived(page.status === 500)
 
   function retry() {
     window.location.reload()
@@ -18,14 +18,14 @@
 <div class="error-page">
   <img src="/gaastat-logo.svg" alt="GAAstat" style="height: 36px;">
 
-  <div class="status">{$page.status}</div>
+  <div class="status">{page.status}</div>
 
   <p class="message">{message}</p>
 
   <div class="actions">
     <a href="/" class="btn-primary">Go home</a>
     {#if is500}
-      <button class="btn-secondary" on:click={retry}>Retry</button>
+      <button class="btn-secondary" onclick={retry}>Retry</button>
     {/if}
   </div>
 
