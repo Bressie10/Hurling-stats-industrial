@@ -1,3 +1,11 @@
+## Project Configuration
+
+- **Language**: None
+- **Package Manager**: npm
+- **Add-ons**: none
+
+---
+
 # CLAUDE.md — Hurling Stats App
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
