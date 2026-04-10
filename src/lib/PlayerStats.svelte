@@ -5,14 +5,14 @@
 
   Chart.register(...registerables)
 
-  let matches = []
-  let squadNames = new Set()
-  let selectedPlayerName = null
-  let compareMode = false
-  let matchA = null
-  let matchB = null
+  let matches = $state([])
+  let squadNames = $state(new Set())
+  let selectedPlayerName = $state(null)
+  let compareMode = $state(false)
+  let matchA = $state(null)
+  let matchB = $state(null)
   let chartInstance = null
-  let canvas
+  let canvas = $state()
 
   onMount(async () => {
     const [loadedMatches, squad] = await Promise.all([loadMatches(), loadSquad()])
@@ -20,7 +20,7 @@
     squadNames = new Set((squad || []).map(p => p.name?.trim()).filter(Boolean))
   })
 
-  $: allPlayers = (() => {
+  let allPlayers = $derived((() => {
     const map = {}
     matches.forEach(m => {
       ;(m.players || []).forEach(p => {
@@ -32,11 +32,11 @@
     return Object.values(map)
       .filter(p => squadNames.has(p.name?.trim()))
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  })()
+  })())
 
-  $: selectedPlayer = allPlayers.find(p => p.name === selectedPlayerName) || null
+  let selectedPlayer = $derived(allPlayers.find(p => p.name === selectedPlayerName) || null)
 
-  $: playerStatKeys = (() => {
+  let playerStatKeys = $derived((() => {
     const keys = new Set([
       'Point','Goal','Wide','Tackle','Block',
       'Turnover Won','Turnover Lost','Free Won'
@@ -45,18 +45,18 @@
       ;(m.customStats || []).forEach(s => keys.add(s))
     })
     return [...keys]
-  })()
+  })())
 
   function getPlayerIdInMatch(match, name) {
     const p = (match.players || []).find(p => p.name?.trim() === name?.trim())
     return p ? p.id : null
   }
 
-  $: playerMatches = matches.filter(m =>
+  let playerMatches = $derived(matches.filter(m =>
     (m.players || []).some(p => p.name?.trim() === selectedPlayerName?.trim())
-  )
+  ))
 
-  $: aggregateStats = (() => {
+  let aggregateStats = $derived((() => {
     if (!selectedPlayerName) return {}
     const agg = {}
     playerStatKeys.forEach(k => (agg[k] = 0))
@@ -67,40 +67,42 @@
       playerStatKeys.forEach(k => (agg[k] += s[k] || 0))
     })
     return agg
-  })()
+  })())
 
-  $: perMatchStats = playerMatches.map(m => {
+  let perMatchStats = $derived(playerMatches.map(m => {
     const id = getPlayerIdInMatch(m, selectedPlayerName)
     return {
       match: m,
       stats: id !== null ? (m.stats?.[id] || {}) : {}
     }
-  })
+  }))
 
-  $: compareA = (() => {
+  let compareA = $derived((() => {
     if (!matchA) return {}
     const id = getPlayerIdInMatch(matchA, selectedPlayerName)
     return id !== null ? (matchA.stats?.[id] || {}) : {}
-  })()
+  })())
 
-  $: compareB = (() => {
+  let compareB = $derived((() => {
     if (!matchB) return {}
     const id = getPlayerIdInMatch(matchB, selectedPlayerName)
     return id !== null ? (matchB.stats?.[id] || {}) : {}
-  })()
+  })())
 
-  $: shootingAcc = (() => {
+  let shootingAcc = $derived((() => {
     if (!selectedPlayerName) return null
     const scores = (aggregateStats['Point'] || 0) + (aggregateStats['Goal'] || 0)
     const wides = aggregateStats['Wide'] || 0
     const total = scores + wides
     if (total === 0) return null
     return Math.round((scores / total) * 100)
-  })()
+  })())
 
-  $: if (canvas && selectedPlayerName && playerMatches.length > 0 && !compareMode) {
-    buildChart()
-  }
+  $effect(() => {
+    if (canvas && selectedPlayerName && playerMatches.length > 0 && !compareMode) {
+      buildChart()
+    }
+  })
 
   function buildChart() {
     if (chartInstance) { chartInstance.destroy(); chartInstance = null }
@@ -173,7 +175,7 @@
         <button
           class="compare-btn"
           class:active={compareMode}
-          on:click={() => compareMode = !compareMode}
+          onclick={() => compareMode = !compareMode}
         >{#if compareMode}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Exit compare{:else}<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg> Compare matches{/if}</button>
       </div>
     {/if}

@@ -3,10 +3,10 @@
   import { loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
 
-  let matches = []
-  let selectedMatch = null
-  let activeFilter = 'Shots'
-  let activePeriod = 'Full match'
+  let matches = $state([])
+  let selectedMatch = $state(null)
+  let activeFilter = $state('Shots')
+  let activePeriod = $state('Full match')
 
   const periods = ['Full match', 'Warm-up', '1st Half', '2nd Half', 'Extra Time']
 
@@ -16,26 +16,26 @@
     if (matches.length > 0) selectedMatch = matches[0]
   })
 
-  $: if (selectedMatch) activeFilter = 'Shots'
+  $effect(() => { if (selectedMatch) activeFilter = 'Shots' })
 
   const baseFilters = ['Shots', 'Tackles', 'Turnovers', 'Frees']
 
-  $: customFilters = (() => {
+  let customFilters = $derived((() => {
     if (!selectedMatch) return []
     return (selectedMatch.customStats || []).filter(s =>
       (selectedMatch.events || []).some(e => e.stat === s && e.x !== null)
     )
-  })()
+  })())
 
-  $: filters = [...baseFilters, ...customFilters, 'All']
+  let filters = $derived([...baseFilters, ...customFilters, 'All'])
 
-  $: events = selectedMatch?.events || []
+  let events = $derived(selectedMatch?.events || [])
 
-  $: periodFilteredEvents = activePeriod === 'Full match'
+  let periodFilteredEvents = $derived(activePeriod === 'Full match'
     ? events
-    : events.filter(e => e.period === activePeriod)
+    : events.filter(e => e.period === activePeriod))
 
-  $: filteredEvents = periodFilteredEvents.filter(e => {
+  let filteredEvents = $derived(periodFilteredEvents.filter(e => {
     if (e.x === null || e.y === null) return false
     if (activeFilter === 'All') return true
     if (activeFilter === 'Shots') return ['Point', 'Goal', 'Wide'].includes(e.stat)
@@ -43,7 +43,7 @@
     if (activeFilter === 'Turnovers') return e.stat === 'Turnover Won' || e.stat === 'Turnover Lost'
     if (activeFilter === 'Frees') return e.stat === 'Free Won'
     return e.stat === activeFilter
-  })
+  }))
 
   function getDotColor(stat) {
     if (stat === 'Point' || stat === 'Goal') return '#2d7a2d'
@@ -77,13 +77,13 @@
     return `${s.goals}-${String(s.points).padStart(2, '0')}`
   }
 
-  $: homeTotal = selectedMatch
-    ? (selectedMatch.score?.home?.goals * 3 + selectedMatch.score?.home?.points) : 0
-  $: awayTotal = selectedMatch
-    ? (selectedMatch.score?.away?.goals * 3 + selectedMatch.score?.away?.points) : 0
-  $: result = homeTotal > awayTotal ? 'W' : homeTotal < awayTotal ? 'L' : 'D'
+  let homeTotal = $derived(selectedMatch
+    ? (selectedMatch.score?.home?.goals * 3 + selectedMatch.score?.home?.points) : 0)
+  let awayTotal = $derived(selectedMatch
+    ? (selectedMatch.score?.away?.goals * 3 + selectedMatch.score?.away?.points) : 0)
+  let result = $derived(homeTotal > awayTotal ? 'W' : homeTotal < awayTotal ? 'L' : 'D')
 
-  $: teamStats = (() => {
+  let teamStats = $derived((() => {
     if (!selectedMatch) return {}
     const agg = {}
     Object.values(selectedMatch.stats || {}).forEach(playerStats => {
@@ -92,14 +92,14 @@
       })
     })
     return agg
-  })()
+  })())
 
-  $: totalShots = (teamStats['Point'] || 0) + (teamStats['Goal'] || 0) + (teamStats['Wide'] || 0)
-  $: shootingAcc = totalShots > 0
+  let totalShots = $derived((teamStats['Point'] || 0) + (teamStats['Goal'] || 0) + (teamStats['Wide'] || 0))
+  let shootingAcc = $derived(totalShots > 0
     ? Math.round(((teamStats['Point'] || 0) + (teamStats['Goal'] || 0)) / totalShots * 100)
-    : null
+    : null)
 
-  $: topScorer = (() => {
+  let topScorer = $derived((() => {
     if (!selectedMatch) return null
     let top = null, max = 0
     Object.entries(selectedMatch.stats || {}).forEach(([id, s]) => {
@@ -108,9 +108,9 @@
     })
     if (!top) return null
     return { name: getPlayerName(top.id), score: top.score }
-  })()
+  })())
 
-  $: topTackler = (() => {
+  let topTackler = $derived((() => {
     if (!selectedMatch) return null
     let top = null, max = 0
     Object.entries(selectedMatch.stats || {}).forEach(([id, s]) => {
@@ -119,9 +119,9 @@
     })
     if (!top || max === 0) return null
     return { name: getPlayerName(top.id), count: top.count }
-  })()
+  })())
 
-  let tooltip = null
+  let tooltip = $state(null)
   function showTooltip(e, event) {
     tooltip = { x: e.clientX, y: e.clientY, text: `${getPlayerName(event.playerId)} — ${event.stat} (${event.period})` }
   }
@@ -223,7 +223,7 @@
             <button
               class="filter-pill"
               class:active={activeFilter === f}
-              on:click={() => activeFilter = f}
+              onclick={() => activeFilter = f}
             >{f}</button>
           {/each}
         </div>
@@ -235,7 +235,7 @@
           <button
             class="period-pill"
             class:active={activePeriod === p}
-            on:click={() => activePeriod = p}
+            onclick={() => activePeriod = p}
           >{p}</button>
         {/each}
       </div>
@@ -310,9 +310,9 @@
             stroke-width="1.5"
             opacity="0.9"
             style="cursor:pointer"
-            on:mouseenter={e => showTooltip(e, event)}
-            on:mouseleave={hideTooltip}
-            on:touchstart={e => showTooltip(e, event)}
+            onmouseenter={e => showTooltip(e, event)}
+            onmouseleave={hideTooltip}
+            ontouchstart={e => showTooltip(e, event)}
           />
           <text
             x={event.x / 100 * 500}

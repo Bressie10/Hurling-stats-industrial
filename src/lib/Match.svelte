@@ -8,10 +8,10 @@
   import { supabase } from './supabase.js'
 
   // ── LIVE SHARING ─────────────────────────────────────────
-  let liveSessionId = null
-  let liveChannel = null
-  let isLive = false
-  let liveError = null
+  let liveSessionId = $state(null)
+  let liveChannel = $state(null)
+  let isLive = $state(false)
+  let liveError = $state(null)
 
   async function startLive() {
     if (!$subscriptionStore.activeTeamId) { liveError = 'No team set up'; return }
@@ -59,19 +59,19 @@
     supabase.from('live_sessions').update({ match_data: payload }).eq('id', liveSessionId).then(() => {})
   }
 
-  let screen = 'setup'
-  let finishing = false
-  let players = []
-  let opposition = ''
-  let venue = ''
-  let competition = ''
-  let matchDate = new Date().toISOString().split('T')[0]
-  let nextId = 21
-  let events = []
+  let screen = $state('setup')
+  let finishing = $state(false)
+  let players = $state([])
+  let opposition = $state('')
+  let venue = $state('')
+  let competition = $state('')
+  let matchDate = $state(new Date().toISOString().split('T')[0])
+  let nextId = $state(21)
+  let events = $state([])
 
   // ── LINEUP ───────────────────────────────────
   // Auto-populated from squad jersey numbers; saved with match for PDF export
-  let lineup = {} // { [positionNumber: 1-15]: playerId }
+  let lineup = $state({}) // { [positionNumber: 1-15]: playerId }
 
   function initLineup() {
     lineup = {}
@@ -83,23 +83,23 @@
   }
 
   // ── PUCKOUT TRACKING ─────────────────────────
-  let puckouts = []
-  let showPuckoutModal = false
-  let puckoutStep = 1         // 1=outcome, 2=our player, 3=zone, 4=opp player
-  let puckoutOutcome = null   // 'won' | 'lost'
-  let puckoutOurPlayer = null // player name string
-  let puckoutOppPlayer = ''   // text input
+  let puckouts = $state([])
+  let showPuckoutModal = $state(false)
+  let puckoutStep = $state(1)         // 1=outcome, 2=our player, 3=zone, 4=opp player
+  let puckoutOutcome = $state(null)   // 'won' | 'lost'
+  let puckoutOurPlayer = $state(null) // player name string
+  let puckoutOppPlayer = $state('')   // text input
 
   // ── OPPOSITION SCORE TRACKING ─────────────────
-  let oppScores = []
-  let showOppScoreModal = false
-  let oppScoreStep = 1        // 1=opp player number, 2=our marker
-  let oppScoreType = null     // 'goal' | 'point'
-  let oppScorePlayerNum = ''
-  let oppScoreMarker = null   // player name string
+  let oppScores = $state([])
+  let showOppScoreModal = $state(false)
+  let oppScoreStep = $state(1)        // 1=opp player number, 2=our marker
+  let oppScoreType = $state(null)     // 'goal' | 'point'
+  let oppScorePlayerNum = $state('')
+  let oppScoreMarker = $state(null)   // player name string
 
   // ── PUCKOUT SECTION ───────────────────────────
-  let puckoutSection = null  // e.g. 'short-top', 'midfield-bottom'
+  let puckoutSection = $state(null)  // e.g. 'short-top', 'midfield-bottom'
   const puckoutCols = [
     { key: 'short',    label: 'Short',    x: 4,   w: 58 },
     { key: 'own-half', label: 'Own Half', x: 62,  w: 58 },
@@ -205,28 +205,27 @@
         allStats.forEach(s => stats[p.id][s] = 0)
       }
     })
-    stats = stats
     initLineup()
     screen = 'match'
     saveDraft()
   }
 
   // ── STATS ────────────────────────────────────
-  $: defaultStats = $settingsStore.defaultStats?.length
+  let defaultStats = $derived($settingsStore.defaultStats?.length
     ? $settingsStore.defaultStats
-    : ['Point', 'Goal', 'Wide', 'Tackle', 'Block', 'Turnover Won', 'Turnover Lost', 'Free Won']
-  let customStats = []
-  let newCustomStat = ''
-  let showAddStat = false
+    : ['Point', 'Goal', 'Wide', 'Tackle', 'Block', 'Turnover Won', 'Turnover Lost', 'Free Won'])
+  let customStats = $state([])
+  let newCustomStat = $state('')
+  let showAddStat = $state(false)
 
-  $: allStats = [...defaultStats, ...customStats]
+  let allStats = $derived([...defaultStats, ...customStats])
 
-  $: lastEventLabel = (() => {
+  let lastEventLabel = $derived((() => {
     if (events.length === 0) return null
     const last = events[events.length - 1]
     const player = players.find(p => p.id === last.playerId)
     return `${last.stat} — ${player?.name || (player ? '#' + player.number : '#' + last.playerId)}`
-  })()
+  })())
 
   function undoLastStat() {
     if (events.length === 0) return
@@ -235,8 +234,6 @@
     if (stats[last.playerId]?.[last.stat] > 0) stats[last.playerId][last.stat]--
     if (last.stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
     if (last.stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
-    stats = stats
-    matchScore = matchScore
     saveDraft()
     scheduleAutoSync($user?.id)
   }
@@ -249,22 +246,21 @@
       if (!stats[p.id]) stats[p.id] = {}
       stats[p.id][trimmed] = 0
     })
-    stats = stats
     newCustomStat = ''
     showAddStat = false
     saveDraft()
   }
 
-  let stats = {}
-  let period = $settingsStore.defaultPeriod || '1st Half'
-  $: matchPeriods = $settingsStore.periods?.length ? $settingsStore.periods : ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
-  let mode = 'quick'
-  let notes = ''
-  let matchScore = { home: { goals: 0, points: 0 }, away: { goals: 0, points: 0 } }
-  let selectedStat = null
-  let showPlayerPicker = false
-  let pendingLog = null
-  let showPitchPicker = false
+  let stats = $state({})
+  let period = $state($settingsStore.defaultPeriod || '1st Half')
+  let matchPeriods = $derived($settingsStore.periods?.length ? $settingsStore.periods : ['Warm-up', '1st Half', '2nd Half', 'Extra Time'])
+  let mode = $state('quick')
+  let notes = $state('')
+  let matchScore = $state({ home: { goals: 0, points: 0 }, away: { goals: 0, points: 0 } })
+  let selectedStat = $state(null)
+  let showPlayerPicker = $state(false)
+  let pendingLog = $state(null)
+  let showPitchPicker = $state(false)
 
   function openPlayerPicker(stat) { selectedStat = stat; showPlayerPicker = true }
 
@@ -293,8 +289,6 @@
     }]
     if (stat === 'Point') matchScore.home.points++
     if (stat === 'Goal') matchScore.home.goals++
-    stats = stats
-    matchScore = matchScore
     pendingLog = null
     showPitchPicker = false
     saveDraft()
@@ -306,8 +300,6 @@
     stats[playerId][stat]--
     if (stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
     if (stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
-    stats = stats
-    matchScore = matchScore
     saveDraft()
     scheduleAutoSync($user?.id)
   }
@@ -399,13 +391,13 @@
     }
   }
 
-  $: starters = players.filter(p => p.position !== 'Sub')
-  $: subs = players.filter(p => p.position === 'Sub')
+  let starters = $derived(players.filter(p => p.position !== 'Sub'))
+  let subs = $derived(players.filter(p => p.position === 'Sub'))
 
   // ── SUBSTITUTIONS ────────────────────────────
-  let subs_log = []
-  let showSubModal = false
-  let subOff = null
+  let subs_log = $state([])
+  let showSubModal = $state(false)
+  let subOff = $state(null)
 
   function openSubModal() { showSubModal = true; subOff = null }
 
@@ -417,7 +409,6 @@
     const tempPos = playerOffData.position
     playerOffData.position = 'Sub'
     playerOnData.position = tempPos
-    players = players
     subs_log = [...subs_log, {
       off: playerOffData.name || `#${playerOffData.number}`,
       on: playerOnData.name || `#${playerOnData.number}`,
@@ -431,12 +422,12 @@
   }
 
   // ── TIMER ────────────────────────────────────
-  let timerSeconds = 0
-  let timerRunning = false
+  let timerSeconds = $state(0)
+  let timerRunning = $state(false)
   let timerInterval = null
-  let timerStartedAt = null  // Date.now() when timer last started — survives app close
+  let timerStartedAt = $state(null)  // Date.now() when timer last started — survives app close
 
-  $: timerOverTime = timerSeconds >= ($settingsStore.periodLength || 30) * 60
+  let timerOverTime = $derived(timerSeconds >= ($settingsStore.periodLength || 30) * 60)
 
   function toggleTimer() {
     if (timerRunning) {
@@ -472,7 +463,6 @@
   function undoOppPoint() {
     if (matchScore.away.points <= 0) return
     matchScore.away.points--
-    matchScore = matchScore
     if ($settingsStore.trackOppScores) {
       const idx = findLastIndex(oppScores, s => s.type === 'point')
       if (idx !== -1) oppScores = oppScores.filter((_, i) => i !== idx)
@@ -484,7 +474,6 @@
   function undoOppGoal() {
     if (matchScore.away.goals <= 0) return
     matchScore.away.goals--
-    matchScore = matchScore
     if ($settingsStore.trackOppScores) {
       const idx = findLastIndex(oppScores, s => s.type === 'goal')
       if (idx !== -1) oppScores = oppScores.filter((_, i) => i !== idx)
@@ -518,9 +507,9 @@
     scheduleAutoSync($user?.id)
   }
 
-  $: puckoutWins = puckouts.filter(p => p.outcome === 'won').length
-  $: puckoutLosses = puckouts.filter(p => p.outcome === 'lost').length
-  $: puckoutTotal = puckouts.length
+  let puckoutWins = $derived(puckouts.filter(p => p.outcome === 'won').length)
+  let puckoutLosses = $derived(puckouts.filter(p => p.outcome === 'lost').length)
+  let puckoutTotal = $derived(puckouts.length)
 
   // ── OPPOSITION SCORE FUNCTIONS ────────────────
   function handleOppScore(type) {
@@ -529,7 +518,6 @@
     } else {
       if (type === 'point') matchScore.away.points++
       if (type === 'goal') matchScore.away.goals++
-      matchScore = matchScore
       saveDraft()
       scheduleAutoSync($user?.id)
     }
@@ -553,7 +541,6 @@
       time: timerSeconds,
       period
     }]
-    matchScore = matchScore
     showOppScoreModal = false
     saveDraft()
     scheduleAutoSync($user?.id)
@@ -579,17 +566,17 @@
   }
 
   // ── QUICK VIEW STATS — all use live data ──────
-  let openSections = {
+  let openSections = $state({
     puckouts: $settingsStore.quickViewSections?.puckouts ?? true,
     conceded: $settingsStore.quickViewSections?.conceded ?? true,
     players: $settingsStore.quickViewSections?.players ?? false,
     subs: $settingsStore.quickViewSections?.subs ?? false,
-  }
-  function toggleSection(k) { openSections[k] = !openSections[k]; openSections = openSections }
+  })
+  function toggleSection(k) { openSections[k] = !openSections[k] }
 
-  let htPuckoutZoneFilter = null
+  let htPuckoutZoneFilter = $state(null)
 
-  $: htPuckoutsByPlayer = (() => {
+  let htPuckoutsByPlayer = $derived((() => {
     const map = {}
     puckouts.forEach(p => {
       const key = p.ourPlayer || 'Unknown'
@@ -603,9 +590,9 @@
       }
     })
     return Object.values(map).sort((a, b) => (b.won + b.lost) - (a.won + a.lost))
-  })()
+  })())
 
-  $: htPuckoutByZone = (() => {
+  let htPuckoutByZone = $derived((() => {
     const map = {}
     puckouts.forEach(p => {
       const z = p.section || 'no-zone'
@@ -613,16 +600,16 @@
       if (p.outcome === 'won') map[z].won++; else map[z].lost++
     })
     return map
-  })()
+  })())
 
-  $: htPuckoutZoneRows = Object.entries(htPuckoutByZone)
+  let htPuckoutZoneRows = $derived(Object.entries(htPuckoutByZone)
     .filter(([k]) => k !== 'no-zone')
     .map(([key, d]) => ({
       key, label: formatZoneLabel(key),
       won: d.won, lost: d.lost, total: d.won + d.lost,
       winPct: Math.round((d.won / (d.won + d.lost)) * 100)
     }))
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => b.total - a.total))
 
   function htZoneColor(zkey) {
     const d = htPuckoutByZone[zkey]
@@ -633,7 +620,7 @@
     return 'rgba(200,50,50,0.6)'
   }
 
-  $: htPuckoutByOppPlayer = (() => {
+  let htPuckoutByOppPlayer = $derived((() => {
     const map = {}
     puckouts.filter(p => p.outcome === 'lost' && p.oppPlayer).forEach(p => {
       const k = '#' + p.oppPlayer
@@ -642,9 +629,9 @@
       if (p.ourPlayer && !map[k].beatPlayers.includes(p.ourPlayer)) map[k].beatPlayers.push(p.ourPlayer)
     })
     return Object.values(map).sort((a, b) => b.count - a.count)
-  })()
+  })())
 
-  $: allConcededByMarker = (() => {
+  let allConcededByMarker = $derived((() => {
     const map = {}
     oppScores.forEach(s => {
       const key = s.marker || 'Unknown'
@@ -653,9 +640,9 @@
       map[key].scores.push(s)
     })
     return Object.values(map).sort((a, b) => (b.goals * 3 + b.points) - (a.goals * 3 + a.points))
-  })()
+  })())
 
-  $: htConcededByOppPlayer = (() => {
+  let htConcededByOppPlayer = $derived((() => {
     const map = {}
     oppScores.forEach(s => {
       const k = s.oppPlayerNum ? '#' + s.oppPlayerNum : 'Unknown'
@@ -664,14 +651,14 @@
       if (s.marker && !map[k].markers.includes(s.marker)) map[k].markers.push(s.marker)
     })
     return Object.values(map).sort((a, b) => (b.goals * 3 + b.points) - (a.goals * 3 + a.points))
-  })()
+  })())
 
-  $: htBestPuckoutPlayer = htPuckoutsByPlayer.reduce((best, p) => p.won > (best?.won ?? -1) ? p : best, null)
-  $: htBestOppPuckoutWinner = htPuckoutByOppPlayer[0] ?? null
-  $: htBestPuckoutZone = htPuckoutZoneRows.reduce((best, z) => z.won > (best?.won ?? -1) ? z : best, null)
-  $: htBiggestConcededOppPlayer = htConcededByOppPlayer[0] ?? null
+  let htBestPuckoutPlayer = $derived(htPuckoutsByPlayer.reduce((best, p) => p.won > (best?.won ?? -1) ? p : best, null))
+  let htBestOppPuckoutWinner = $derived(htPuckoutByOppPlayer[0] ?? null)
+  let htBestPuckoutZone = $derived(htPuckoutZoneRows.reduce((best, z) => z.won > (best?.won ?? -1) ? z : best, null))
+  let htBiggestConcededOppPlayer = $derived(htConcededByOppPlayer[0] ?? null)
 
-  $: htTopScorer = (() => {
+  let htTopScorer = $derived((() => {
     let best = null, max = 0
     players.filter(p => p.name?.trim()).forEach(p => {
       const s = stats[p.id] || {}
@@ -679,7 +666,7 @@
       if (pts > max) { max = pts; best = { name: p.name, goals: s['Goal'] || 0, points: s['Point'] || 0, pts } }
     })
     return best
-  })()
+  })())
 </script>
 
 {#if screen === 'setup'}
@@ -743,7 +730,7 @@
     <div class="squad-preview-hint">Edit your panel anytime in the Squad tab</div>
   </div>
 
-  <button class="start-btn" on:click={startMatch}>
+  <button class="start-btn" onclick={startMatch}>
     <span>Throw In</span>
     <span class="start-arrow">→</span>
   </button>
@@ -769,10 +756,10 @@
         <div class="score-label">{opposition.slice(0,4).toUpperCase()}</div>
         <div class="score-val">{formatScore(matchScore.away)}</div>
         <div class="opp-btns">
-          <button class="opp-btn" on:click={undoOppPoint}>−P</button>
-          <button class="opp-btn opp-btn-score" on:click={() => handleOppScore('point')}>+P</button>
-          <button class="opp-btn" on:click={undoOppGoal}>−G</button>
-          <button class="opp-btn opp-btn-score" on:click={() => handleOppScore('goal')}>+G</button>
+          <button class="opp-btn" onclick={undoOppPoint}>−P</button>
+          <button class="opp-btn opp-btn-score" onclick={() => handleOppScore('point')}>+P</button>
+          <button class="opp-btn" onclick={undoOppGoal}>−G</button>
+          <button class="opp-btn opp-btn-score" onclick={() => handleOppScore('goal')}>+G</button>
         </div>
       </div>
     </div>
@@ -782,14 +769,14 @@
     <div class="timer-left">
       <div class="timer-display" class:running={timerRunning} class:overtime={timerOverTime}>{formatTime(timerSeconds)}</div>
       <div class="timer-btns">
-        <button class="timer-btn primary" on:click={toggleTimer}>
+        <button class="timer-btn primary" onclick={toggleTimer}>
           {#if timerRunning}
             <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause
           {:else}
             <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start
           {/if}
         </button>
-        <button class="timer-btn" on:click={resetTimer}>Reset</button>
+        <button class="timer-btn" onclick={resetTimer}>Reset</button>
       </div>
     </div>
     <div class="period-pills">
@@ -797,7 +784,7 @@
         <button
           class="period-btn"
           class:active={period === p}
-          on:click={() => { period = p; resetTimer() }}
+          onclick={() => { period = p; resetTimer() }}
         >{p}</button>
       {/each}
     </div>
@@ -805,15 +792,15 @@
 
   <div class="mode-row">
     <div class="mode-toggle">
-      <button class:active={mode === 'quick'} on:click={() => mode = 'quick'}>Quick log</button>
-      <button class:active={mode === 'player'} on:click={() => mode = 'player'}>Player rows</button>
+      <button class:active={mode === 'quick'} onclick={() => mode = 'quick'}>Quick log</button>
+      <button class:active={mode === 'player'} onclick={() => mode = 'player'}>Player rows</button>
     </div>
     <div class="action-btns">
-      {#if $settingsStore.trackPuckouts}<button class="puckout-btn" on:click={openPuckoutModal}>+ Puckout</button>{/if}
-      <button class="sub-btn" on:click={openSubModal}>
+      {#if $settingsStore.trackPuckouts}<button class="puckout-btn" onclick={openPuckoutModal}>+ Puckout</button>{/if}
+      <button class="sub-btn" onclick={openSubModal}>
         <svg style="width:15px;height:15px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg> Sub
       </button>
-      <button class="stats-view-btn" on:click={openStatsView}>
+      <button class="stats-view-btn" onclick={openStatsView}>
         <svg style="width:15px;height:15px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> Stats
       </button>
     </div>
@@ -831,7 +818,7 @@
 
   {#if lastEventLabel}
     <div class="undo-row">
-      <button class="undo-btn" on:click={undoLastStat}>Undo: {lastEventLabel}</button>
+      <button class="undo-btn" onclick={undoLastStat}>Undo: {lastEventLabel}</button>
     </div>
   {/if}
 
@@ -839,7 +826,7 @@
     <div class="section-label">Tap a stat — then pick the player</div>
     <div class="stat-grid">
       {#each allStats as stat}
-        <button class="stat-btn" on:click={() => openPlayerPicker(stat)}>
+        <button class="stat-btn" onclick={() => openPlayerPicker(stat)}>
           {stat}
           {#if customStats.includes(stat)}
             <span class="custom-tag">custom</span>
@@ -849,12 +836,12 @@
       {#if showAddStat}
         <div class="stat-btn add-stat-input">
           <input bind:value={newCustomStat} placeholder="Stat name"
-            on:keydown={e => e.key === 'Enter' && addCustomStat()} autofocus />
-          <button class="confirm-btn" on:click={addCustomStat}>Add</button>
-          <button class="cancel-small" on:click={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            onkeydown={e => e.key === 'Enter' && addCustomStat()} autofocus />
+          <button class="confirm-btn" onclick={addCustomStat}>Add</button>
+          <button class="cancel-small" onclick={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {:else}
-        <button class="stat-btn dashed" on:click={() => showAddStat = true}>+ Custom stat</button>
+        <button class="stat-btn dashed" onclick={() => showAddStat = true}>+ Custom stat</button>
       {/if}
     </div>
   {/if}
@@ -864,12 +851,12 @@
       {#if showAddStat}
         <div class="custom-stat-input-wrap">
           <input class="custom-stat-input" bind:value={newCustomStat} placeholder="Enter stat name..."
-            on:keydown={e => e.key === 'Enter' && addCustomStat()} autofocus />
-          <button class="confirm-btn" on:click={addCustomStat}>Add</button>
-          <button class="cancel-small" on:click={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            onkeydown={e => e.key === 'Enter' && addCustomStat()} autofocus />
+          <button class="confirm-btn" onclick={addCustomStat}>Add</button>
+          <button class="cancel-small" onclick={() => showAddStat = false}><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       {:else}
-        <button class="custom-stat-btn" on:click={() => showAddStat = true}>+ Add custom stat</button>
+        <button class="custom-stat-btn" onclick={() => showAddStat = true}>+ Add custom stat</button>
       {/if}
     </div>
 
@@ -889,9 +876,9 @@
               {#each allStats as stat}
                 <td>
                   <div class="counter">
-                    <button class="mini-dec" on:click={() => decrement(player.id, stat)}>−</button>
+                    <button class="mini-dec" onclick={() => decrement(player.id, stat)}>−</button>
                     <span class="mini-val">{stats[player.id]?.[stat] ?? 0}</span>
-                    <button class="mini-inc" on:click={() => logStat(player.id, stat)}>+</button>
+                    <button class="mini-inc" onclick={() => logStat(player.id, stat)}>+</button>
                   </div>
                 </td>
               {/each}
@@ -911,9 +898,9 @@
               {#each allStats as stat}
                 <td>
                   <div class="counter">
-                    <button class="mini-dec" on:click={() => decrement(player.id, stat)}>−</button>
+                    <button class="mini-dec" onclick={() => decrement(player.id, stat)}>−</button>
                     <span class="mini-val">{stats[player.id]?.[stat] ?? 0}</span>
-                    <button class="mini-inc" on:click={() => logStat(player.id, stat)}>+</button>
+                    <button class="mini-inc" onclick={() => logStat(player.id, stat)}>+</button>
                   </div>
                 </td>
               {/each}
@@ -938,13 +925,13 @@
   {/if}
 
   {#if showPlayerPicker}
-    <div class="modal-backdrop" on:click={() => showPlayerPicker = false}>
-      <div class="modal" on:click|stopPropagation>
+    <div class="modal-backdrop" onclick={() => showPlayerPicker = false}>
+      <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">Who got the <strong>{selectedStat}</strong>?</div>
         <div class="modal-section-label">Starters</div>
         <div class="player-grid">
           {#each starters as player}
-            <button class="player-btn" on:click={() => logStat(player.id, selectedStat)}>
+            <button class="player-btn" onclick={() => logStat(player.id, selectedStat)}>
               <span class="player-num">#{player.number}</span>
               <span class="player-name">{player.name || 'Player'}</span>
             </button>
@@ -954,21 +941,21 @@
           <div class="modal-section-label">Subs</div>
           <div class="player-grid">
             {#each subs as player}
-              <button class="player-btn sub" on:click={() => logStat(player.id, selectedStat)}>
+              <button class="player-btn sub" onclick={() => logStat(player.id, selectedStat)}>
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name || 'Player'}</span>
               </button>
             {/each}
           </div>
         {/if}
-        <button class="cancel-btn" on:click={() => showPlayerPicker = false}>Cancel</button>
+        <button class="cancel-btn" onclick={() => showPlayerPicker = false}>Cancel</button>
       </div>
     </div>
   {/if}
 
   {#if showPitchPicker}
-    <div class="modal-backdrop" on:click={() => confirmLogWithCoords(null, null, null)}>
-      <div class="modal" on:click|stopPropagation>
+    <div class="modal-backdrop" onclick={() => confirmLogWithCoords(null, null, null)}>
+      <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">
           Where did it happen?
           <span class="optional-tag">optional</span>
@@ -977,7 +964,7 @@
           <svg
             class="pitch-svg"
             viewBox="0 0 300 200"
-            on:click={e => {
+            onclick={e => {
               const rect = e.currentTarget.getBoundingClientRect()
               const x = Math.round(((e.clientX - rect.left) / rect.width) * 100)
               const y = Math.round(((e.clientY - rect.top) / rect.height) * 100)
@@ -1010,7 +997,7 @@
             <text x="150" y="108" text-anchor="middle" fill="white" font-size="10" opacity="0.5">Tap where it happened</text>
           </svg>
         </div>
-        <button class="cancel-btn" on:click={() => confirmLogWithCoords(null, null, null)}>
+        <button class="cancel-btn" onclick={() => confirmLogWithCoords(null, null, null)}>
           Skip — log without location
         </button>
       </div>
@@ -1018,14 +1005,14 @@
   {/if}
 
   {#if showSubModal}
-    <div class="modal-backdrop" on:click={() => showSubModal = false}>
-      <div class="modal" on:click|stopPropagation>
+    <div class="modal-backdrop" onclick={() => showSubModal = false}>
+      <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">Make a Substitution</div>
         {#if !subOff}
           <div class="modal-section-label">Who is coming OFF?</div>
           <div class="player-grid">
             {#each starters as player}
-              <button class="player-btn" on:click={() => subOff = player.id}>
+              <button class="player-btn" onclick={() => subOff = player.id}>
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name || 'Player'}</span>
               </button>
@@ -1037,15 +1024,15 @@
           </div>
           <div class="player-grid">
             {#each subs as player}
-              <button class="player-btn" on:click={() => makeSub(player.id)}>
+              <button class="player-btn" onclick={() => makeSub(player.id)}>
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name || 'Player'}</span>
               </button>
             {/each}
           </div>
-          <button class="ghost-btn" style="margin-top:8px" on:click={() => subOff = null}>← Back</button>
+          <button class="ghost-btn" style="margin-top:8px" onclick={() => subOff = null}>← Back</button>
         {/if}
-        <button class="cancel-btn" on:click={() => showSubModal = false}>Cancel</button>
+        <button class="cancel-btn" onclick={() => showSubModal = false}>Cancel</button>
       </div>
     </div>
   {/if}
@@ -1070,16 +1057,16 @@
 
   <div class="notes-section">
     <div class="section-label">Match notes</div>
-    <textarea bind:value={notes} placeholder="Add notes about the match..." on:input={saveDraft}></textarea>
+    <textarea bind:value={notes} placeholder="Add notes about the match..." oninput={saveDraft}></textarea>
   </div>
 
   {#if $isClubPro}
     <div class="live-share-row">
       {#if isLive}
         <div class="live-active-badge"><span class="live-pulse"></span> Live — coaches can watch in real time</div>
-        <button class="stop-live-btn" on:click={stopLive}>Stop sharing</button>
+        <button class="stop-live-btn" onclick={stopLive}>Stop sharing</button>
       {:else}
-        <button class="go-live-btn" on:click={startLive}>
+        <button class="go-live-btn" onclick={startLive}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
           Go Live
         </button>
@@ -1090,14 +1077,14 @@
   {/if}
 
   <div class="finish-row">
-    <button class="finish-btn" disabled={finishing} on:click={finishMatch}>{finishing ? 'Saving…' : 'End Match & Save'}</button>
-    <button class="cancel-match-btn" on:click={cancelMatch}>Cancel Match</button>
+    <button class="finish-btn" disabled={finishing} onclick={finishMatch}>{finishing ? 'Saving…' : 'End Match & Save'}</button>
+    <button class="cancel-match-btn" onclick={cancelMatch}>Cancel Match</button>
   </div>
 
   <!-- PUCKOUT MODAL — 4 sequential steps -->
   {#if showPuckoutModal}
-    <div class="modal-backdrop" on:click={() => showPuckoutModal = false}>
-      <div class="modal" on:click|stopPropagation>
+    <div class="modal-backdrop" onclick={() => showPuckoutModal = false}>
+      <div class="modal" onclick={(e) => e.stopPropagation()}>
 
         <!-- Step indicator -->
         <div class="step-indicator">
@@ -1114,20 +1101,20 @@
             <button
               class="outcome-btn won"
               class:selected={puckoutOutcome === 'won'}
-              on:click={() => puckoutOutcome = 'won'}
+              onclick={() => puckoutOutcome = 'won'}
             >We Won</button>
             <button
               class="outcome-btn lost"
               class:selected={puckoutOutcome === 'lost'}
-              on:click={() => puckoutOutcome = 'lost'}
+              onclick={() => puckoutOutcome = 'lost'}
             >They Won</button>
           </div>
           <button
             class="confirm-log-btn"
             disabled={!puckoutOutcome}
-            on:click={() => puckoutStep = 2}
+            onclick={() => puckoutStep = 2}
           >Next</button>
-          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
         {:else if puckoutStep === 2}
           <!-- Step 2: Our player -->
@@ -1139,7 +1126,7 @@
               <button
                 class="player-btn"
                 class:selected-player={puckoutOurPlayer === label}
-                on:click={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
+                onclick={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
               >
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1154,7 +1141,7 @@
                 <button
                   class="player-btn sub"
                   class:selected-player={puckoutOurPlayer === label}
-                  on:click={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
+                  onclick={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
                 >
                   <span class="player-num">#{player.number}</span>
                   <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1163,12 +1150,12 @@
             </div>
           {/if}
           <div class="step-nav">
-            <button class="step-back-btn" on:click={() => puckoutStep = 1}>← Back</button>
-            <button class="confirm-log-btn step-next" on:click={() => puckoutStep = 3}>
+            <button class="step-back-btn" onclick={() => puckoutStep = 1}>← Back</button>
+            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 3}>
               {puckoutOurPlayer ? 'Next' : 'Skip'}
             </button>
           </div>
-          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
         {:else if puckoutStep === 3}
           <!-- Step 3: Zone picker -->
@@ -1188,7 +1175,7 @@
                     stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
                     stroke-width={puckoutSection === zkey ? '2' : '0.5'}
                     style="cursor:pointer"
-                    on:click={() => puckoutSection = puckoutSection === zkey ? null : zkey}
+                    onclick={() => puckoutSection = puckoutSection === zkey ? null : zkey}
                   />
                   <text
                     x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
@@ -1212,12 +1199,12 @@
             </svg>
           </div>
           <div class="step-nav">
-            <button class="step-back-btn" on:click={() => puckoutStep = 2}>← Back</button>
-            <button class="confirm-log-btn step-next" on:click={() => puckoutStep = 4}>
+            <button class="step-back-btn" onclick={() => puckoutStep = 2}>← Back</button>
+            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 4}>
               {puckoutSection ? 'Next' : 'Skip'}
             </button>
           </div>
-          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
         {:else if puckoutStep === 4}
           <!-- Step 4: Opposition player number -->
@@ -1230,15 +1217,15 @@
               <button
                 class="opp-num-btn"
                 class:selected-player={puckoutOppPlayer === num}
-                on:click={() => puckoutOppPlayer = puckoutOppPlayer === num ? '' : num}
+                onclick={() => puckoutOppPlayer = puckoutOppPlayer === num ? '' : num}
               >{num}</button>
             {/each}
           </div>
           <div class="step-nav">
-            <button class="step-back-btn" on:click={() => puckoutStep = 3}>← Back</button>
-            <button class="confirm-log-btn step-next" on:click={logPuckout}>Log Puckout</button>
+            <button class="step-back-btn" onclick={() => puckoutStep = 3}>← Back</button>
+            <button class="confirm-log-btn step-next" onclick={logPuckout}>Log Puckout</button>
           </div>
-          <button class="cancel-btn" on:click={() => showPuckoutModal = false}>Cancel</button>
+          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
         {/if}
 
       </div>
@@ -1247,8 +1234,8 @@
 
   <!-- OPPOSITION SCORE MODAL — 2 sequential steps -->
   {#if showOppScoreModal}
-    <div class="modal-backdrop" on:click={() => showOppScoreModal = false}>
-      <div class="modal" on:click|stopPropagation>
+    <div class="modal-backdrop" onclick={() => showOppScoreModal = false}>
+      <div class="modal" onclick={(e) => e.stopPropagation()}>
 
         <!-- Step indicator -->
         <div class="step-indicator">
@@ -1269,14 +1256,14 @@
               <button
                 class="opp-num-btn"
                 class:selected-player={oppScorePlayerNum === num}
-                on:click={() => oppScorePlayerNum = oppScorePlayerNum === num ? '' : num}
+                onclick={() => oppScorePlayerNum = oppScorePlayerNum === num ? '' : num}
               >{num}</button>
             {/each}
           </div>
-          <button class="confirm-log-btn" style="margin-top:1rem" on:click={() => oppScoreStep = 2}>
+          <button class="confirm-log-btn" style="margin-top:1rem" onclick={() => oppScoreStep = 2}>
             {oppScorePlayerNum ? 'Next' : 'Skip'}
           </button>
-          <button class="cancel-btn" on:click={() => showOppScoreModal = false}>Cancel</button>
+          <button class="cancel-btn" onclick={() => showOppScoreModal = false}>Cancel</button>
 
         {:else if oppScoreStep === 2}
           <!-- Step 2: Our marker -->
@@ -1288,7 +1275,7 @@
               <button
                 class="player-btn"
                 class:selected-player={oppScoreMarker === label}
-                on:click={() => oppScoreMarker = oppScoreMarker === label ? null : label}
+                onclick={() => oppScoreMarker = oppScoreMarker === label ? null : label}
               >
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1303,7 +1290,7 @@
                 <button
                   class="player-btn sub"
                   class:selected-player={oppScoreMarker === label}
-                  on:click={() => oppScoreMarker = oppScoreMarker === label ? null : label}
+                  onclick={() => oppScoreMarker = oppScoreMarker === label ? null : label}
                 >
                   <span class="player-num">#{player.number}</span>
                   <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1312,10 +1299,10 @@
             </div>
           {/if}
           <div class="step-nav">
-            <button class="step-back-btn" on:click={() => oppScoreStep = 1}>← Back</button>
-            <button class="confirm-log-btn step-next" on:click={confirmOppScore}>Log Score</button>
+            <button class="step-back-btn" onclick={() => oppScoreStep = 1}>← Back</button>
+            <button class="confirm-log-btn step-next" onclick={confirmOppScore}>Log Score</button>
           </div>
-          <button class="cancel-btn" on:click={() => showOppScoreModal = false}>Cancel</button>
+          <button class="cancel-btn" onclick={() => showOppScoreModal = false}>Cancel</button>
         {/if}
 
       </div>
@@ -1353,7 +1340,7 @@
     {@const htLosses = htTotal - htWins}
     {@const htWinPct = Math.round((htWins / htTotal) * 100)}
     <div class="accordion-card">
-      <button class="accordion-header" on:click={() => toggleSection('puckouts')}>
+      <button class="accordion-header" onclick={() => toggleSection('puckouts')}>
         <div class="accordion-title">
           <span class="accordion-name">Puckouts</span>
           <span class="accordion-summary">
@@ -1417,7 +1404,7 @@
                       stroke={htPuckoutZoneFilter === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
                       stroke-width={htPuckoutZoneFilter === zkey ? '2.5' : '0.5'}
                       style="cursor:pointer"
-                      on:click={() => htPuckoutZoneFilter = htPuckoutZoneFilter === zkey ? null : zkey}
+                      onclick={() => htPuckoutZoneFilter = htPuckoutZoneFilter === zkey ? null : zkey}
                     />
                     {#if zd}
                       <text x={col.x+col.w/2} y={row.y+row.h/2-4} text-anchor="middle" fill="white" font-size="7.5" font-weight="bold" style="pointer-events:none">{zd.won}W {zd.lost}L</text>
@@ -1442,7 +1429,7 @@
               <div class="zone-filter-result">
                 <span class="zone-filter-name">{formatZoneLabel(htPuckoutZoneFilter)}</span>
                 <span class="zone-filter-stats">{zf.won}W / {zf.lost}L — {zt > 0 ? Math.round(zf.won/zt*100) : 0}%</span>
-                <button class="zone-filter-clear" on:click={() => htPuckoutZoneFilter = null}>All zones</button>
+                <button class="zone-filter-clear" onclick={() => htPuckoutZoneFilter = null}>All zones</button>
               </div>
             {/if}
           {/if}
@@ -1520,7 +1507,7 @@
     {@const htGoals = oppScores.filter(s => s.type === 'goal').length}
     {@const htPoints = oppScores.filter(s => s.type === 'point').length}
     <div class="accordion-card">
-      <button class="accordion-header" on:click={() => toggleSection('conceded')}>
+      <button class="accordion-header" onclick={() => toggleSection('conceded')}>
         <div class="accordion-title">
           <span class="accordion-name">Scores Conceded</span>
           <span class="accordion-summary">
@@ -1586,7 +1573,7 @@
   {#if players.some(p => p.name?.trim() && Object.values(stats[p.id]||{}).some(v=>v>0))}
     {@const playersWithStats = players.filter(p => p.name?.trim() && Object.values(stats[p.id]||{}).some(v=>v>0))}
     <div class="accordion-card">
-      <button class="accordion-header" on:click={() => toggleSection('players')}>
+      <button class="accordion-header" onclick={() => toggleSection('players')}>
         <div class="accordion-title">
           <span class="accordion-name">Player Stats</span>
           <span class="accordion-summary"><span class="badge-pts">{playersWithStats.length} active</span></span>
@@ -1637,7 +1624,7 @@
   <!-- ── SUBSTITUTIONS accordion ── -->
   {#if subs_log.length > 0}
     <div class="accordion-card">
-      <button class="accordion-header" on:click={() => toggleSection('subs')}>
+      <button class="accordion-header" onclick={() => toggleSection('subs')}>
         <div class="accordion-title">
           <span class="accordion-name">Substitutions</span>
           <span class="accordion-summary"><span class="badge-pts">{subs_log.length} made</span></span>
@@ -1658,7 +1645,7 @@
     </div>
   {/if}
 
-  <button class="back-to-match-btn" on:click={closeStatsView}>← Back to Match</button>
+  <button class="back-to-match-btn" onclick={closeStatsView}>← Back to Match</button>
 </div>
 {/if}
 

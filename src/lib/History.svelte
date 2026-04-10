@@ -6,22 +6,22 @@
   import { deleteMatchFromCloud } from './sync.js'
   import Upgrade from './Upgrade.svelte'
 
-  export let proAccess = false
+  const { proAccess = false } = $props()
 
   const FREE_MATCH_LIMIT = 3
 
-  let matches = []
-  let search = ''
-  let filterResult = 'all'
-  let selectedMatch = null
+  let matches = $state([])
+  let search = $state('')
+  let filterResult = $state('all')
+  let selectedMatch = $state(null)
 
   onMount(async () => {
     matches = await loadMatches()
     matches.sort((a, b) => new Date(b.date) - new Date(a.date))
   })
 
-  $: visibleMatches = proAccess ? filtered : filtered.slice(0, FREE_MATCH_LIMIT)
-  $: lockedCount = proAccess ? 0 : Math.max(0, filtered.length - FREE_MATCH_LIMIT)
+  let visibleMatches = $derived(proAccess ? filtered : filtered.slice(0, FREE_MATCH_LIMIT))
+  let lockedCount = $derived(proAccess ? 0 : Math.max(0, filtered.length - FREE_MATCH_LIMIT))
 
   async function deleteMatch(id, e) {
     e.stopPropagation()
@@ -35,7 +35,7 @@
     deleteMatchFromCloud($user?.id, id)
   }
 
-  $: filtered = matches.filter(m => {
+  let filtered = $derived(matches.filter(m => {
     const matchesSearch = !search ||
       m.opposition?.toLowerCase().includes(search.toLowerCase()) ||
       m.venue?.toLowerCase().includes(search.toLowerCase()) ||
@@ -48,9 +48,9 @@
     if (filterResult === 'L') return ht < at
     if (filterResult === 'D') return ht === at
     return true
-  })
+  }))
 
-  $: seasonStats = (() => {
+  let seasonStats = $derived((() => {
     if (matches.length === 0) return null
     let wins = 0, losses = 0, draws = 0
     let totalFor = 0, totalAgainst = 0
@@ -69,7 +69,7 @@
       avgFor: (totalFor / matches.length).toFixed(1),
       avgAgainst: (totalAgainst / matches.length).toFixed(1)
     }
-  })()
+  })())
 
   function getResult(m) {
     const ht = (m.score?.home?.goals * 3 + m.score?.home?.points) || 0
@@ -106,7 +106,7 @@
   }
 
   // All stat column names present in this match (ordered: known stats first, custom after)
-  $: allStatCols = (() => {
+  let allStatCols = $derived((() => {
     if (!selectedMatch?.stats) return []
     const KNOWN = ['Point','Goal','Wide','Tackle','Block','Turnover Won','Turnover Lost','Free Won','Yellow Card','Red Card','Penalty Won','Penalty Scored']
     const found = new Set()
@@ -114,23 +114,23 @@
     const result = KNOWN.filter(k => found.has(k))
     found.forEach(k => { if (!KNOWN.includes(k)) result.push(k) })
     return result
-  })()
+  })())
 
   // Per-player totals scoring contribution: Goal*3 + Point
   function scoringContrib(s) { return (s?.['Goal'] || 0) * 3 + (s?.['Point'] || 0) }
 
   // Team totals across all players
-  $: teamTotals = (() => {
+  let teamTotals = $derived((() => {
     if (!selectedMatch?.stats) return {}
     const t = {}
     Object.values(selectedMatch.stats).forEach(s => {
       Object.entries(s).forEach(([k, v]) => { t[k] = (t[k] || 0) + v })
     })
     return t
-  })()
+  })())
 
   // Period breakdown from events
-  $: statsByPeriod = (() => {
+  let statsByPeriod = $derived((() => {
     if (!selectedMatch?.events?.length) return []
     const periodMap = {}
     const periodOrder = []
@@ -142,10 +142,10 @@
     const seen = new Set()
     return periodOrder.filter(p => { if (seen.has(p)) return false; seen.add(p); return true })
       .map(p => ({ period: p, stats: periodMap[p] }))
-  })()
+  })())
 
   // Scoring timeline — our goals/points + opp scores, sorted by time
-  $: scoringTimeline = (() => {
+  let scoringTimeline = $derived((() => {
     if (!selectedMatch) return []
     let homeG = 0, homeP = 0, awayG = 0, awayP = 0
     const events = []
@@ -164,10 +164,10 @@
       else { if (e.type === 'Goal') awayG++; else awayP++ }
       return { ...e, score: `${homeG}-${String(homeP).padStart(2,'0')} : ${awayG}-${String(awayP).padStart(2,'0')}` }
     })
-  })()
+  })())
 
   // Puckout zone breakdown
-  $: puckoutByZone = (() => {
+  let puckoutByZone = $derived((() => {
     if (!selectedMatch?.puckouts?.length) return []
     const map = {}
     selectedMatch.puckouts.forEach(p => {
@@ -176,7 +176,7 @@
       if (p.outcome === 'won') map[p.section].won++; else map[p.section].lost++
     })
     return Object.values(map).sort((a,b) => (b.won+b.lost)-(a.won+a.lost))
-  })()
+  })())
 
   function formatZoneLabel(key) {
     if (!key) return '—'
@@ -195,17 +195,17 @@
 
   // ── PRINT-ONLY COMPUTED DATA ──────────────────────────
 
-  $: printShotEvents = (() => {
+  let printShotEvents = $derived((() => {
     if (!selectedMatch?.events?.length) return []
     return selectedMatch.events.filter(e => e.x != null && e.y != null && ['Point','Goal','Wide'].includes(e.stat))
-  })()
+  })())
 
-  $: printAllLocatedEvents = (() => {
+  let printAllLocatedEvents = $derived((() => {
     if (!selectedMatch?.events?.length) return []
     return selectedMatch.events.filter(e => e.x != null && e.y != null)
-  })()
+  })())
 
-  $: puckoutZoneData = (() => {
+  let puckoutZoneData = $derived((() => {
     if (!selectedMatch?.puckouts?.length) return {}
     const map = {}
     selectedMatch.puckouts.forEach(p => {
@@ -214,7 +214,7 @@
       if (p.outcome === 'won') map[p.section].won++; else map[p.section].lost++
     })
     return map
-  })()
+  })())
 
   function printZoneColor(key) {
     const d = puckoutZoneData[key]
@@ -225,7 +225,7 @@
     return 'rgba(229,57,53,0.75)'
   }
 
-  $: topPerformers = (() => {
+  let topPerformers = $derived((() => {
     if (!selectedMatch?.stats || !allStatCols.length) return []
     return allStatCols.map(stat => {
       let topId = null, max = 0
@@ -236,9 +236,9 @@
       const player = selectedMatch.players?.find(p => p.id === topId)
       return { stat, name: player?.name || `#${player?.number || '?'}`, count: max }
     }).filter(Boolean)
-  })()
+  })())
 
-  $: fullEventLog = (() => {
+  let fullEventLog = $derived((() => {
     if (!selectedMatch?.events?.length) return []
     return [...selectedMatch.events]
       .sort((a, b) => (a.time ?? 9999) - (b.time ?? 9999))
@@ -246,7 +246,7 @@
         const player = selectedMatch.players?.find(p => p.id === e.playerId)
         return { ...e, playerName: player?.name || `#${player?.number || '?'}` }
       })
-  })()
+  })())
 
   function evtColor(stat) {
     if (stat === 'Point' || stat === 'Goal') return '#2d7a2d'
@@ -282,8 +282,8 @@
 
     <div class="detail-header">
       <div class="detail-top-row">
-        <button class="back-btn" data-print-hide on:click={() => selectedMatch = null}>← Back</button>
-        <button class="print-btn" data-print-hide on:click={printReport}>
+        <button class="back-btn" data-print-hide onclick={() => selectedMatch = null}>← Back</button>
+        <button class="print-btn" data-print-hide onclick={printReport}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print / Save PDF
         </button>
@@ -843,7 +843,7 @@
       </div>
     {/if}
 
-    <button class="delete-match-btn" data-print-hide on:click={async (e) => {
+    <button class="delete-match-btn" data-print-hide onclick={async (e) => {
       await deleteMatch(selectedMatch.id, e)
       selectedMatch = null
     }}>
@@ -896,7 +896,7 @@
           <button
             class="filter-pill"
             class:active={filterResult === f}
-            on:click={() => filterResult = f}
+            onclick={() => filterResult = f}
           >{f === 'all' ? 'All' : f}</button>
         {/each}
       </div>
@@ -916,7 +916,7 @@
       {#each visibleMatches as match}
         {@const result = getResult(match)}
         {@const topScorer = getTopScorer(match)}
-        <div class="match-card" on:click={() => selectedMatch = match}>
+        <div class="match-card" onclick={() => selectedMatch = match}>
           <div class="match-card-top">
             <div class="match-card-left">
               <span class="result-badge sm" class:win={result==='W'} class:loss={result==='L'} class:draw={result==='D'}>
@@ -943,7 +943,7 @@
               </div>
               <button
                 class="delete-btn"
-                on:click={e => deleteMatch(match.id, e)}
+                onclick={e => deleteMatch(match.id, e)}
                 title="Delete match"
               ><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
