@@ -11,6 +11,8 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { onMount } from 'svelte'
+  import Toast from '$lib/Toast.svelte'
+  import ConfirmModal from '$lib/ConfirmModal.svelte'
 
   function hexToRgbString(hex) {
     const r = parseInt(hex.slice(1,3), 16)
@@ -61,6 +63,7 @@
   let dataReady = $state(false)
   let lastUserId = $state(null)
   let showMoreSheet = $state(false)
+  let showSignOutConfirm = $state(false)
   let subscribeToast = $state('')
   let needsTeamSetup = $state(false)
   let needsTeamPick = $state(false)
@@ -173,15 +176,12 @@
     setTimeout(() => syncMsg = '', 3000)
   }
 
-  async function handleSignOut() {
-    const confirmed = confirm(
-      'Before signing out:\n\n' +
-      '1. Make sure you have a stable internet connection\n' +
-      '2. Click "↑ Sync" in the top bar to back up your data to the cloud\n\n' +
-      'If you sign out without syncing, any unsynced match data will be lost.\n\n' +
-      'Are you sure you want to sign out?'
-    )
-    if (!confirmed) return
+  function handleSignOut() {
+    showSignOutConfirm = true
+  }
+
+  async function doSignOut() {
+    showSignOutConfirm = false
     localStorage.removeItem(LAST_USER_KEY)
     await signOut()
     dataReady = false
@@ -386,6 +386,19 @@
 
 {:else}
   <slot />
+{/if}
+
+<Toast />
+
+{#if showSignOutConfirm}
+  <ConfirmModal
+    title="Sign out?"
+    message="Make sure you've synced first. Unsynced match data will be lost if you sign out without syncing."
+    confirmLabel="Sign Out"
+    confirmStyle="danger"
+    onConfirm={doSignOut}
+    onCancel={() => showSignOutConfirm = false}
+  />
 {/if}
 
 <style>

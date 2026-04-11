@@ -6,6 +6,8 @@
   import { settingsStore } from './settings-store.js'
   import { subscriptionStore, isClubPro } from './subscription-store.js'
   import { supabase } from './supabase.js'
+  import { showToast } from './toast.js'
+  import ConfirmModal from './ConfirmModal.svelte'
 
   // ── LIVE SHARING ─────────────────────────────────────────
   let liveSessionId = $state(null)
@@ -191,13 +193,17 @@
     screen = 'setup'
   }
 
-  async function cancelMatch() {
-    if (!confirm('Cancel this match? All stats will be lost.')) return
+  function cancelMatch() {
+    showCancelConfirm = true
+  }
+
+  async function doCancelMatch() {
+    showCancelConfirm = false
     await discardDraft()
   }
 
   async function startMatch() {
-    if (!opposition.trim()) { alert('Please enter the opposition team name.'); return }
+    if (!opposition.trim()) { oppositionError = 'Please enter the opposition team name.'; return }
     await saveSquad($state.snapshot(players))
     players.forEach(p => {
       if (!stats[p.id]) {
@@ -261,6 +267,9 @@
   let showPlayerPicker = $state(false)
   let pendingLog = $state(null)
   let showPitchPicker = $state(false)
+  let oppositionError = $state('')
+  let showCancelConfirm = $state(false)
+  let showFinishConfirm = $state(false)
 
   function openPlayerPicker(stat) { selectedStat = stat; showPlayerPicker = true }
 
@@ -338,7 +347,11 @@
 
   async function finishMatch() {
     if (isLive) await stopLive()
-    if (!confirm('End match and save stats?')) return
+    showFinishConfirm = true
+  }
+
+  async function doFinishMatch() {
+    showFinishConfirm = false
     if (finishing) return
     finishing = true
     clearInterval(timerInterval)
@@ -377,9 +390,9 @@
       // FIX: Trigger auto-sync so the finished match is backed up without
       // requiring the coach to manually tap Sync.
       scheduleAutoSync($user?.id)
-      alert('Match saved!')
+      showToast('Match saved!', 'success')
     } catch (e) {
-      alert('Save failed — please try again. Your match data is still safe.')
+      showToast('Save failed — please try again. Your match data is still safe.', 'error')
       // FIX: Restore timerStartedAt so wall-clock recovery works correctly
       // if the app closes after this failure. Without this, reopening the app
       // would calculate elapsed from the wrong reference point.
@@ -684,7 +697,8 @@
     <div class="setup-card-title">Match Details</div>
     <div class="field-group">
       <label>Opposition *</label>
-      <input bind:value={opposition} placeholder="e.g. Éire Óg" />
+      <input bind:value={opposition} placeholder="e.g. Éire Óg" oninput={() => { if (oppositionError) oppositionError = '' }} />
+      {#if oppositionError}<p style="color:#e53935;font-size:13px;margin-top:4px;">{oppositionError}</p>{/if}
     </div>
     <div class="field-row">
       {#if $settingsStore.showVenueField}
@@ -1299,6 +1313,28 @@
   {/if}
 
 </div>
+{/if}
+
+{#if showCancelConfirm}
+  <ConfirmModal
+    title="Cancel this match?"
+    message="All stats will be lost."
+    confirmLabel="Cancel Match"
+    confirmStyle="danger"
+    onConfirm={doCancelMatch}
+    onCancel={() => showCancelConfirm = false}
+  />
+{/if}
+
+{#if showFinishConfirm}
+  <ConfirmModal
+    title="End match and save?"
+    message="This will save all stats to your match history."
+    confirmLabel="Save Match"
+    confirmStyle="primary"
+    onConfirm={doFinishMatch}
+    onCancel={() => showFinishConfirm = false}
+  />
 {/if}
 
 <!-- QUICK VIEW STATS — available at any time, persists across navigation and app close -->

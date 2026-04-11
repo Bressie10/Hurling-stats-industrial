@@ -6,12 +6,21 @@
   import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
+  import { showToast } from './toast.js'
+  import ConfirmModal from './ConfirmModal.svelte'
 
   let deletingAccount = $state(false)
   let cancellingSubscription = $state(false)
   let cancelSuccess = $state(false)
   let portalLoading = $state(false)
   let checkoutLoading = $state(null)
+  let showCancelSubConfirm = $state(false)
+  let showDeleteTeamConfirm = $state(false)
+  let deletingTeamId = $state(null)
+  let showLeaveTeamConfirm = $state(false)
+  let leavingTeamId = $state(null)
+  let leavingTeamName = $state('')
+  let showDeleteAccountConfirm = $state(false)
 
   async function openPortal() {
     portalLoading = true
@@ -22,7 +31,7 @@
       if (error || !data?.url) throw new Error(error?.message ?? 'No portal URL')
       window.location.href = data.url
     } catch (e) {
-      alert('Could not open billing portal: ' + e.message)
+      showToast('Could not open billing portal: ' + e.message, 'error')
       portalLoading = false
     }
   }
@@ -36,17 +45,17 @@
       if (error || !data?.url) throw new Error(error?.message ?? 'No checkout URL')
       window.location.href = data.url
     } catch (e) {
-      alert('Could not start checkout: ' + e.message)
+      showToast('Could not start checkout: ' + e.message, 'error')
       checkoutLoading = null
     }
   }
 
-  async function handleCancelSubscription() {
-    const confirmed = confirm(
-      'Cancel your subscription?\n\nYou\'ll keep access until the end of your current billing period.'
-    )
-    if (!confirmed) return
+  function handleCancelSubscription() {
+    showCancelSubConfirm = true
+  }
 
+  async function doCancelSub() {
+    showCancelSubConfirm = false
     cancellingSubscription = true
     try {
       const { error } = await supabase.functions.invoke('cancel-subscription')
@@ -56,7 +65,7 @@
       cancelSuccess = true
       setTimeout(() => cancelSuccess = false, 4000)
     } catch (e) {
-      alert('Failed to cancel subscription: ' + e.message)
+      showToast('Failed to cancel subscription: ' + e.message, 'error')
     }
     cancellingSubscription = false
   }
@@ -90,10 +99,16 @@
     addingTeam = false
   }
 
-  async function handleDeleteTeam(id) {
-    if (!confirm('Delete this team? Coaches linked to it will lose access.')) return
-    await deleteTeam(id)
-    teams = teams.filter(t => t.id !== id)
+  function handleDeleteTeam(id) {
+    deletingTeamId = id
+    showDeleteTeamConfirm = true
+  }
+
+  async function doDeleteTeam() {
+    showDeleteTeamConfirm = false
+    await deleteTeam(deletingTeamId)
+    teams = teams.filter(t => t.id !== deletingTeamId)
+    deletingTeamId = null
   }
 
   async function handleRenameTeam(id) {
@@ -168,24 +183,29 @@
   }
 
   // Leave a team
-  async function handleLeaveTeam(teamId, teamName) {
-    if (!confirm(`Leave ${teamName}? You'll lose access to this team's live sessions.`)) return
+  function handleLeaveTeam(teamId, teamName) {
+    leavingTeamId = teamId
+    leavingTeamName = teamName
+    showLeaveTeamConfirm = true
+  }
+
+  async function doLeaveTeam() {
+    showLeaveTeamConfirm = false
     try {
-      await leaveTeam(teamId, $user.id)
+      await leaveTeam(leavingTeamId, $user.id)
+      leavingTeamId = null
+      leavingTeamName = ''
     } catch (e) {
-      alert('Failed to leave team: ' + e.message)
+      showToast('Failed to leave team: ' + e.message, 'error')
     }
   }
 
-  async function handleDeleteAccount() {
-    const confirmed = confirm(
-      'Are you sure you want to delete your account?\n\n' +
-      'This will permanently delete all your matches, squad, and data. This cannot be undone.'
-    )
-    if (!confirmed) return
-    const reconfirmed = confirm('Last warning — this is permanent. Delete account?')
-    if (!reconfirmed) return
+  function handleDeleteAccount() {
+    showDeleteAccountConfirm = true
+  }
 
+  async function doDeleteAccount() {
+    showDeleteAccountConfirm = false
     deletingAccount = true
     try {
       // Cancel Stripe subscription immediately (not at period end) before deleting
@@ -195,7 +215,7 @@
       await supabase.rpc('delete_own_account')
       await signOut()
     } catch (e) {
-      alert('Failed to delete account: ' + e.message)
+      showToast('Failed to delete account: ' + e.message, 'error')
       deletingAccount = false
     }
   }
@@ -990,6 +1010,50 @@
   </div>
 
 </div>
+
+{#if showCancelSubConfirm}
+  <ConfirmModal
+    title="Cancel your subscription?"
+    message="You'll keep access until the end of your current billing period."
+    confirmLabel="Cancel subscription"
+    confirmStyle="danger"
+    onConfirm={doCancelSub}
+    onCancel={() => showCancelSubConfirm = false}
+  />
+{/if}
+
+{#if showDeleteTeamConfirm}
+  <ConfirmModal
+    title="Delete this team?"
+    message="Coaches linked to it will lose access."
+    confirmLabel="Delete Team"
+    confirmStyle="danger"
+    onConfirm={doDeleteTeam}
+    onCancel={() => showDeleteTeamConfirm = false}
+  />
+{/if}
+
+{#if showLeaveTeamConfirm}
+  <ConfirmModal
+    title="Leave {leavingTeamName}?"
+    message="You'll lose access to this team's live sessions."
+    confirmLabel="Leave Team"
+    confirmStyle="danger"
+    onConfirm={doLeaveTeam}
+    onCancel={() => showLeaveTeamConfirm = false}
+  />
+{/if}
+
+{#if showDeleteAccountConfirm}
+  <ConfirmModal
+    title="Delete your account?"
+    message="This will permanently delete all your matches, squad, and data. This cannot be undone."
+    confirmLabel="Delete Account"
+    confirmStyle="danger"
+    onConfirm={doDeleteAccount}
+    onCancel={() => showDeleteAccountConfirm = false}
+  />
+{/if}
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 0; padding-bottom: 2rem; }
