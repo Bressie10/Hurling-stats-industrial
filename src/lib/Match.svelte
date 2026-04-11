@@ -1005,8 +1005,8 @@
             <rect x="256" y="60" width="40" height="80" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
             <rect x="278" y="78" width="18" height="44" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
             <!-- End labels -->
-            <text x="75" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="bold" opacity="0.9">DB END</text>
-            <text x="225" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="bold" opacity="0.9">{opposition.slice(0,8).toUpperCase()} END</text>
+            <text x="75" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()} END</text>
+            <text x="225" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="bold" opacity="0.9">{(opposition || 'Opposition').slice(0,8).toUpperCase()} END</text>
             <!-- Tap hint -->
             <text x="150" y="108" text-anchor="middle" fill="white" font-size="10" opacity="0.5">Tap where it happened</text>
           </svg>
@@ -1201,8 +1201,8 @@
               <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
               <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
               <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-              <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">DB END</text>
-              <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">OPP END</text>
+              <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()}</text>
+              <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{(opposition || 'Opposition').slice(0,8).toUpperCase()}</text>
             </svg>
           </div>
           <div class="step-nav">
@@ -1444,8 +1444,8 @@
                 <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
                 <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
                 <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-                <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">DB END</text>
-                <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">OPP END</text>
+                <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()}</text>
+                <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{(opposition || 'Opposition').slice(0,8).toUpperCase()}</text>
               </svg>
             </div>
             {#if htPuckoutZoneFilter}

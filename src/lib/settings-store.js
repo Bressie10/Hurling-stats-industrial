@@ -4,7 +4,7 @@ const SETTINGS_KEY = 'doora-settings'
 
 const defaults = {
   // Team
-  teamName: 'Doora Barefield',
+  teamName: 'GAAstat',
 
   // Match setup fields
   showVenueField: true,
