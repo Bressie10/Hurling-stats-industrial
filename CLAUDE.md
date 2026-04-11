@@ -35,8 +35,10 @@ grounds with no internet.
 ```
 hurling-stats-industrial/
 ├── static/                           # Public static assets (was public/ in Vite)
-│   ├── doora-barefield.png           # Club crest
+│   ├── doora-barefield.png           # Club crest (legacy; kept for any existing references)
 │   ├── favicon.svg
+│   ├── gaastat-icon.svg              # App icon — used in LpNav logo mark
+│   ├── gaastat-logo.svg              # Full logo lockup
 │   ├── manifest.json                 # PWA manifest
 │   ├── robots.txt
 │   └── sw.js                         # Service worker
@@ -289,6 +291,8 @@ Two views toggled by a pill toggle in the header: **List** and **Pitch**.
 ### List view
 Standard editable table of all squad players (name, jersey number, position dropdown). Starters and Subs shown in separate sections. "Add Player" dashed button at the bottom. Full-width Save button.
 
+Position values use full GAA names: `'Goalkeeper'`, `'Right Corner Back'`, `'Full Back'`, `'Left Corner Back'`, `'Right Half Back'`, `'Centre Back'`, `'Left Half Back'`, `'Midfield'`, `'Right Half Forward'`, `'Centre Forward'`, `'Left Half Forward'`, `'Right Corner Forward'`, `'Full Forward'`, `'Left Corner Forward'`, `'Sub'`. The `SLOT_POSITION` map and `defaultSquad` in `Squad.svelte` use these same strings — never revert to the old abbreviations (`GK`, `FB`, etc.).
+
 ### Pitch view
 Visual GAA pitch with 15 position slots laid out in the correct formation:
 
@@ -398,7 +402,7 @@ All data shown is **live current data** — not a snapshot. The panel always ref
 - [x] Settings rework — auto-save on every change (no Save button), per-stat tracking toggles to hide unused stats, period count management (add/remove periods beyond H1/H2)
 - [x] SVG icons — all emojis replaced with inline SVG icons throughout the entire app for consistent cross-platform rendering (no emoji font dependency)
 - [x] Club colour picker — Settings has 8 GAA county presets + custom colour input; primary colour applied globally via CSS custom properties at runtime
-- [x] Dynamic team name — `document.title` and nav brand name reflect `settingsStore.teamName`; scoreboard labels and match setup hero also use it
+- [x] Dynamic team name — `document.title` and nav brand name reflect `settingsStore.teamName`; scoreboard labels, match setup hero, and pitch end labels also use it. Default is `'GAAstat'` (was `'Doora Barefield'`). Pitch end labels in Match.svelte show `settingsStore.teamName` (left/own end) and `opposition` (right/opp end) — never hardcoded.
 - [x] Dark mode removed — app is light-only; `[data-theme="dark"]` block removed from `app.css`
 - [x] Squad pitch view — List/Pitch toggle on Squad page; visual GAA formation with 15 slots; tap to assign players, inline new-player form, removable sub chips, reactive `$: slotMap` driving display
 - [x] Lineup auto-populated on match start — `Match.svelte` builds `lineup` from squad jersey numbers silently; saved with match for PDF export; no interactive builder on setup screen
