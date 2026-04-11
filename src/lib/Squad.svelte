@@ -16,15 +16,32 @@
   let addingNewPlayer = $state(false)   // inline "new player" form inside the slot modal
   let newPlayerName = $state('')        // bound to the new player name input
 
-  const positions = ['GK', 'FB', 'HB', 'MF', 'HF', 'FF', 'Sub']
+  const positions = [
+    'Goalkeeper',
+    'Right Corner Back',
+    'Full Back',
+    'Left Corner Back',
+    'Right Half Back',
+    'Centre Back',
+    'Left Half Back',
+    'Midfield',
+    'Right Half Forward',
+    'Centre Forward',
+    'Left Half Forward',
+    'Right Corner Forward',
+    'Full Forward',
+    'Left Corner Forward',
+    'Sub'
+  ]
 
   // Maps jersey number → GAA position category
   const SLOT_POSITION = {
-    1:'GK', 2:'FB',3:'FB',4:'FB',
-    5:'HB',6:'HB',7:'HB',
-    8:'MF',9:'MF',
-    10:'HF',11:'HF',12:'HF',
-    13:'FF',14:'FF',15:'FF'
+    1:'Goalkeeper',
+    2:'Right Corner Back', 3:'Full Back', 4:'Left Corner Back',
+    5:'Right Half Back', 6:'Centre Back', 7:'Left Half Back',
+    8:'Midfield', 9:'Midfield',
+    10:'Right Half Forward', 11:'Centre Forward', 12:'Left Half Forward',
+    13:'Right Corner Forward', 14:'Full Forward', 15:'Left Corner Forward'
   }
 
   // Short display labels for each slot
@@ -45,7 +62,7 @@
     name: '',
     number: i + 1,
     position: i < 15
-      ? ['GK','FB','FB','FB','HB','HB','HB','MF','MF','HF','HF','HF','FF','FF','FF'][i]
+      ? ['Goalkeeper','Right Corner Back','Full Back','Left Corner Back','Right Half Back','Centre Back','Left Half Back','Midfield','Midfield','Right Half Forward','Centre Forward','Left Half Forward','Right Corner Forward','Full Forward','Left Corner Forward'][i]
       : 'Sub'
   }))
 
