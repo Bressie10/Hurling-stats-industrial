@@ -73,7 +73,7 @@ export async function syncToSupabase(userId) {
       }))
       const { error } = await supabase
         .from('squad')
-        .upsert(squadRows, { onConflict: 'id' })
+        .upsert(squadRows, { onConflict: 'id,user_id' })
       if (error) throw error
     }
 
