@@ -1101,19 +1101,14 @@
             <button
               class="outcome-btn won"
               class:selected={puckoutOutcome === 'won'}
-              onclick={() => puckoutOutcome = 'won'}
+              onclick={() => { puckoutOutcome = 'won'; puckoutStep = 2 }}
             >We Won</button>
             <button
               class="outcome-btn lost"
               class:selected={puckoutOutcome === 'lost'}
-              onclick={() => puckoutOutcome = 'lost'}
+              onclick={() => { puckoutOutcome = 'lost'; puckoutStep = 2 }}
             >They Won</button>
           </div>
-          <button
-            class="confirm-log-btn"
-            disabled={!puckoutOutcome}
-            onclick={() => puckoutStep = 2}
-          >Next</button>
           <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
         {:else if puckoutStep === 2}
@@ -1126,7 +1121,7 @@
               <button
                 class="player-btn"
                 class:selected-player={puckoutOurPlayer === label}
-                onclick={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
+                onclick={() => { puckoutOurPlayer = label; puckoutStep = 3 }}
               >
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1141,7 +1136,7 @@
                 <button
                   class="player-btn sub"
                   class:selected-player={puckoutOurPlayer === label}
-                  onclick={() => puckoutOurPlayer = puckoutOurPlayer === label ? null : label}
+                  onclick={() => { puckoutOurPlayer = label; puckoutStep = 3 }}
                 >
                   <span class="player-num">#{player.number}</span>
                   <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1151,9 +1146,7 @@
           {/if}
           <div class="step-nav">
             <button class="step-back-btn" onclick={() => puckoutStep = 1}>← Back</button>
-            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 3}>
-              {puckoutOurPlayer ? 'Next' : 'Skip'}
-            </button>
+            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 3}>Skip</button>
           </div>
           <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
@@ -1175,7 +1168,7 @@
                     stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
                     stroke-width={puckoutSection === zkey ? '2' : '0.5'}
                     style="cursor:pointer"
-                    onclick={() => puckoutSection = puckoutSection === zkey ? null : zkey}
+                    onclick={() => { puckoutSection = zkey; puckoutStep = 4 }}
                   />
                   <text
                     x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
@@ -1200,9 +1193,7 @@
           </div>
           <div class="step-nav">
             <button class="step-back-btn" onclick={() => puckoutStep = 2}>← Back</button>
-            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 4}>
-              {puckoutSection ? 'Next' : 'Skip'}
-            </button>
+            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 4}>Skip</button>
           </div>
           <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
@@ -1217,7 +1208,7 @@
               <button
                 class="opp-num-btn"
                 class:selected-player={puckoutOppPlayer === num}
-                onclick={() => puckoutOppPlayer = puckoutOppPlayer === num ? '' : num}
+                onclick={() => { puckoutOppPlayer = num; logPuckout() }}
               >{num}</button>
             {/each}
           </div>
@@ -1256,13 +1247,11 @@
               <button
                 class="opp-num-btn"
                 class:selected-player={oppScorePlayerNum === num}
-                onclick={() => oppScorePlayerNum = oppScorePlayerNum === num ? '' : num}
+                onclick={() => { oppScorePlayerNum = num; oppScoreStep = 2 }}
               >{num}</button>
             {/each}
           </div>
-          <button class="confirm-log-btn" style="margin-top:1rem" onclick={() => oppScoreStep = 2}>
-            {oppScorePlayerNum ? 'Next' : 'Skip'}
-          </button>
+          <button class="confirm-log-btn" style="margin-top:1rem" onclick={() => oppScoreStep = 2}>Skip</button>
           <button class="cancel-btn" onclick={() => showOppScoreModal = false}>Cancel</button>
 
         {:else if oppScoreStep === 2}
@@ -1275,7 +1264,7 @@
               <button
                 class="player-btn"
                 class:selected-player={oppScoreMarker === label}
-                onclick={() => oppScoreMarker = oppScoreMarker === label ? null : label}
+                onclick={() => { oppScoreMarker = label; confirmOppScore() }}
               >
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -1290,7 +1279,7 @@
                 <button
                   class="player-btn sub"
                   class:selected-player={oppScoreMarker === label}
-                  onclick={() => oppScoreMarker = oppScoreMarker === label ? null : label}
+                  onclick={() => { oppScoreMarker = label; confirmOppScore() }}
                 >
                   <span class="player-num">#{player.number}</span>
                   <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
