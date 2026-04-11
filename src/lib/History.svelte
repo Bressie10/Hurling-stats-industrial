@@ -199,15 +199,9 @@
       // PAGE 1 — Header + Match Summary + Player Stats
       // ══════════════════════════════════════════════════════════
 
-      // Header: text logo left ("GAA" lime bold + "stat" dark regular), club name + fixture right
-      doc.setFontSize(20)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor('#A8E63D')
-      doc.text('GAA', M, y + 8)
-      const gaaW = doc.getTextWidth('GAA')
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor('#111111')
-      doc.text('stat', M + gaaW, y + 8)
+      // Header: lime accent bar left, club name + fixture right
+      doc.setFillColor('#A8E63D')
+      doc.rect(M, y, 3, 14, 'F')
 
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(14)
@@ -397,22 +391,24 @@
       // ══════════════════════════════════════════════════════════
       doc.addPage(); y = M
 
-      const pitchSvgEls = document.querySelectorAll('.print-pitch-svg')
+      const shotsSvgEl = document.querySelector('.print-pitch-shots')
+      const actionsSvgEl = document.querySelector('.print-pitch-actions')
 
-      if (printShotEvents.length > 0 && pitchSvgEls[0]) {
+      if (printShotEvents.length > 0 && shotsSvgEl) {
         sectionTitle('Shots Map — Points, Goals & Wides')
-        const cap = await captureEl(pitchSvgEls[0])
+        const cap = await captureEl(shotsSvgEl)
         if (cap) {
           const imgH = (cap.h / cap.w) * CW
           checkPage(imgH + 4)
           doc.addImage(cap.dataUrl, 'PNG', M, y, CW, imgH)
           y += imgH + 8
         }
+        await new Promise(r => setTimeout(r, 500))
       }
 
-      if (printAllLocatedEvents.length > 0 && pitchSvgEls[1]) {
+      if (printAllLocatedEvents.length > 0 && actionsSvgEl) {
         sectionTitle(`All Actions Map (${printAllLocatedEvents.length} events)`)
-        const cap = await captureEl(pitchSvgEls[1])
+        const cap = await captureEl(actionsSvgEl)
         if (cap) {
           const imgH = (cap.h / cap.w) * CW
           checkPage(imgH + 4)
@@ -1129,7 +1125,7 @@
           <span class="pm-legend"><span class="pm-dot" style="background:#2d7a2d"></span> Point / Goal</span>
           <span class="pm-legend"><span class="pm-dot" style="background:#e53935"></span> Wide</span>
         </div>
-        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg" style="display: block; width: 100%; height: auto;">
+        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg print-pitch-shots" style="display: block; width: 100%; height: auto;">
           <rect width="500" height="320" fill="#2d7a2d" rx="6"/>
           {#each [0,1,2,3,4,5,6] as i}<rect x={i*72} y="0" width="36" height="320" fill="rgba(0,0,0,0.04)"/>{/each}
           <rect x="0" y="0" width="250" height="320" fill="rgba(0,0,0,0.07)" rx="6"/>
@@ -1168,7 +1164,7 @@
           <span class="pm-legend"><span class="pm-dot" style="background:#f57c00"></span> Free Won</span>
           <span class="pm-legend"><span class="pm-dot" style="background:#7B1FA2"></span> Other</span>
         </div>
-        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg" style="display: block; width: 100%; height: auto;">
+        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg print-pitch-actions" style="display: block; width: 100%; height: auto;">
           <rect width="500" height="320" fill="#2d7a2d" rx="6"/>
           {#each [0,1,2,3,4,5,6] as i}<rect x={i*72} y="0" width="36" height="320" fill="rgba(0,0,0,0.04)"/>{/each}
           <rect x="0" y="0" width="250" height="320" fill="rgba(0,0,0,0.07)" rx="6"/>
