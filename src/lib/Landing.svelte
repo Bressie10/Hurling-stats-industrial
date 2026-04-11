@@ -171,7 +171,7 @@
   })
 </script>
 
-<div class="lp">
+<div class="lp" class:banner-visible={showInstallBanner}>
   <!-- Noise overlay -->
   <div class="lp-noise"></div>
 
@@ -1254,7 +1254,7 @@
 
   /* ── HERO ─────────────────────────────────────────────────────────────── */
   .hero {
-    min-height: 100vh; padding-top: 68px;
+    min-height: 100vh; padding-top: calc(68px + var(--banner-h, 0px));
     position: relative; display: grid;
     grid-template-columns: 1fr 1fr;
     align-items: center; overflow: hidden;
@@ -1980,16 +1980,22 @@
   }
 
   /* ── PWA install banner ────────────────────────────────────────────── */
+  .lp { --banner-h: 0px; }
+
+  :global(.lp .lp-nav) { top: var(--banner-h, 0px); }
+
   .install-banner {
-    display: none; /* hidden on desktop */
+    display: none; /* shown via @media below */
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 201;
     align-items: center;
     gap: 10px;
     padding: 12px 16px;
+    min-height: 44px;
     background: #1A1A1A;
     border-bottom: 1px solid #2E2E2E;
-    width: 100%;
     box-sizing: border-box;
-    position: relative;
   }
   .install-banner-icon { flex-shrink: 0; }
   .install-banner-text {
@@ -2024,5 +2030,6 @@
   }
   @media (max-width: 1024px) {
     .install-banner { display: flex; }
+    .lp.banner-visible { --banner-h: 44px; }
   }
 </style>
