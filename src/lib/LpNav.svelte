@@ -33,7 +33,7 @@
 
   <!-- Logo -->
   <button class="nav-logo" on:click={() => nav('home')}>
-    <div class="nav-logo-mark">G</div>
+    <img src="/gaastat-icon.svg" alt="GAAstat" class="nav-logo-mark" />
     <span class="nav-logo-text">GAA <span>Stats</span></span>
   </button>
 
@@ -296,10 +296,10 @@
     text-decoration: none; flex-shrink: 0;
   }
   .nav-logo-mark {
-    width: 34px; height: 34px; background: var(--lp-lime);
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    font-family: var(--lp-font-head); font-size: 17px; color: #05080F; letter-spacing: 0;
-    font-weight: 900;
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: block;
+    object-fit: contain;
   }
   .nav-logo-text {
     font-family: var(--lp-font-body); font-size: 15px; font-weight: 700;
