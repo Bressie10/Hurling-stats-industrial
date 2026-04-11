@@ -86,7 +86,7 @@
   // on the browser's task queue even after the component is gone.
   onDestroy(() => {
     if (!saved && !saving && !loading) {
-      saveSquad(players).catch(e => console.warn('Squad auto-save on destroy failed:', e))
+      saveSquad($state.snapshot(players)).catch(e => console.warn('Squad auto-save on destroy failed:', e))
     }
   })
 
@@ -95,7 +95,7 @@
     saving = true
     saveError = false
     try {
-      await saveSquad(players)
+      await saveSquad($state.snapshot(players))
       saved = true
       setTimeout(() => { saved = false }, 3000)
     } catch (e) {
