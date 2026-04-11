@@ -13,11 +13,12 @@ PWA for GAA coaches to track hurling match stats in real time. Coaches log stats
 | Local storage | IndexedDB via `idb` |
 | Cloud sync | Supabase (PostgreSQL + Auth) |
 | Charts | Chart.js |
+| PDF export | jsPDF 4.x + html2canvas 1.4.x |
 | Styling | Scoped CSS inside Svelte components |
 | PWA | `sw.js` + `manifest.json` in `static/` |
 | Deployment | Vercel |
 
-**Svelte 5 legacy mode:** Uses `let`, `$:`, `on:click` — NOT runes (`$state`, `$derived`, `$effect`). Do not mix rune syntax.
+**Svelte 5 mode — mixed:** Most components use legacy mode (`let`, `$:`, `on:click`). `History.svelte` has been migrated to runes (`$state`, `$derived`, `$props`). Do not mix rune and legacy syntax within a single file.
 
 **SvelteKit:** All routes set `export const ssr = false` (CSR-only). Static assets in `static/` (not `public/`). Navigation via `goto()` from `$app/navigation`.
 
@@ -177,6 +178,15 @@ Uses `timerStartedAt = Date.now()` (wall-clock). On restore: `elapsed = floor((D
 
 ### Lineup
 `Match.svelte` auto-populates `lineup` (slot → player ID) from squad jersey numbers when match starts. Saved with match for PDF export. No interactive lineup builder on setup screen.
+
+### PDF export (`History.svelte`)
+`generatePDF()` uses **jsPDF** (A4 portrait, 15mm margins) + **html2canvas** to produce a 4-page report:
+- **Page 1:** Logo header → lime `#A8E63D` divider → dark result block → player stats table
+- **Page 2:** Puckout summary → by-player table → opp winners → zone breakdown → zone heatmap (html2canvas of `.print-zone-svg`, XMLSerializer fallback)
+- **Page 3:** Shots map + all-actions map (html2canvas of `.print-pitch-svg` elements) → scoring timeline
+- **Page 4:** Top performers → full event log
+
+The `.print-only` sections in the template must stay — their SVG elements need to be in the DOM for capture. `window.print()` and all `@media print` CSS have been removed. Filename: `ClubName_vs_Opp_YYYY-MM-DD.pdf`.
 
 ### Match screen
 `screen` variable: `'setup'` | `'match'` | `'stats'`. Quick View Stats (Stats button) keeps timer running. Accordions: puckouts, conceded, players, subs.
