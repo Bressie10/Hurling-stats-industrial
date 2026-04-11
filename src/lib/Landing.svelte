@@ -16,6 +16,24 @@
   let selectedPersonalPlan = null // null | 'free' | 'pro'
   let selectedClubPlan = null     // null | 'club' | 'club_pro'
 
+  // PWA install banner
+  let deferredPrompt = null
+  let showInstallBanner = false
+  let isIosBanner = false
+
+  function dismissBanner() {
+    showInstallBanner = false
+    localStorage.setItem('gaastat_install_dismissed', '1')
+  }
+
+  async function triggerInstall() {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    await deferredPrompt.userChoice
+    deferredPrompt = null
+    showInstallBanner = false
+  }
+
   async function handleLogin() {
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
@@ -75,6 +93,24 @@
   }
 
   onMount(() => {
+    // PWA install banner detection
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone
+    const dismissed = localStorage.getItem('gaastat_install_dismissed')
+    if (!isStandalone && !dismissed) {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+      if (isIos && isSafari) {
+        isIosBanner = true
+        showInstallBanner = true
+      }
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault()
+        deferredPrompt = e
+        isIosBanner = false
+        showInstallBanner = true
+      }, { once: true })
+    }
+
     // Scroll reveal
     const revealEls = document.querySelectorAll('.lp .reveal')
     const io = new IntersectionObserver((entries) => {
@@ -138,6 +174,24 @@
 <div class="lp">
   <!-- Noise overlay -->
   <div class="lp-noise"></div>
+
+  {#if showInstallBanner}
+    <div class="install-banner">
+      {#if isIosBanner}
+        <svg class="install-banner-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <rect x="3" y="3" width="12" height="12" rx="2" stroke="#A8E63D" stroke-width="1.5"/>
+          <path d="M9 3V10M6 6l3-3 3 3" stroke="#A8E63D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="install-banner-text">Install GAAstat — tap the <svg class="ios-share-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-label="Share"><rect x="2" y="5" width="10" height="8" rx="1.5" stroke="#A8E63D" stroke-width="1.3"/><path d="M7 1v7M4.5 3.5L7 1l2.5 2.5" stroke="#A8E63D" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Share button then 'Add to Home Screen'</span>
+      {:else}
+        <span class="install-banner-text">Install GAAstat for the best offline experience</span>
+        <button class="install-banner-btn" on:click={triggerInstall}>Install App</button>
+      {/if}
+      <button class="install-banner-close" on:click={dismissBanner} aria-label="Dismiss">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="#666" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  {/if}
 
   <LpNav {onNavigate} currentPage="home" />
 
@@ -1923,5 +1977,52 @@
     .club-inner { grid-template-columns: 1fr; gap: 40px; }
     .faq-section { padding: 60px 24px; }
     .faq-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── PWA install banner ────────────────────────────────────────────── */
+  .install-banner {
+    display: none; /* hidden on desktop */
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #1A1A1A;
+    border-bottom: 1px solid #2E2E2E;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .install-banner-icon { flex-shrink: 0; }
+  .install-banner-text {
+    flex: 1;
+    color: #fff;
+    font-size: 13px;
+    font-family: var(--lp-font-body, sans-serif);
+    line-height: 1.4;
+  }
+  .ios-share-icon { vertical-align: middle; margin: 0 2px; }
+  .install-banner-btn {
+    flex-shrink: 0;
+    background: #A8E63D;
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-family: var(--lp-font-body, sans-serif);
+  }
+  .install-banner-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-left: 4px;
+  }
+  @media (max-width: 1024px) {
+    .install-banner { display: flex; }
   }
 </style>
