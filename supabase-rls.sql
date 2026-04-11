@@ -34,6 +34,11 @@ drop policy if exists "clubs: owner insert"   on clubs;
 drop policy if exists "clubs: owner update"   on clubs;
 drop policy if exists "clubs: join by code"   on clubs;
 
+-- Owner can read their own club (needed so INSERT...RETURNING works before club_members exists)
+create policy "clubs: owner read"
+  on clubs for select
+  using (owner_id = auth.uid());
+
 -- Members can read their own club
 create policy "clubs: member read"
   on clubs for select
