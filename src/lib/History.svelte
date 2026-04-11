@@ -5,6 +5,8 @@
   import { user } from './auth-store.js'
   import { deleteMatchFromCloud } from './sync.js'
   import Upgrade from './Upgrade.svelte'
+  import { jsPDF } from 'jspdf'
+  import html2canvas from 'html2canvas'
 
   const { proAccess = false } = $props()
 
@@ -14,6 +16,7 @@
   let search = $state('')
   let filterResult = $state('all')
   let selectedMatch = $state(null)
+  let pdfGenerating = $state(false)
 
   onMount(async () => {
     matches = await loadMatches()
@@ -82,8 +85,417 @@
     return `${s.goals}-${String(s.points).padStart(2, '0')}`
   }
 
-  function printReport() {
-    window.print()
+  async function generatePDF() {
+    pdfGenerating = true
+    try {
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+
+      const M = 15         // margin
+      const PW = 210       // page width
+      const PH = 297       // page height
+      const CW = PW - M * 2  // content width = 180
+      let y = M
+
+      // ── Helpers ────────────────────────────────────────────────
+
+      function checkPage(need) {
+        if (y + need > PH - M) { doc.addPage(); y = M }
+      }
+
+      function sectionTitle(text) {
+        checkPage(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8)
+        doc.setTextColor('#A8E63D')
+        doc.text(text.toUpperCase(), M, y + 4)
+        y += 8
+      }
+
+      function drawTableHeader(cols, widths) {
+        checkPage(8)
+        doc.setFillColor('#f5f5f5')
+        doc.rect(M, y, CW, 7, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8)
+        doc.setTextColor('#555555')
+        let x = M
+        cols.forEach((col, i) => { doc.text(col, x + 2, y + 5); x += widths[i] })
+        y += 7
+      }
+
+      function drawTableRow(cells, widths, rowIdx) {
+        checkPage(7)
+        doc.setFillColor(rowIdx % 2 === 0 ? '#ffffff' : '#f9f9f9')
+        doc.rect(M, y, CW, 7, 'F')
+        doc.setDrawColor('#eeeeee')
+        doc.setLineWidth(0.3)
+        doc.line(M, y + 7, M + CW, y + 7)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor('#111111')
+        let x = M
+        cells.forEach((cell, i) => {
+          const s = String(cell ?? '—')
+          doc.text(s.length > 32 ? s.slice(0, 30) + '…' : s, x + 2, y + 5)
+          x += widths[i]
+        })
+        y += 7
+      }
+
+      // Capture an SVG or canvas element that may be inside .print-only (hidden)
+      // Uses html2canvas with fallback to XMLSerializer for SVG
+      async function captureEl(el) {
+        if (!el) return null
+        const shown = []
+        let cur = el.parentElement
+        while (cur) {
+          if (cur.classList.contains('print-only')) {
+            shown.push(cur)
+            cur.style.setProperty('display', 'block', 'important')
+          }
+          cur = cur.parentElement
+        }
+        await new Promise(r => setTimeout(r, 60))
+
+        let result = null
+        try {
+          const canvas = await html2canvas(el, {
+            backgroundColor: null, scale: 2, useCORS: true, logging: false
+          })
+          result = { dataUrl: canvas.toDataURL('image/png'), w: canvas.width, h: canvas.height }
+        } catch(e) {
+          // Fallback: XMLSerializer (reliable for SVG elements)
+          try {
+            const vb = (el.getAttribute('viewBox') || '0 0 500 320').split(' ').map(Number)
+            const [,, vw, vh] = vb
+            const serial = new XMLSerializer()
+            const svgStr = serial.serializeToString(el)
+            const url = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' }))
+            result = await new Promise((res, rej) => {
+              const img = new Image()
+              img.onload = () => {
+                const c = document.createElement('canvas')
+                c.width = vw * 2; c.height = vh * 2
+                c.getContext('2d').drawImage(img, 0, 0, vw * 2, vh * 2)
+                URL.revokeObjectURL(url)
+                res({ dataUrl: c.toDataURL('image/png'), w: vw * 2, h: vh * 2 })
+              }
+              img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img load')) }
+              img.src = url
+            })
+          } catch(e2) {
+            console.warn('SVG capture failed:', e2)
+          }
+        } finally {
+          shown.forEach(el2 => el2.style.removeProperty('display'))
+        }
+        return result
+      }
+
+      // ── Logo ────────────────────────────────────────────────────
+      let logoData = null
+      try {
+        const resp = await fetch('/gaastat-logo.svg')
+        const svgText = await resp.text()
+        const vbMatch = svgText.match(/viewBox="([^"]+)"/)
+        let logoAspect = 4
+        if (vbMatch) {
+          const parts = vbMatch[1].split(/\s+/).map(Number)
+          if (parts.length >= 4 && parts[3]) logoAspect = parts[2] / parts[3]
+        }
+        const blob = new Blob([svgText], { type: 'image/svg+xml' })
+        const url = URL.createObjectURL(blob)
+        const H = 80, W = Math.round(H * logoAspect)
+        logoData = await new Promise((res, rej) => {
+          const img = new Image()
+          img.onload = () => {
+            const c = document.createElement('canvas')
+            c.width = W; c.height = H
+            c.getContext('2d').drawImage(img, 0, 0, W, H)
+            URL.revokeObjectURL(url)
+            res({ dataUrl: c.toDataURL('image/png'), aspect: W / H })
+          }
+          img.onerror = () => { URL.revokeObjectURL(url); rej() }
+          img.src = url
+        })
+      } catch(e) { console.warn('Logo load failed', e) }
+
+      const clubName = $settingsStore.teamName || 'GAAstat'
+      const opposition = selectedMatch.opposition || 'Opposition'
+
+      // ══════════════════════════════════════════════════════════
+      // PAGE 1 — Header + Match Summary + Player Stats
+      // ══════════════════════════════════════════════════════════
+
+      // Header: logo left, club name + fixture right
+      if (logoData) {
+        const lH = 12, lW = lH * logoData.aspect
+        doc.addImage(logoData.dataUrl, 'PNG', M, y, lW, lH)
+      }
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.setTextColor('#111111')
+      doc.text(clubName, PW - M, y + 4, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor('#555555')
+      const fixLine = `vs ${opposition} · ${selectedMatch.date || ''}${selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}`
+      doc.text(fixLine, PW - M, y + 11, { align: 'right' })
+      y += 18
+
+      // Lime green divider
+      doc.setDrawColor('#A8E63D')
+      doc.setLineWidth(1)
+      doc.line(M, y, PW - M, y)
+      y += 7
+
+      // Match result block — dark background, white text
+      const result = getResult(selectedMatch)
+      const homeScore = formatScore(selectedMatch.score?.home)
+      const awayScore = formatScore(selectedMatch.score?.away)
+
+      doc.setFillColor('#111111')
+      doc.roundedRect(M, y, CW, 22, 3, 3, 'F')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(255, 255, 255)
+      doc.text(clubName, M + 5, y + 8)
+      doc.setFontSize(15)
+      doc.text(homeScore, M + 5, y + 17)
+
+      // W / D / L badge
+      const [br, bg, bb] = result === 'W' ? [45, 122, 45] : result === 'L' ? [198, 40, 40] : [100, 100, 100]
+      doc.setFillColor(br, bg, bb)
+      doc.circle(PW / 2, y + 11, 7, 'F')
+      doc.setFontSize(9)
+      doc.setTextColor(255, 255, 255)
+      doc.text(result, PW / 2, y + 14, { align: 'center' })
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(255, 255, 255)
+      doc.text(opposition, PW - M - 5, y + 8, { align: 'right' })
+      doc.setFontSize(15)
+      doc.text(awayScore, PW - M - 5, y + 17, { align: 'right' })
+
+      y += 28
+
+      // Player stats table
+      sectionTitle('Player Stats')
+
+      const nameW = 55, scoreW = 18
+      const statColW = allStatCols.length > 0 ? Math.min(16, (CW - nameW - scoreW) / allStatCols.length) : 0
+      const colHdrs = ['Player', 'Score', ...allStatCols]
+      const colWs = [nameW, scoreW, ...allStatCols.map(() => statColW)]
+
+      drawTableHeader(colHdrs, colWs)
+
+      let rIdx = 0
+      ;(selectedMatch.players || []).forEach(p => {
+        const s = selectedMatch.stats?.[p.id] || {}
+        if (!Object.values(s).some(v => v > 0)) return
+        const sc = scoringContrib(s)
+        drawTableRow(
+          [`#${p.number} ${p.name || 'Player'}`, sc > 0 ? sc + 'pts' : '—', ...allStatCols.map(c => s[c] || 0)],
+          colWs, rIdx++
+        )
+      })
+
+      // Totals row
+      checkPage(7)
+      doc.setFillColor('#f0f0f0')
+      doc.rect(M, y, CW, 7, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor('#111111')
+      const tc = scoringContrib(teamTotals)
+      const totCells = ['Team Total', tc > 0 ? tc + 'pts' : '—', ...allStatCols.map(c => teamTotals[c] || 0)]
+      let tx = M
+      totCells.forEach((cell, i) => { doc.text(String(cell), tx + 2, y + 5); tx += colWs[i] })
+      y += 12
+
+      // ══════════════════════════════════════════════════════════
+      // PAGE 2 — Puckout Stats + Zone Breakdown + Heatmap
+      // ══════════════════════════════════════════════════════════
+      doc.addPage(); y = M
+
+      if (selectedMatch.puckouts?.length > 0) {
+        const pW = selectedMatch.puckouts.filter(p => p.outcome === 'won').length
+        const pT = selectedMatch.puckouts.length
+
+        sectionTitle('Puckout Stats')
+
+        // Summary numbers
+        checkPage(26)
+        doc.setFillColor('#f9f9f9')
+        doc.rect(M, y, CW, 22, 'F')
+        const sumItems = [
+          { label: 'Won',      val: String(pW),                              color: [45, 122, 45]  },
+          { label: 'Lost',     val: String(pT - pW),                         color: [229, 57, 53]  },
+          { label: 'Total',    val: String(pT),                              color: [17, 17, 17]   },
+          { label: 'Win Rate', val: Math.round((pW / pT) * 100) + '%',       color: [17, 17, 17]   }
+        ]
+        const iW = CW / 4
+        sumItems.forEach((item, i) => {
+          const ix = M + i * iW + iW / 2
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(18)
+          doc.setTextColor(...item.color)
+          doc.text(item.val, ix, y + 13, { align: 'center' })
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(8)
+          doc.setTextColor('#555555')
+          doc.text(item.label, ix, y + 20, { align: 'center' })
+        })
+        y += 26
+
+        // Puckout by our player
+        const byP = (() => {
+          const m = {}
+          selectedMatch.puckouts.forEach(p => {
+            const k = p.ourPlayer || 'Unknown'
+            if (!m[k]) m[k] = { name: k, won: 0, lost: 0 }
+            if (p.outcome === 'won') m[k].won++; else m[k].lost++
+          })
+          return Object.values(m).sort((a, b) => b.won - a.won)
+        })()
+
+        if (byP.length > 0) {
+          sectionTitle('Puckouts by Player')
+          drawTableHeader(['Player', 'Won', 'Lost', 'Total', 'Win %'], [80, 25, 25, 25, 25])
+          byP.forEach((r, i) => {
+            const t = r.won + r.lost
+            drawTableRow([r.name, r.won, r.lost, t, Math.round(r.won / t * 100) + '%'], [80, 25, 25, 25, 25], i)
+          })
+          y += 6
+        }
+
+        // Opposition winners
+        const byO = (() => {
+          const m = {}
+          selectedMatch.puckouts.filter(p => p.outcome === 'lost' && p.oppPlayer).forEach(p => {
+            const k = '#' + p.oppPlayer
+            if (!m[k]) m[k] = { num: k, count: 0 }
+            m[k].count++
+          })
+          return Object.values(m).sort((a, b) => b.count - a.count)
+        })()
+
+        if (byO.length > 0) {
+          sectionTitle('Opposition Winners (Lost Puckouts)')
+          drawTableHeader(['Player', 'Puckouts Won'], [90, 90])
+          byO.forEach((r, i) => drawTableRow([r.num, r.count], [90, 90], i))
+          y += 6
+        }
+
+        // Zone breakdown table
+        if (puckoutByZone.length > 0) {
+          sectionTitle('Zone Breakdown')
+          drawTableHeader(['Zone', 'Won', 'Lost', 'Total', 'Win %'], [76, 26, 26, 26, 26])
+          puckoutByZone.forEach((z, i) => {
+            const zt = z.won + z.lost
+            drawTableRow([formatZoneLabel(z.zone), z.won, z.lost, zt, Math.round(z.won / zt * 100) + '%'], [76, 26, 26, 26, 26], i)
+          })
+          y += 6
+        }
+
+        // Puckout zone heatmap — html2canvas capture of existing SVG
+        const zoneSvgEl = document.querySelector('.print-zone-svg')
+        if (zoneSvgEl) {
+          sectionTitle('Puckout Zone Heatmap')
+          const cap = await captureEl(zoneSvgEl)
+          if (cap) {
+            const imgH = (cap.h / cap.w) * CW
+            checkPage(imgH + 4)
+            doc.addImage(cap.dataUrl, 'PNG', M, y, CW, imgH)
+            y += imgH + 8
+          }
+        }
+      }
+
+      // ══════════════════════════════════════════════════════════
+      // PAGE 3 — Shots Map + All Actions Map + Scoring Timeline
+      // ══════════════════════════════════════════════════════════
+      doc.addPage(); y = M
+
+      const pitchSvgEls = document.querySelectorAll('.print-pitch-svg')
+
+      if (printShotEvents.length > 0 && pitchSvgEls[0]) {
+        sectionTitle('Shots Map — Points, Goals & Wides')
+        const cap = await captureEl(pitchSvgEls[0])
+        if (cap) {
+          const imgH = (cap.h / cap.w) * CW
+          checkPage(imgH + 4)
+          doc.addImage(cap.dataUrl, 'PNG', M, y, CW, imgH)
+          y += imgH + 8
+        }
+      }
+
+      if (printAllLocatedEvents.length > 0 && pitchSvgEls[1]) {
+        sectionTitle(`All Actions Map (${printAllLocatedEvents.length} events)`)
+        const cap = await captureEl(pitchSvgEls[1])
+        if (cap) {
+          const imgH = (cap.h / cap.w) * CW
+          checkPage(imgH + 4)
+          doc.addImage(cap.dataUrl, 'PNG', M, y, CW, imgH)
+          y += imgH + 8
+        }
+      }
+
+      if (scoringTimeline.length > 0) {
+        sectionTitle('Scoring Timeline')
+        drawTableHeader(
+          ['Time', 'Period', 'Team', 'Player', 'Score', 'Running Score'],
+          [18, 20, 38, 42, 18, 44]
+        )
+        scoringTimeline.forEach((e, i) => {
+          const tn = e.team === 'home' ? clubName : opposition
+          const pn = e.name + (e.team === 'away' && e.marker ? ` (${e.marker})` : '')
+          drawTableRow(
+            [e.time != null ? formatTime(e.time) : '—', e.period || '—', tn, pn, e.type, e.score],
+            [18, 20, 38, 42, 18, 44], i
+          )
+        })
+        y += 6
+      }
+
+      // ══════════════════════════════════════════════════════════
+      // PAGE 4 — Top Performers + Event Log
+      // ══════════════════════════════════════════════════════════
+      doc.addPage(); y = M
+
+      if (topPerformers.length > 0) {
+        sectionTitle('Top Performers per Stat')
+        drawTableHeader(['Stat', 'Top Player', 'Count', 'Team Total'], [50, 80, 22, 28])
+        topPerformers.forEach((r, i) =>
+          drawTableRow([r.stat, r.name, r.count, teamTotals[r.stat] || 0], [50, 80, 22, 28], i)
+        )
+        y += 8
+      }
+
+      if (fullEventLog.length > 0) {
+        sectionTitle(`Complete Event Log — ${fullEventLog.length} events`)
+        drawTableHeader(['Time', 'Period', 'Player', 'Stat', 'End'], [20, 25, 68, 42, 25])
+        fullEventLog.forEach((e, i) => {
+          const endTxt = e.end === 'db' ? 'DB End' : e.end === 'opposition' ? 'Opp End' : '—'
+          drawTableRow(
+            [e.time != null ? formatTime(e.time) : '—', e.period || '—', e.playerName, e.stat, endTxt],
+            [20, 25, 68, 42, 25], i
+          )
+        })
+      }
+
+      // ── Save ─────────────────────────────────────────────────
+      const fn = `${clubName.replace(/\s+/g, '_')}_vs_${opposition.replace(/\s+/g, '_')}_${selectedMatch.date || 'unknown'}.pdf`
+      doc.save(fn)
+
+    } catch(err) {
+      console.error('PDF generation failed:', err)
+      alert('PDF generation failed. Please try again.')
+    } finally {
+      pdfGenerating = false
+    }
   }
 
   function getTopScorer(m) {
@@ -288,9 +700,13 @@
     <div class="detail-header">
       <div class="detail-top-row">
         <button class="back-btn" data-print-hide onclick={() => selectedMatch = null}>← Back</button>
-        <button class="print-btn" data-print-hide onclick={printReport}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Print / Save PDF
+        <button class="print-btn" onclick={generatePDF} disabled={pdfGenerating}>
+          {#if pdfGenerating}
+            Generating…
+          {:else}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print / Save PDF
+          {/if}
         </button>
       </div>
       <div class="detail-title">vs {selectedMatch.opposition}</div>
@@ -1122,96 +1538,6 @@
   .tl-score { font-size: 12px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .tl-marker { font-size: 11px; color: var(--text-faint); }
 
-  @media print {
-    :global(nav) { display: none !important; }
-    :global([data-print-hide]) { display: none !important; }
-    :global(main) { padding: 0 !important; max-width: 100% !important; }
-    :global(body) { background: white !important; color: #111 !important; }
-
-    /* Header */
-    .print-header { display: block; padding-bottom: 1rem; margin-bottom: 1.5rem; border-bottom: 3px solid #A8E63D; }
-    .print-header-top { display: flex; align-items: center; gap: 16px; }
-    .print-logo { height: 48px; width: auto; }
-    .print-header-right { display: flex; flex-direction: column; gap: 4px; }
-    .print-club { font-size: 22px; font-weight: 800; color: #111; }
-    .print-fixture { font-size: 14px; color: #555; }
-
-    /* Layout */
-    .screen { gap: 16px; padding-bottom: 0; }
-    .print-only { display: block; }
-
-    /* Cards */
-    .card {
-      page-break-inside: avoid;
-      break-inside: avoid;
-      border: 1px solid #e0e0e0 !important;
-      border-radius: 8px !important;
-      background: white !important;
-      color: #111 !important;
-      padding: 16px !important;
-    }
-
-    /* Result card */
-    .result-card {
-      background: #111 !important;
-      color: white !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    /* Tables */
-    .stats-table { font-size: 12px; color: #111; }
-    .stats-table th { font-size: 11px; color: #555; background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .stats-table td { color: #111; border-bottom: 1px solid #eee !important; }
-    .table-wrap { overflow: visible; }
-    .print-table { width: 100%; }
-
-    /* Section titles */
-    .print-section-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #888;
-      margin-bottom: 10px;
-      display: block;
-      page-break-after: avoid;
-      break-after: avoid;
-    }
-
-    /* Print info grid */
-    .print-info-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .print-info-block { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; background: white; }
-    .print-info-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .print-info-table tr { border-bottom: 1px solid #f0f0f0; }
-    .print-info-table td { padding: 5px 0; color: #111; }
-    .pi-label { color: #888; width: 100px; font-weight: 600; }
-
-    /* Lineup */
-    .print-lineup-grid { display: flex; flex-direction: column; gap: 4px; }
-    .print-lineup-row { display: flex; gap: 6px; justify-content: center; }
-    .print-lineup-slot {
-      display: flex; flex-direction: column; align-items: center;
-      border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px;
-      min-width: 70px; background: #f9f9f9;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-    .print-lineup-pos { font-size: 9px; color: #A8E63D; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .print-lineup-poslabel { color: #bbb; }
-    .print-lineup-name { font-size: 11px; font-weight: 600; color: #111; text-align: center; margin-top: 2px; }
-
-    /* Timeline */
-    .timeline-home td { background: #f9fff5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .timeline-away td { background: #fff5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .tl-home { color: #2d7a2d; }
-    .tl-away { color: #c62828; }
-
-    /* Page breaks */
-    .print-only { page-break-inside: avoid; break-inside: avoid; }
-
-    /* Hide URL from print */
-    @page { margin: 1.5cm; }
-  }
 
   .result-card { background: #1a1a1a; border-radius: 14px; padding: 1.25rem; color: white; }
   .result-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
@@ -1311,17 +1637,6 @@
   .zlc.none { background: rgba(255,255,255,0.2); border: 1px solid #ccc; }
   .evt-badge { display: inline-block; color: white; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
 
-  @media print {
-    /* Pitch + zone SVGs */
-    .print-pitch-svg { width: 100%; height: auto; display: block; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .print-zone-svg { width: 100%; max-width: 420px; height: auto; display: block; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .print-map-section { page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; }
-    .print-map-legend-row { display: flex !important; }
-    .print-zone-legend { display: flex !important; }
-    .print-event-table { font-size: 10px; }
-    .print-event-table th, .print-event-table td { padding: 4px 6px; }
-    .evt-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
 
   @media (min-width: 600px) {
     .season-grid { grid-template-columns: repeat(6, 1fr); }
