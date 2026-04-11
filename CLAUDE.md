@@ -1,6 +1,6 @@
-# CLAUDE.md — Hurling Stats App
+# CLAUDE.md — GAAstat
 
-PWA for Doora Barefield GAA to track hurling match stats in real time. Coaches log stats during matches, view analytics, and sync to Supabase. Works fully offline at GAA grounds.
+PWA for GAA coaches to track hurling match stats in real time. Coaches log stats during matches, view analytics, and sync to Supabase. Works fully offline at GAA grounds.
 
 ---
 
@@ -183,6 +183,12 @@ Uses `timerStartedAt = Date.now()` (wall-clock). On restore: `elapsed = floor((D
 
 ---
 
+## Branding
+
+App name is **GAAstat** everywhere — in fallback strings, meta tags, legal pages, and marketing copy. Default `settingsStore.teamName` fallback is `'GAAstat'`. Club colour picker has been removed from Settings — `clubPrimaryColor` still exists in the store and is applied at runtime via `+layout.svelte`, but there is no UI to change it.
+
+---
+
 ## Things To Never Break
 
 - `clearAllData()` on login — prevents data bleed between coaches
@@ -193,9 +199,10 @@ Uses `timerStartedAt = Date.now()` (wall-clock). On restore: `elapsed = floor((D
 - `saveDraft()` on every state change — removing any call risks data loss
 - Silent auto-resume draft — no "Resume or Discard?" screen
 - `timerStartedAt` wall-clock — don't revert to counter
-- Logo path `doora-barefield.png` — use static-root path, never `/src/assets/`
+- Logo path `doora-barefield.png` — static-root path only, never `/src/assets/`
 - `export const ssr = false` / `prerender = false` on all routes
 - `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY` in env — never hardcode
+- `stopLive()` in `Match.svelte` — called inside `doFinishMatch()` **after** `saveMatch()` + `clearDraftMatch()` succeed, never before the confirm modal. Moving it back to `finishMatch()` would end the live session even if the user cancels.
 - `ourPlayer` + `oppPlayer` on puckouts — both needed for marking breakdowns
 - `$: slotMap` in Squad.svelte — must stay reactive declaration
 - `nextAvailableNumber()` — never `players.length + 1`
@@ -268,6 +275,16 @@ supabase functions deploy create-portal-session --no-verify-jwt
 **Secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 
 **Going live:** Switch Stripe to live mode → create products/prices → update price IDs in `create-checkout-session` and `stripe-webhook` → update secrets → redeploy.
+
+---
+
+## Database Notes
+
+### `live_sessions` foreign key
+`live_sessions.host_user_id` references `auth.users(id) ON DELETE CASCADE`. This was added manually — without it, deleting a user who has ever hosted a live session throws a FK violation. If you add new tables that reference `auth.users`, always add `ON DELETE CASCADE`.
+
+### `delete_own_account` RPC
+Called from `Settings.svelte → doDeleteAccount()`. It's a PostgreSQL function in Supabase that deletes the user's data and their `auth.users` entry. If it doesn't exist or is missing permissions, account deletion will fail with a database error.
 
 ---
 
