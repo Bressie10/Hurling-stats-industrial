@@ -276,8 +276,13 @@
     <!-- MATCH DETAIL VIEW -->
     <!-- Print-only report header (hidden on screen) -->
     <div class="print-header">
-      <div class="print-club">{$settingsStore.teamName || 'GAAstat'} — Match Report</div>
-      <div class="print-fixture">vs {selectedMatch.opposition} · {selectedMatch.date}{selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}</div>
+      <div class="print-header-top">
+        <img src="/gaastat-logo.svg" alt="GAAstat" class="print-logo">
+        <div class="print-header-right">
+          <div class="print-club">{$settingsStore.teamName || 'GAAstat'} — Match Report</div>
+          <div class="print-fixture">vs {selectedMatch.opposition} · {selectedMatch.date}{selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}</div>
+        </div>
+      </div>
     </div>
 
     <div class="detail-header">
@@ -716,7 +721,7 @@
           <span class="pm-legend"><span class="pm-dot" style="background:#2d7a2d"></span> Point / Goal</span>
           <span class="pm-legend"><span class="pm-dot" style="background:#e53935"></span> Wide</span>
         </div>
-        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg">
+        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg" style="display: block; width: 100%; height: auto;">
           <rect width="500" height="320" fill="#2d7a2d" rx="6"/>
           {#each [0,1,2,3,4,5,6] as i}<rect x={i*72} y="0" width="36" height="320" fill="rgba(0,0,0,0.04)"/>{/each}
           <rect x="0" y="0" width="250" height="320" fill="rgba(0,0,0,0.07)" rx="6"/>
@@ -755,7 +760,7 @@
           <span class="pm-legend"><span class="pm-dot" style="background:#f57c00"></span> Free Won</span>
           <span class="pm-legend"><span class="pm-dot" style="background:#7B1FA2"></span> Other</span>
         </div>
-        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg">
+        <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" class="print-pitch-svg" style="display: block; width: 100%; height: auto;">
           <rect width="500" height="320" fill="#2d7a2d" rx="6"/>
           {#each [0,1,2,3,4,5,6] as i}<rect x={i*72} y="0" width="36" height="320" fill="rgba(0,0,0,0.04)"/>{/each}
           <rect x="0" y="0" width="250" height="320" fill="rgba(0,0,0,0.07)" rx="6"/>
@@ -1121,54 +1126,91 @@
     :global(nav) { display: none !important; }
     :global([data-print-hide]) { display: none !important; }
     :global(main) { padding: 0 !important; max-width: 100% !important; }
-    .print-header { display: block; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 3px solid #1a1a1a; }
-    .print-club { font-size: 22px; font-weight: 800; }
-    .print-fixture { font-size: 14px; }
-    .screen { gap: 12px; padding-bottom: 0; }
+    :global(body) { background: white !important; color: #111 !important; }
+
+    /* Header */
+    .print-header { display: block; padding-bottom: 1rem; margin-bottom: 1.5rem; border-bottom: 3px solid #A8E63D; }
+    .print-header-top { display: flex; align-items: center; gap: 16px; }
+    .print-logo { height: 48px; width: auto; }
+    .print-header-right { display: flex; flex-direction: column; gap: 4px; }
+    .print-club { font-size: 22px; font-weight: 800; color: #111; }
+    .print-fixture { font-size: 14px; color: #555; }
+
+    /* Layout */
+    .screen { gap: 16px; padding-bottom: 0; }
     .print-only { display: block; }
 
-    /* Result card print fix */
-    .result-card { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Cards */
+    .card {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      border: 1px solid #e0e0e0 !important;
+      border-radius: 8px !important;
+      background: white !important;
+      color: #111 !important;
+      padding: 16px !important;
+    }
 
-    /* Season card print fix */
-    .season-card { background: #1a1a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Result card */
+    .result-card {
+      background: #111 !important;
+      color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
 
     /* Tables */
-    .stats-table { font-size: 11px; }
-    .stats-table th { font-size: 10px; }
+    .stats-table { font-size: 12px; color: #111; }
+    .stats-table th { font-size: 11px; color: #555; background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stats-table td { color: #111; border-bottom: 1px solid #eee !important; }
     .table-wrap { overflow: visible; }
     .print-table { width: 100%; }
 
-    /* Avoid breaks inside cards */
-    .card { page-break-inside: avoid; break-inside: avoid; border: 1px solid #ccc !important; }
-    .print-only { page-break-inside: avoid; break-inside: avoid; }
-    .print-section-title { page-break-after: avoid; break-after: avoid; }
+    /* Section titles */
+    .print-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 10px;
+      display: block;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
 
     /* Print info grid */
     .print-info-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .print-info-block { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
-    .print-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #666; margin-bottom: 8px; }
+    .print-info-block { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; background: white; }
     .print-info-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .print-info-table tr { border-bottom: 1px solid #f0f0f0; }
-    .print-info-table td { padding: 4px 0; }
+    .print-info-table td { padding: 5px 0; color: #111; }
     .pi-label { color: #888; width: 100px; font-weight: 600; }
 
-    /* Lineup grid */
+    /* Lineup */
     .print-lineup-grid { display: flex; flex-direction: column; gap: 4px; }
     .print-lineup-row { display: flex; gap: 6px; justify-content: center; }
-    .print-lineup-slot { display: flex; flex-direction: column; align-items: center; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; min-width: 60px; background: #f9f9f9; }
-    .print-lineup-pos { font-size: 9px; color: #888; font-weight: 700; }
+    .print-lineup-slot {
+      display: flex; flex-direction: column; align-items: center;
+      border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px;
+      min-width: 70px; background: #f9f9f9;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .print-lineup-pos { font-size: 9px; color: #A8E63D; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .print-lineup-poslabel { color: #bbb; }
-    .print-lineup-name { font-size: 10px; font-weight: 600; color: #333; text-align: center; margin-top: 1px; }
-
-    /* Period breakdown */
-    .print-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #555; margin-bottom: 6px; display: block; }
+    .print-lineup-name { font-size: 11px; font-weight: 600; color: #111; text-align: center; margin-top: 2px; }
 
     /* Timeline */
-    .timeline-home td { background: #f9fff5; }
-    .timeline-away td { background: #fff5f5; }
+    .timeline-home td { background: #f9fff5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .timeline-away td { background: #fff5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .tl-home { color: #2d7a2d; }
     .tl-away { color: #c62828; }
+
+    /* Page breaks */
+    .print-only { page-break-inside: avoid; break-inside: avoid; }
+
+    /* Hide URL from print */
+    @page { margin: 1.5cm; }
   }
 
   .result-card { background: #1a1a1a; border-radius: 14px; padding: 1.25rem; color: white; }
