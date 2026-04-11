@@ -99,7 +99,7 @@
       // ── Helpers ────────────────────────────────────────────────
 
       function checkPage(need) {
-        if (y + need > PH - M) { doc.addPage(); y = M }
+        if (y + need > PH - M - 14) { doc.addPage(); y = M }
       }
 
       function sectionTitle(text) {
@@ -192,34 +192,6 @@
         return result
       }
 
-      // ── Logo ────────────────────────────────────────────────────
-      let logoData = null
-      try {
-        const resp = await fetch('/gaastat-logo.svg')
-        const svgText = await resp.text()
-        const vbMatch = svgText.match(/viewBox="([^"]+)"/)
-        let logoAspect = 4
-        if (vbMatch) {
-          const parts = vbMatch[1].split(/\s+/).map(Number)
-          if (parts.length >= 4 && parts[3]) logoAspect = parts[2] / parts[3]
-        }
-        const blob = new Blob([svgText], { type: 'image/svg+xml' })
-        const url = URL.createObjectURL(blob)
-        const H = 80, W = Math.round(H * logoAspect)
-        logoData = await new Promise((res, rej) => {
-          const img = new Image()
-          img.onload = () => {
-            const c = document.createElement('canvas')
-            c.width = W; c.height = H
-            c.getContext('2d').drawImage(img, 0, 0, W, H)
-            URL.revokeObjectURL(url)
-            res({ dataUrl: c.toDataURL('image/png'), aspect: W / H })
-          }
-          img.onerror = () => { URL.revokeObjectURL(url); rej() }
-          img.src = url
-        })
-      } catch(e) { console.warn('Logo load failed', e) }
-
       const clubName = $settingsStore.teamName || 'GAAstat'
       const opposition = selectedMatch.opposition || 'Opposition'
 
@@ -227,11 +199,16 @@
       // PAGE 1 — Header + Match Summary + Player Stats
       // ══════════════════════════════════════════════════════════
 
-      // Header: logo left, club name + fixture right
-      if (logoData) {
-        const lH = 12, lW = lH * logoData.aspect
-        doc.addImage(logoData.dataUrl, 'PNG', M, y, lW, lH)
-      }
+      // Header: text logo left ("GAA" lime bold + "stat" dark regular), club name + fixture right
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor('#A8E63D')
+      doc.text('GAA', M, y + 8)
+      const gaaW = doc.getTextWidth('GAA')
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor('#111111')
+      doc.text('stat', M + gaaW, y + 8)
+
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(14)
       doc.setTextColor('#111111')
@@ -284,9 +261,10 @@
       // Player stats table
       sectionTitle('Player Stats')
 
-      const nameW = 55, scoreW = 18
-      const statColW = allStatCols.length > 0 ? Math.min(16, (CW - nameW - scoreW) / allStatCols.length) : 0
-      const colHdrs = ['Player', 'Score', ...allStatCols]
+      const ABBREV = { 'Turnover Won': 'T.Won', 'Turnover Lost': 'T.Lost', 'Free Won': 'F.Won' }
+      const nameW = 40, scoreW = 16
+      const statColW = allStatCols.length > 0 ? Math.min(13, (CW - nameW - scoreW) / allStatCols.length) : 0
+      const colHdrs = ['Player', 'Score', ...allStatCols.map(c => ABBREV[c] || c)]
       const colWs = [nameW, scoreW, ...allStatCols.map(() => statColW)]
 
       drawTableHeader(colHdrs, colWs)
@@ -486,6 +464,20 @@
         })
       }
 
+      // ── Footer on every page ─────────────────────────────────
+      const totalPages = doc.internal.pages.length - 1
+      for (let pg = 1; pg <= totalPages; pg++) {
+        doc.setPage(pg)
+        doc.setDrawColor('#eeeeee')
+        doc.setLineWidth(0.3)
+        doc.line(M, PH - 12, PW - M, PH - 12)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor('#888888')
+        doc.text('GAAstat — gaastat.com', M, PH - 7)
+        doc.text(`Page ${pg} of ${totalPages}`, PW - M, PH - 7, { align: 'right' })
+      }
+
       // ── Save ─────────────────────────────────────────────────
       const fn = `${clubName.replace(/\s+/g, '_')}_vs_${opposition.replace(/\s+/g, '_')}_${selectedMatch.date || 'unknown'}.pdf`
       doc.save(fn)
@@ -642,11 +634,11 @@
     return allStatCols.map(stat => {
       let topId = null, max = 0
       Object.entries(selectedMatch.stats).forEach(([id, s]) => {
-        if ((s[stat] || 0) > max) { max = s[stat] || 0; topId = parseInt(id) }
+        if ((s[stat] || 0) > max) { max = s[stat] || 0; topId = id }
       })
       if (!topId || max === 0) return null
-      const player = selectedMatch.players?.find(p => p.id === topId)
-      return { stat, name: player?.name || `#${player?.number || '?'}`, count: max }
+      const player = selectedMatch.players?.find(p => String(p.id) === topId)
+      return { stat, name: player?.name || `#${player?.number ?? topId}`, count: max }
     }).filter(Boolean)
   })())
 
@@ -1155,7 +1147,7 @@
           <line x1="380" y1="6" x2="380" y2="314" stroke="white" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
           <circle cx="90" cy="160" r="3" fill="white" opacity="0.6"/>
           <circle cx="410" cy="160" r="3" fill="white" opacity="0.6"/>
-          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">DB END</text>
+          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'GAAstat').slice(0,10).toUpperCase()} END</text>
           <text x="375" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{selectedMatch.opposition.slice(0,10).toUpperCase()} END</text>
           {#each printShotEvents as e}
             <circle cx={e.x/100*500} cy={e.y/100*320} r="9" fill={evtColor(e.stat)} opacity="0.88" stroke="white" stroke-width="0.8"/>
@@ -1194,7 +1186,7 @@
           <line x1="380" y1="6" x2="380" y2="314" stroke="white" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
           <circle cx="90" cy="160" r="3" fill="white" opacity="0.6"/>
           <circle cx="410" cy="160" r="3" fill="white" opacity="0.6"/>
-          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">DB END</text>
+          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'GAAstat').slice(0,10).toUpperCase()} END</text>
           <text x="375" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{selectedMatch.opposition.slice(0,10).toUpperCase()} END</text>
           {#each printAllLocatedEvents as e}
             <circle cx={e.x/100*500} cy={e.y/100*320} r="7" fill={evtColor(e.stat)} opacity="0.82" stroke="white" stroke-width="0.5"/>
