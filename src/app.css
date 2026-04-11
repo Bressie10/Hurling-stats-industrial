@@ -57,6 +57,25 @@ input[type="date"] {
   color: var(--text);
 }
 
+input, textarea, select {
+  color: var(--text);
+  background: var(--input-bg);
+  -webkit-text-fill-color: var(--text);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
+}
+
+select {
+  color-scheme: dark;
+}
+
 /* Prevent iOS from zooming on input focus */
 @media (max-width: 768px) {
   input, select, textarea {
