@@ -1991,8 +1991,8 @@
     z-index: 201;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
-    min-height: 44px;
+    padding: 14px 16px;
+    min-height: 48px;
     background: #1A1A1A;
     border-bottom: 1px solid #2E2E2E;
     box-sizing: border-box;
@@ -2030,6 +2030,6 @@
   }
   @media (max-width: 1024px) {
     .install-banner { display: flex; }
-    .lp.banner-visible { --banner-h: 44px; }
+    .lp.banner-visible { --banner-h: 48px; }
   }
 </style>
