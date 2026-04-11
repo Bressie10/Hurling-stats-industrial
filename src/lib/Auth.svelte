@@ -208,7 +208,7 @@
         </div>
         <div class="field-group">
           <label>Club name</label>
-          <input type="text" bind:value={clubName} placeholder="e.g. Doora Barefield GAA" />
+          <input type="text" bind:value={clubName} placeholder="e.g. Your Club GAA" />
         </div>
         <div class="field-group">
           <label>Your email</label>

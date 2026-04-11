@@ -116,7 +116,7 @@
         <p>After signup you'll receive a confirmation email. Click the link, then sign back in.</p>
 
         <h2>Installing as a PWA</h2>
-        <p>GAA Stats App is a Progressive Web App — you install it directly from the browser, no App Store required.</p>
+        <p>GAAstat is a Progressive Web App — you install it directly from the browser, no App Store required.</p>
         <div class="docs-steps">
           <div class="docs-step"><div class="step-num">1</div><div><strong>iOS (Safari):</strong> tap the Share button → "Add to Home Screen"</div></div>
           <div class="docs-step"><div class="step-num">2</div><div><strong>Android (Chrome):</strong> tap the three-dot menu → "Add to Home screen" or "Install app"</div></div>

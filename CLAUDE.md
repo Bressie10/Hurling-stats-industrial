@@ -1,13 +1,6 @@
 # CLAUDE.md — Hurling Stats App
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## What This Project Is
-
-A Progressive Web App (PWA) built for Doora Barefield GAA to track hurling match statistics
-in real time from the sideline. Coaches log stats during matches, view player and team
-analytics, and sync data to the cloud via Supabase. Designed to work fully offline at GAA
-grounds with no internet.
+PWA for Doora Barefield GAA to track hurling match stats in real time. Coaches log stats during matches, view analytics, and sync to Supabase. Works fully offline at GAA grounds.
 
 ---
 
@@ -15,599 +8,255 @@ grounds with no internet.
 
 | Layer | Technology |
 |---|---|
-| Framework | SvelteKit + adapter-vercel (migrated from Vite) |
+| Framework | SvelteKit + adapter-vercel |
 | Language | JavaScript (no TypeScript) |
-| Local storage | IndexedDB via `idb` library |
+| Local storage | IndexedDB via `idb` |
 | Cloud sync | Supabase (PostgreSQL + Auth) |
 | Charts | Chart.js |
 | Styling | Scoped CSS inside Svelte components |
-| PWA | Service worker (`sw.js` + `manifest.json`) in `static/` |
-| Package manager | npm |
-| Deployment | Vercel (via `@sveltejs/adapter-vercel`) |
+| PWA | `sw.js` + `manifest.json` in `static/` |
+| Deployment | Vercel |
 
-**Svelte version note:** The app runs Svelte 5 but uses the legacy API (`let`, `$:`, `on:click`, etc.) throughout — not runes (`$state`, `$derived`, `$effect`). Do not mix rune syntax into existing components.
+**Svelte 5 legacy mode:** Uses `let`, `$:`, `on:click` — NOT runes (`$state`, `$derived`, `$effect`). Do not mix rune syntax.
 
-**SvelteKit note:** Migrated from a plain Vite + Svelte SPA to SvelteKit with file-based routing. All routes use `export const ssr = false` (client-side rendering only — no server-side rendering). Public static assets moved from `public/` → `static/`.
+**SvelteKit:** All routes set `export const ssr = false` (CSR-only). Static assets in `static/` (not `public/`). Navigation via `goto()` from `$app/navigation`.
 
 ---
 
-## File & Folder Structure
+## File Structure
+
 ```
-hurling-stats-industrial/
-├── static/                           # Public static assets (was public/ in Vite)
-│   ├── doora-barefield.png           # Club crest (legacy; kept for any existing references)
-│   ├── favicon.svg
-│   ├── gaastat-icon.svg              # App icon — used in LpNav logo mark
-│   ├── gaastat-logo.svg              # Full logo lockup
-│   ├── manifest.json                 # PWA manifest
-│   ├── robots.txt
-│   └── sw.js                         # Service worker
-├── src/
-│   ├── app.html                      # HTML shell (replaces index.html)
-│   ├── app.css                       # Global reset + CSS custom properties (light theme)
-│   ├── lib/
-│   │   ├── assets/
-│   │   │   └── favicon.svg
-│   │   ├── index.js                  # Barrel export (SvelteKit convention)
-│   │   ├── db.js                     # All IndexedDB operations
-│   │   ├── supabase.js               # Supabase client (reads from env variables)
-│   │   ├── auth-store.js             # Svelte writable store for auth state
-│   │   ├── settings-store.js         # Svelte writable store for app settings (includes rememberLastTeam)
-│   │   ├── subscription-store.js     # Club/team membership, active team, join/leave helpers
-│   │   ├── sync.js                   # Supabase sync logic (push/pull)
-│   │   ├── Auth.svelte               # Compact sign-in card — kept but not used in routing
-│   │   ├── Landing.svelte            # Full marketing landing page — shown to all unauthenticated visitors
-│   │   ├── LpNav.svelte              # Shared nav for all public pages
-│   │   ├── LpFooter.svelte           # Shared footer for all public pages
-│   │   ├── TeamPicker.svelte         # Team selection overlay shown on login with multiple teams
-│   │   ├── TeamSetup.svelte          # Club/team setup flow
-│   │   ├── Match.svelte              # Live match logging (main screen)
-│   │   ├── PlayerStats.svelte        # Individual player stats + charts
-│   │   ├── TeamStats.svelte          # Team stats + pitch map
-│   │   ├── History.svelte            # Previous matches archive
-│   │   ├── Timeline.svelte           # Chronological match event feed
-│   │   ├── Squad.svelte              # Squad management — list view + pitch view
-│   │   ├── StatTargets.svelte        # Team performance targets
-│   │   └── Settings.svelte           # App settings + data export (includes join/leave team)
-│   └── routes/                       # SvelteKit file-based routing
-│       ├── +layout.svelte            # Root layout — auth gate, nav, global state, CSS import
-│       ├── +layout.server.js         # prerender = false (all routes are CSR)
-│       ├── +page.svelte              # / → Landing.svelte (unauthenticated) or app redirect
-│       ├── +page.server.js
-│       ├── contact/+page.svelte      # /contact
-│       ├── docs/+page.svelte         # /docs (User Guide)
-│       ├── install/+page.svelte      # /install
-│       ├── pricing/+page.svelte      # /pricing
-│       ├── privacy/+page.svelte      # /privacy
-│       ├── terms/+page.svelte        # /terms
-│       └── app/                      # Authenticated app routes
-│           ├── +layout.svelte        # App shell layout
-│           ├── +layout.server.js
-│           ├── +page.svelte          # /app → default dashboard
-│           ├── history/+page.svelte  # /app/history
-│           ├── live/+page.svelte     # /app/live — LiveViewer
-│           ├── match/+page.svelte    # /app/match
-│           ├── player/+page.svelte   # /app/player
-│           ├── settings/+page.svelte # /app/settings
-│           ├── squad/+page.svelte    # /app/squad
-│           ├── targets/+page.svelte  # /app/targets
-│           ├── team/+page.svelte     # /app/team
-│           └── timeline/+page.svelte # /app/timeline
-├── svelte.config.js                  # adapter-vercel, a11y warnings suppressed
-├── vite.config.js
-├── jsconfig.json
-├── package.json
-└── CLAUDE.md                         # This file
+src/
+├── app.html / app.css
+├── lib/
+│   ├── db.js              # IndexedDB ops
+│   ├── supabase.js        # Supabase client (env vars)
+│   ├── auth-store.js      # Auth writable store
+│   ├── settings-store.js  # App settings store (incl. rememberLastTeam)
+│   ├── subscription-store.js  # Club/team membership, join/leave
+│   ├── sync.js            # Supabase push/pull
+│   ├── Match.svelte        # Live match logging
+│   ├── Squad.svelte        # Squad management (list + pitch views)
+│   ├── PlayerStats.svelte  # Player stats + charts
+│   ├── TeamStats.svelte    # Team stats + pitch map
+│   ├── History.svelte      # Match archive + PDF export
+│   ├── Timeline.svelte     # Match event feed
+│   ├── Settings.svelte     # Settings + join/leave team
+│   ├── Landing.svelte      # Marketing landing page (unauthenticated)
+│   ├── LpNav.svelte        # Shared public nav
+│   └── LpFooter.svelte     # Shared public footer
+└── routes/
+    ├── +layout.svelte      # Root layout (auth gate, nav, global state)
+    ├── +page.svelte        # / → Landing or app redirect
+    ├── contact|docs|install|pricing|privacy|terms/+page.svelte
+    └── app/
+        ├── +layout.svelte
+        └── history|live|match|player|settings|squad|targets|team|timeline/+page.svelte
+static/
+├── doora-barefield.png  # Club crest — use this path, not /src/assets/
+├── gaastat-icon.svg     # App icon (LpNav logo)
+├── gaastat-logo.svg
+├── manifest.json
+└── sw.js
 ```
 
 ---
 
 ## Key Commands
+
 ```bash
-# Start dev server
-cd ~/Downloads/hurling-stats-industrial && npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+npm run dev      # Start dev server
+npm run build    # Production build
+npm run preview  # Preview build
 ```
 
-### Environment variables
-Supabase credentials are now in environment variables (not hardcoded in `supabase.js`).
-Required in `.env` (not committed to git):
+**Env vars** (`.env` for dev, Vercel dashboard for prod):
 ```
 PUBLIC_SUPABASE_URL=https://syikhsgovqogzkmmhuis.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<anon key>
 ```
-For production, set these in the Vercel project dashboard.
 
 ---
 
 ## Database
 
-### IndexedDB (local, on-device)
+### IndexedDB (`src/lib/db.js`)
 
-Managed via `src/lib/db.js` using the `idb` library.
-
-| Store | Key | Purpose |
+| Store | Key | Notes |
 |---|---|---|
-| `matches` | `id` (number or `'draft'`) | All saved matches + active draft |
-| `squad` | `id` | Saved squad players |
+| `matches` | `id` (number or `'draft'`) | `loadMatches()` filters out `isDraft: true` |
+| `squad` | `id` | |
 
-**Important:** `loadMatches()` filters out `isDraft: true` records — only returns real saved matches.
+Draft: saved as `id: 'draft'`, `isDraft: true`. Auto-resumed on load, cleared by `finishMatch()`.
 
-Draft match is saved with `id: 'draft'` and `isDraft: true`. It is auto-resumed on app load and cleared when a match is saved via `finishMatch()`.
-
-### Supabase (cloud sync)
-
-Project URL: `https://syikhsgovqogzkmmhuis.supabase.co`
+### Supabase Tables
 
 | Table | Purpose |
 |---|---|
-| `matches` | Cloud copy of all saved matches, per user |
-| `squad` | Cloud copy of squad, per user |
-| `profiles` | User profile (team name, age group) |
-| `club_members` | Club-level membership — roles: `'owner'` \| `'admin'` \| `'coach'` |
-| `team_members` | Team-level membership junction — `(club_id, team_id, user_id, role)` — unique per team+user |
-| `teams` | Sub-teams within a club (up to 4) — each has a shareable join code |
-| `subscriptions.custom_features` | JSONB column for per-club bespoke overrides — set in Supabase dashboard; keys: `isPro`, `isClub`, `isClubPro` (bool), `maxTeams` (int). Example: `{"isPro": true, "isClub": true, "maxTeams": 8}` |
+| `matches` / `squad` | Cloud copies per user |
+| `profiles` | Team name, age group |
+| `club_members` | Roles: `owner` \| `admin` \| `coach` |
+| `team_members` | `(club_id, team_id, user_id, role)` — many-to-many |
+| `teams` | Sub-teams within club (up to 4), each with join code |
+| `subscriptions` | Plan, status, Stripe IDs; `custom_features` JSONB for per-club overrides |
 
-All tables have Row Level Security (RLS) enabled. Every row has a `user_id` column tied to `auth.users`. Coaches only ever see their own data.
+All tables have RLS. `custom_features` keys: `isPro`, `isClub`, `isClubPro` (bool), `maxTeams` (int).
 
-#### Two-tier role model
-- **Club-level roles** (`club_members.role`): `'owner'` | `'admin'` | `'coach'`
-  - Owners have **implicit access to all teams** — no `team_members` row needed
-  - `isOwner` flag derived in `subscription-store.js`; used to gate owner-only UI
-- **Team-level roles** (`team_members.role`): `'coach'` | `'player'`
-  - Coaches/players can belong to **multiple teams** via multiple `team_members` rows
-  - `activeTeamId` persisted to `localStorage('active-team-id')` and validated on load
+**Two-tier roles:**
+- Club: `owner` (implicit all-team access) | `admin` | `coach`
+- Team: `coach` | `player` (multiple teams via multiple `team_members` rows)
+- `activeTeamId` persisted to `localStorage('active-team-id')`
 
-#### Active team flow
-1. On login, `loadSubscription()` fetches all teams the user belongs to
-2. If `teams.length > 1` and no `activeTeamId` and `!rememberLastTeam` → `needsTeamPick = true` → `TeamPicker` shown
-3. User picks a team → `setActiveTeam(team)` persists to localStorage
-4. `rememberLastTeam` toggle in Settings skips the picker on subsequent logins
-5. Coaches can join additional teams from Settings without creating a new account (`joinTeam(code)`)
-6. `leaveTeam(teamId)` removes the `team_members` row and clears localStorage if it was the active team
+**Active team flow:** On login, if multiple teams and no `activeTeamId` and `!rememberLastTeam` → show `TeamPicker`. `leaveTeam()` clears localStorage if it was the active team.
 
 ---
 
 ## Auth Flow
 
-### Web vs PWA routing (App.svelte)
-All unauthenticated users — whether on the web or installed as a PWA — see the full `<Landing />` marketing page with the sign-in form embedded in the hero. The `isPWA` check and `<Auth />` card have been removed from the unauthenticated routing path.
+All unauthenticated visitors (web + PWA) see `Landing.svelte` with sign-in embedded in hero. `Auth.svelte` exists but is unused.
 
-`Auth.svelte` still exists in the codebase but is no longer imported or used in `App.svelte`.
-
-### Sign-in flow (both paths)
-1. User signs up or logs in (via `Landing.svelte` hero form — same flow on web and PWA)
-2. On login, `App.svelte` detects the new `user.id` via `auth-store.js`
-3. `clearAllData()` wipes local IndexedDB
-4. `syncFromSupabase()` pulls that user's data from Supabase into IndexedDB
-5. `dataReady = true` — app renders
-6. On sign out: `clearAllData()` wipes local data so the next coach starts clean
-
-**Never skip the clearAllData step** — skipping it causes one coach to see another coach's data.
+1. User signs in via `Landing.svelte`
+2. `clearAllData()` wipes local IndexedDB — **never skip this**
+3. `syncFromSupabase()` pulls user's data
+4. `dataReady = true` — app renders
+5. On sign out: `clearAllData()` again
 
 ---
 
 ## Patterns & Conventions
 
-### Routing
-SvelteKit file-based routing. Public pages live at `/routes/<page>/+page.svelte`. Authenticated app pages live under `/routes/app/<page>/+page.svelte`.
-
-All routes set `export const ssr = false` via their `+page.server.js` (`export const prerender = false`) — the app is fully client-side rendered. Navigation uses SvelteKit's `goto()` from `$app/navigation`.
-
-`Match.svelte` uses its own internal `screen` variable (`'setup'` | `'match'` | `'stats'`) to switch between the setup form, live match logging, and the Quick View Stats panel.
-
-The root `+layout.svelte` acts as the old `App.svelte` — it handles auth state, global stores, nav, and renders `<slot />` for the active route.
-
-### State
-- Local component state: Svelte `let` variables
-- Shared global state: Svelte `writable` stores (`auth-store.js`, `settings-store.js`)
-- Persistent state: IndexedDB via `db.js`
-
 ### Svelte 5 legacy reactivity gotcha
-The app runs Svelte 5 in legacy mode. **Template function calls do not track reactive dependencies** the way `$:` declarations do. If a function reads a reactive variable (like `players`) and is called from a template expression or `{@const}`, the template will NOT re-render when that variable changes.
-
-**Rule:** Any derived value that drives the template display must be a `$:` reactive declaration, not a plain function called inline. For example, `Squad.svelte` uses `$: slotMap = ...` (not `getPlayerForSlot()` in the template) so pitch slots update when players are assigned.
+**Template function calls do not track reactive dependencies.** Any derived value driving the template MUST be a `$:` declaration — not a plain function called inline. Example: `$: slotMap = ...` in `Squad.svelte` (not `getPlayerForSlot()` in template).
 
 ### Player identity
-Players are identified by **name**, not jersey number. Numbers change week to week. The `getPlayerIdInMatch()` function in `PlayerStats.svelte` looks up a player's ID within a specific match by matching on name. Always use name as the stable identifier.
+Players identified by **name**, not jersey number. Numbers change week to week. Always use name as stable identifier.
 
-### Stats storage
-Stats are stored as `stats[playerId][statName] = count` — a nested object keyed by player ID then stat name. Custom stats are stored in the same structure alongside default stats.
+### Data structures
 
-### Events (pitch map)
-Each logged stat produces an event object:
 ```javascript
-{ playerId, stat, period, time, x, y, end }
-```
-`x` and `y` are percentages (0–100) of pitch width/height. `end` is `'db'` or `'opposition'`. Both can be `null` if the coach skipped location logging.
+// Stats
+stats[playerId][statName] = count
 
-### Puckout storage
-Each logged puckout produces an object:
-```javascript
+// Event (pitch map)
+{ playerId, stat, period, time, x, y, end }  // x/y: 0-100%, end: 'db'|'opposition'
+
+// Puckout
 { outcome, ourPlayer, oppPlayer, section, time, period }
-```
-- `outcome`: `'won'` | `'lost'`
-- `ourPlayer`: DB player name (string) or `null`
-- `oppPlayer`: opposition player number as a string (e.g. `'5'`) or `null`
-- `section`: zone key string (e.g. `'midfield-top'`) or `null` — from the 10-zone pitch map (5 cols × 2 rows)
+// outcome: 'won'|'lost'. On lost: oppPlayer=who won it, ourPlayer=who was marking
 
-When `outcome === 'lost'`, `oppPlayer` records which opposition player won the puckout and `ourPlayer` records who was marking them. This enables the marking matchup breakdown (e.g. "Player 1 was marking #5").
-
-### Opposition score storage
-Each logged opposition score produces an object:
-```javascript
-{ type, oppPlayerNum, marker, time, period }
-```
-- `type`: `'goal'` | `'point'`
-- `oppPlayerNum`: opposition player jersey number as a string or `null`
-- `marker`: DB player name who was marking or `null`
-
-### Puckout zone keys
-Zone keys follow the format `'<col>-<row>'`, e.g. `'midfield-top'`. Columns: `short`, `own-half`, `midfield`, `opp-half`, `long`. Rows: `top`, `bottom`. Use `formatZoneLabel(key)` to produce a display string.
-
-### Theming / Colours
-All brand colours are CSS custom properties — never hardcode them:
-- `var(--primary)` — club primary colour (default lime green `#5A8A00`; overridable per-club in Settings)
-- `var(--primary-hover)` — darkened primary for hover states
-- `var(--primary-rgb)` — RGB triplet for use in `rgba(var(--primary-rgb), 0.1)` alpha variants
-- `var(--primary-text)` — contrasting text colour on primary backgrounds (white or dark, auto-computed)
-- Backgrounds: `var(--bg)`, `var(--surface)`, `var(--surface-2)`, `var(--surface-3)`
-- Borders: `var(--border)`, `var(--input-border)`, `var(--divider)`, `var(--divider-faint)`
-- Text: `var(--text)`, `var(--text-2)`, `var(--text-muted)`, `var(--text-faint)`
-- Semantic colours (success green `#2d7a2d`, error red `#e53935`) and pitch green (`#1e6b1e`, `#2d7a2d`) are kept as hex — they are not brand colours and don't change
-
-`App.svelte` applies the club's custom colour at runtime via `document.documentElement.style.setProperty('--primary', ...)` and also keeps `document.title` and `apple-mobile-web-app-title` in sync with `settingsStore.teamName`.
-
-Dark mode has been **removed** — the app is light-only. Do not add `[data-theme="dark"]` back.
-
-### Club colour presets (Settings.svelte)
-8 GAA county presets are defined in `PRESET_COLORS`. Coaches can also pick a fully custom colour via a native `<input type="color">`. The selected colour is stored in `settingsStore.clubPrimaryColor` (a hex string or `null` for the default).
-
-### Auto-save (draft)
-`saveDraft()` is called on every stat tap, sub, score change, puckout log, and timer tick. It writes the full match state to IndexedDB as `id: 'draft'`. IndexedDB persists across tab/browser close, reload, navigation, and offline — data is only cleared by explicit user action.
-
-On app load, if a draft exists `Match.svelte` **auto-resumes it immediately** — there is no "Resume or Discard?" screen. The draft is restored silently and the coach lands directly on the match screen (or stats screen if that was active when the app closed).
-
-The draft saves `screen: 'stats' | 'match'` so the Quick View Stats panel is also restored on reload.
-
-### Timer persistence (wall-clock)
-The timer uses `timerStartedAt = Date.now()` (epoch ms) rather than a pure counter. On app restore, elapsed time since close is calculated: `elapsed = floor((Date.now() - timerStartedAt) / 1000)`. This means the timer is always accurate even if the device was off for 20 minutes.
-
-### Logo paths
-All logo references use the static-folder relative path `doora-barefield.png` (not `/src/assets/doora-barefield.png`). In SvelteKit, `static/` is the public folder — files there are served from the root. This applies to `Auth.svelte` and `+layout.svelte`.
-
----
-
-## Squad Page (Squad.svelte)
-
-Two views toggled by a pill toggle in the header: **List** and **Pitch**.
-
-### List view
-Standard editable table of all squad players (name, jersey number, position dropdown). Starters and Subs shown in separate sections. "Add Player" dashed button at the bottom. Full-width Save button.
-
-Position values use full GAA names: `'Goalkeeper'`, `'Right Corner Back'`, `'Full Back'`, `'Left Corner Back'`, `'Right Half Back'`, `'Centre Back'`, `'Left Half Back'`, `'Midfield'`, `'Right Half Forward'`, `'Centre Forward'`, `'Left Half Forward'`, `'Right Corner Forward'`, `'Full Forward'`, `'Left Corner Forward'`, `'Sub'`. The `SLOT_POSITION` map and `defaultSquad` in `Squad.svelte` use these same strings — never revert to the old abbreviations (`GK`, `FB`, etc.).
-
-### Pitch view
-Visual GAA pitch with 15 position slots laid out in the correct formation:
-
-```
-PITCH_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]
+// Opposition score
+{ type, oppPlayerNum, marker, time, period }  // type: 'goal'|'point'
 ```
 
-A player "occupies a slot" if and only if `number >= 1 && number <= 15 && position !== 'Sub'`. This is the canonical check used everywhere — `isInPitchSlot(p)`.
+### Puckout zones
+Format: `'<col>-<row>'` e.g. `'midfield-top'`. Cols: `short`, `own-half`, `midfield`, `opp-half`, `long`. Rows: `top`, `bottom`. Use `formatZoneLabel(key)` for display.
 
-**Reactive slot map:** The pitch display is driven by `$: slotMap` (a plain object keyed by slot number → player). This MUST remain a `$:` declaration. Using a function call in the template would break reactivity in Svelte 5 legacy mode and the pitch would not update after assignments.
+### Theming
+Never hardcode primary colours. Use CSS custom properties:
+- `var(--primary)` — default `#5A8A00`, overridable per-club
+- `var(--primary-hover)`, `var(--primary-rgb)`, `var(--primary-text)`
+- Backgrounds: `--bg`, `--surface`, `--surface-2`, `--surface-3`
+- Borders: `--border`, `--input-border`, `--divider`, `--divider-faint`
+- Text: `--text`, `--text-2`, `--text-muted`, `--text-faint`
+- Semantic colours (success `#2d7a2d`, error `#e53935`) kept as hex — they don't change
 
-**Assigning a player to a slot:**
-- Tap any slot → bottom-sheet modal opens
-- Modal lists all named players; players already in slots are tagged with their current position
-- Selecting a player runs `assignPlayerToSlot(playerId)`:
-  - If the slot already has a player, the displaced player is swapped to the incoming player's old position/number (or made a Sub if incoming was a Sub)
-  - `nextAvailableNumber()` is used wherever a free jersey number is needed — it finds the lowest positive integer not already in use
+App is **light-only**. Dark mode removed. Do not add `[data-theme="dark"]` back.
 
-**Adding players from pitch view:**
-- Each slot modal has a "New player" row at the bottom → expands inline to a name input → "Add & assign" creates and places in one step
-- The subs panel has an "Add player to squad" button → opens the new-player form as a Sub
-- Sub chips have a × remove button
+### Draft auto-save
+`saveDraft()` called on every stat tap, sub, score change, puckout log, timer tick. Draft auto-resumes silently on load — no "Resume or Discard?" prompt. Saves `screen: 'stats'|'match'` so stats panel is also restored.
 
-**Number management:**
-- Always use `nextAvailableNumber()` when assigning a free number — never `players.length + 1` (breaks after deletions)
-- Jersey numbers 1–15 are "pitch slots"; anything higher is treated as a Sub regardless of `position` field
+### Timer
+Uses `timerStartedAt = Date.now()` (wall-clock). On restore: `elapsed = floor((Date.now() - timerStartedAt) / 1000)`. Never revert to a pure counter.
 
-### Lineup saved with matches
-`Match.svelte` silently auto-populates a `lineup` object (slot number → player ID) from squad jersey numbers when a match starts. This is saved with the match and used by `History.svelte` for the PDF export. There is no interactive lineup builder on the Match setup screen — it lives entirely on the Squad page.
+### Squad page
+- Positions use full GAA names: `'Goalkeeper'`, `'Right Corner Back'`, etc. — never old abbreviations (`GK`, `FB`).
+- `PITCH_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]`
+- A player occupies a slot iff `number >= 1 && number <= 15 && position !== 'Sub'` (`isInPitchSlot(p)`)
+- Always use `nextAvailableNumber()` for free jersey numbers — never `players.length + 1`
+- `$: slotMap` MUST stay a reactive declaration
 
----
+### Lineup
+`Match.svelte` auto-populates `lineup` (slot → player ID) from squad jersey numbers when match starts. Saved with match for PDF export. No interactive lineup builder on setup screen.
 
-## Quick View Stats (Match.svelte)
-
-Accessed via the Stats button in the match action bar at any time during the match. Sets `screen = 'stats'`. The timer keeps running — nothing is paused or frozen.
-
-The stats panel is a series of **collapsible accordions** (`openSections` object, toggled via `toggleSection(k)`):
-
-| Accordion | Key | Shows |
-|---|---|---|
-| Puckouts | `puckouts` | W/L/%, zone heatmap, tap-to-filter zones, by our player (with matchup lines), opposition winners (with who they beat) |
-| Scores Conceded | `conceded` | Goals/points totals, by our marker, by opposition player number |
-| Player Stats | `players` | Full stats table for all players with any stats |
-| Substitutions | `subs` | Sub log with times |
-
-Each accordion header shows a summary badge (wins/losses/%, goals/points, count) so the coach can scan without opening.
-
-Each section shows a **standout callout** (`.standout-row`) — a left-bordered highlight row naming the top/most-dangerous performer in that section.
-
-**Marking matchup lines**: In the puckouts breakdown, each player row shows `Won vs #7` / `Lost to #5` in green/red. Each opposition winner row shows `Marking: Player 1`. This is derived from `ourPlayer` + `oppPlayer` on each puckout object.
-
-**Zone heatmap**: The 10-zone SVG pitch is colour-coded by win rate (green ≥67%, amber 40–66%, red <40%). Tap a zone to filter the breakdown table to that zone only.
-
-All data shown is **live current data** — not a snapshot. The panel always reflects the full match so far.
+### Match screen
+`screen` variable: `'setup'` | `'match'` | `'stats'`. Quick View Stats (Stats button) keeps timer running. Accordions: puckouts, conceded, players, subs.
 
 ---
 
 ## Things To Never Break
 
-- **`clearAllData()` on login** — removing this causes data bleed between coach accounts
-- **`loadMatches()` filtering `isDraft`** — without this, the draft match appears in history and stats
-- **RLS policies in Supabase** — never disable these or coaches can see each other's data
-- **Player identity by name** — if you switch back to ID-based lookup, cross-match stat aggregation breaks
-- **`dataReady` gate in `App.svelte`** — components must not mount until sync is complete or they load stale data
-- **`saveDraft()` on every state change** — removing any of these calls means match data can be lost if the app closes
-- **Auto-resume draft** — do not add a "Resume or Discard?" screen back; the draft should restore silently
-- **`timerStartedAt` wall-clock pattern** — do not revert to a pure counter; the wall-clock approach is what keeps the timer accurate after app close
-- **Logo path `doora-barefield.png`** — always use this static-folder path, never `/src/assets/doora-barefield.png` (SvelteKit serves `static/` from root)
-- **`export const ssr = false` / `prerender = false`** — all routes are CSR-only; do not remove these or SvelteKit will attempt SSR and break Supabase auth + IndexedDB
-- **Env variables for Supabase** — `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` must be set in `.env` (dev) and Vercel dashboard (prod); never hardcode them back into `supabase.js`
-- **`ourPlayer` + `oppPlayer` on puckouts** — both fields are needed for the marking matchup breakdown; do not remove either
-- **`$: slotMap` in Squad.svelte** — must stay a reactive declaration; converting to a plain function call in the template breaks pitch view updates in Svelte 5
-- **`nextAvailableNumber()` for free jersey numbers** — never use `players.length + 1`; it produces duplicates after deletions
-- **CSS custom properties for all colours** — never hardcode `#6B1B2B` or any primary colour hex; use `var(--primary)` and `rgba(var(--primary-rgb), ...)` so club colour overrides apply everywhere
-
----
-
-## Roadmap
-
-### Done
-- [x] Match page — live logging, quick mode, player rows mode
-- [x] Timer with wall-clock persistence (accurate after app close/device off)
-- [x] Pitch coordinate picker (DB end vs opposition end)
-- [x] Opposition score tracker — log opp player number + which DB player was marking
-- [x] Substitution tracker with log
-- [x] Custom stats (per match)
-- [x] Squad management page (saved between matches)
-- [x] Player Stats — aggregate stats, trend chart, per-match table, compare mode
-- [x] Team Stats — pitch map with stat + period filters, top performers
-- [x] Previous Matches — archive, search, filter, detail view, delete
-- [x] Match Timeline — chronological event feed with SVG icons, puckout filter pill
-- [x] Settings — team name, age group, default stats, data export
-- [x] Team Targets — set goals per stat, track progress, trend
-- [x] Supabase auth + sync — multi-account, per-coach data isolation
-- [x] Draft auto-save — match survives app close / device off, auto-resumes silently
-- [x] Logo path standardised — all references use `doora-barefield.png` (public folder)
-- [x] PWA offline install — `manifest.json` + `sw.js` (cache-first for assets, network-first for Supabase), registered in `index.html`
-- [x] PDF match report export — `window.print()` + `@media print` CSS in `History.svelte`
-- [x] Auto-sync to Supabase — `scheduleAutoSync()` debounced 10s; NOT called on timer ticks
-- [x] Puckout tracking — log every puckout as won/lost, our player, opp player number, zone
-- [x] Puckout zone picker — 10-zone SVG pitch map (5 cols × 2 rows) in the log modal
-- [x] Opposition player tracking on lost puckouts — records which opp player won it and who was marking; shown as matchup lines in stats
-- [x] Cancel match button — confirms then discards draft and returns to setup
-- [x] Quick View Stats panel — Stats button in action bar, available at any time during the match; collapsible accordions with live data, zone heatmap, marking breakdowns, standout callouts
-- [x] Match history puckout section — shows opp player winners, marking matchups, biggest winner standouts
-- [x] Match history conceded section — split into by-marker and by-opp-player with standout callouts
-- [x] Settings rework — auto-save on every change (no Save button), per-stat tracking toggles to hide unused stats, period count management (add/remove periods beyond H1/H2)
-- [x] SVG icons — all emojis replaced with inline SVG icons throughout the entire app for consistent cross-platform rendering (no emoji font dependency)
-- [x] Club colour picker — Settings has 8 GAA county presets + custom colour input; primary colour applied globally via CSS custom properties at runtime
-- [x] Dynamic team name — `document.title` and nav brand name reflect `settingsStore.teamName`; scoreboard labels, match setup hero, and pitch end labels also use it. Default is `'GAAstat'` (was `'Doora Barefield'`). Pitch end labels in Match.svelte show `settingsStore.teamName` (left/own end) and `opposition` (right/opp end) — never hardcoded.
-- [x] Dark mode removed — app is light-only; `[data-theme="dark"]` block removed from `app.css`
-- [x] Squad pitch view — List/Pitch toggle on Squad page; visual GAA formation with 15 slots; tap to assign players, inline new-player form, removable sub chips, reactive `$: slotMap` driving display
-- [x] Lineup auto-populated on match start — `Match.svelte` builds `lineup` from squad jersey numbers silently; saved with match for PDF export; no interactive builder on setup screen
-- [x] Landing page integrated into app — `Landing.svelte` is the full dark-themed marketing site shown to ALL unauthenticated visitors (web + PWA); sign-in/signup form is embedded directly in the hero; the old `isPWA` → `<Auth />` routing has been removed
-- [x] Pricing section on landing page — 5 cards: Free, Personal Pro €7.99/mo, Club €15/mo, Club Pro €25/mo, Custom/Enterprise (contact CTA, amber styling); all plan buttons use `goToSignup(mode)` to set auth mode + smooth-scroll to hero sign-in card
-- [x] Google Fonts added to `index.html` — Bebas Neue, Barlow Condensed, Outfit; used by `Landing.svelte` only
-- [x] Landing page buttons fully wired — all CTAs use `goToSignup(mode)` helper; nav anchor links have `scroll-padding-top: 80px` offset for fixed nav; contact/enterprise button left as mailto link
-- [x] Landing page pitch map mockup — rebuilt to exactly match the real puckout zone heatmap: green pitch (`#2d7a2d`), 5 cols × 2 rows (Short/Own Half/Midfield/Opp Half/Long), white W/L + % labels in every zone, green/amber/red fills by win-rate threshold (≥67%/40–66%/<40%), goal boxes, centre line, dashed midfield line, zone dividers, DB END / OPP END labels
-- [x] Landing page analytics mockup — replaced generic bar chart with accurate match logging screen SVG showing live score, H1 timer, player rows with + stat buttons, and puckout/score/sub action bar
-
-- [x] Stripe subscription payments — Personal Pro (€7.99/mo), Club (€15/mo), Club Pro (€25/mo); Stripe Checkout hosted by Supabase Edge Functions; webhook syncs plan/status to DB; Stripe Customer Portal for managing card/invoices/cancellation
-- [x] Two-tier role model — `club_members` (owner/admin/coach) + `team_members` junction table for many-to-many user↔team; owners have implicit access to all teams
-- [x] Team Picker — coaches with multiple teams prompted to choose on login; "Remember last team" toggle in Settings skips picker
-- [x] Join another team from Settings — coaches can join additional teams by code without a new account; leave team button per team row
-- [x] Public site — 8 pages with shared `LpNav` (Supabase-style CSS hover dropdowns + Home link) + `LpFooter`
-- [x] DocsPage — renamed to "User Guide"; Supabase docs layout with fixed sidebar, 12 feature sections, IntersectionObserver active link tracking; mobile slide-in drawer; `minmax(0,1fr)` grid fix prevents text overflow on mobile
-- [x] ContactPage — email card (contact@gaastatsapp.com), help topics list, User Guide nudge; linked from nav Company dropdown + footer
-- [x] PricingPage — 5 plan cards + feature comparison table with 4 row groups + FAQ accordion
-- [x] PrivacyPage — GDPR-compliant: data tables, sub-processors (Supabase EU, Stripe), retention periods, user rights, DPC link
-- [x] TermsPage — subscriptions, cancellation, Irish governing law, EU ODR link
-
-- [x] Custom plan support — `subscriptions.custom_features` JSONB column for per-club bespoke overrides; set directly in Supabase dashboard with no code deploy; `isPro`/`isClub`/`isClubPro` derived stores check it before plan logic
-- [x] Payment-during-signup — Personal and Club signup flows now include a plan picker step; paid plans store `pending_checkout_plan` in localStorage and redirect to Stripe Checkout automatically on first login
-- [x] SW cache auto-versioning — `vite.config.js` plugin replaces `__CACHE_VERSION__` in the built `sw.js` with a build timestamp; cache version bumps automatically on every deploy
-- [x] Safe IndexedDB migrations — `db.js` upgrade handler uses `if (oldVersion < N)` pattern with a bumped `DB_VERSION` constant; add a new `if (oldVersion < N)` block for each future schema change, never remove old ones
-- [x] Consistent stat registration UI — all stats use sequential modal flow (step indicators, starters/subs split, identical opp player grid 1–25, single confirm button); mobile/tablet first
-- [x] InstallPage.svelte — "How to Install" public page with iOS/Android/Desktop steps, 8 common issues accordion, prominent amber warning that internet is required to sign in; linked from nav Resources dropdown and footer
-- [x] Go Live gated to Club Pro — `startLive()` checks `activeTeamId` (fixed from broken `teamId`); Live button only shown to `$isClubPro` users
-- [x] Club ownership setup flows — Settings.svelte has "Set up your club" and "Activate team management" blocks; `setupClub()` and `claimClubOwnership()` helpers in `subscription-store.js`; `loadSubscription()` infers `isOwner` from `personalSub.club_id` as RLS fallback
-- [x] Live Viewer Quick Stats — `getLivePayload()` now broadcasts `puckouts`, `oppScores`, `subs_log`; `LiveViewer.svelte` shows collapsible accordions for Puckouts (W/L/%, by player with matchup lines, opp winners), Scores Conceded (by marker + by opp player), Player Stats table, and Substitutions
-- [x] Fix coaches seeing "Activate team management" — added `!$subscriptionStore.clubRole` guard to the claim-ownership block in `Settings.svelte`; coaches have `clubRole = 'coach'` so the block no longer renders for them
-
-- [x] SvelteKit migration — Phase 1: scaffold + adapter-vercel; Phase 2: file-based routing for all public + app pages; `+layout.svelte` replaces `App.svelte`; `static/` replaces `public/`; all routes set `ssr = false`
-- [x] Supabase credentials moved to env variables — `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY` via SvelteKit's `$env/static/public`; not hardcoded
-
-### Still To Build
-
-- [ ] PWA service worker needs CSS/JS asset URLs injected at build time (currently pre-caches fixed URLs; a proper build step would hash-bust correctly)
+- `clearAllData()` on login — prevents data bleed between coaches
+- `loadMatches()` filtering `isDraft` — prevents draft appearing in history
+- RLS in Supabase — never disable
+- Player identity by name — switching to ID breaks cross-match aggregation
+- `dataReady` gate — components must not mount before sync completes
+- `saveDraft()` on every state change — removing any call risks data loss
+- Silent auto-resume draft — no "Resume or Discard?" screen
+- `timerStartedAt` wall-clock — don't revert to counter
+- Logo path `doora-barefield.png` — use static-root path, never `/src/assets/`
+- `export const ssr = false` / `prerender = false` on all routes
+- `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY` in env — never hardcode
+- `ourPlayer` + `oppPlayer` on puckouts — both needed for marking breakdowns
+- `$: slotMap` in Squad.svelte — must stay reactive declaration
+- `nextAvailableNumber()` — never `players.length + 1`
+- CSS custom properties for all colours — never hardcode `--primary` hex
 
 ---
 
 ## Landing Page (`Landing.svelte`)
 
-### Overview
-`Landing.svelte` is a full dark-themed marketing site (~1550 lines) served to non-authenticated browser visitors. It has its own design system (fonts, colours, layout) completely separate from the app's light theme.
+Dark-themed marketing site (~1550 lines). CSS vars scoped to `.lp {}` — don't bleed into app.
 
-### Design tokens
-All landing page CSS variables are scoped to the `.lp` root element — they do not bleed into the app:
-```css
-.lp {
-  --lp-bg: #05080F;  --lp-surface: #0C1422;
-  --lp-lime: #BAFF29;  --lp-amber: #FFB800;  --lp-red: #FF3A3A;
-  --lp-text: #E4EDF8;  --lp-text2: #8CA3BF;  --lp-text3: #4A6280;
-  --lp-font-head: 'Bebas Neue';  --lp-font-sub: 'Barlow Condensed';  --lp-font-body: 'Outfit';
-}
-```
+**Sections:** Nav → Hero (with sign-in card `#signin`) → Marquee → Features → Pitch map (`#pitch`) → Offline → Stats showcase → Analytics (`#analytics`) → Timeline → Pricing (`#pricing`) → CTA → Footer
 
-### Sections (in order)
-1. **Nav** — fixed top bar with anchor links + "Sign In" CTA → `#signin`
-2. **Hero** — 2-col grid: marketing copy left, dark auth card right (`id="signin"`)
-3. **Marquee strip** — scrolling feature list
-4. **Features** — 3-col grid of feature cards
-5. **Pitch map** (`id="pitch"`) — puckout zone heatmap SVG mockup
-6. **Offline** (`id="offline"`) — PWA/offline story
-7. **Stats showcase** — animated count-up numbers
-8. **Analytics** (`id="analytics"`) — match logging screen mockup + player season totals
-9. **Timeline** (`id="timeline"`) — match event feed mockup
-10. **Pricing** (`id="pricing"`) — 5 plan cards
-11. **CTA** — final sign-up push
-12. **Footer**
+**Auth modes:** `'login'` | `'choose'` | `'personal'` | `'club'` | `'join'`
 
-### Auth card in hero
-The hero section contains a full sign-in/signup flow (`mode`: `'login'` | `'choose'` | `'personal'` | `'club'` | `'join'`). It shares the same `signIn`/`signUp` functions as `Auth.svelte` but uses dark-themed styles prefixed `auth-dark-*`.
+**Payment-during-signup:** Personal Pro stores `pending_checkout_plan: 'personal'` in localStorage; Club stores `'club'` or `'club_pro'`. `+layout.svelte` detects this on first login and redirects to Stripe Checkout.
 
-**Payment-during-signup flow:**
-- `personal` mode has two steps: (1) plan picker — Free or Personal Pro; (2) email/password form. Free goes straight through; Personal Pro stores `pending_checkout_plan: 'personal'` in localStorage before creating the account.
-- `club` mode has two steps: (1) plan picker — Club €15 or Club Pro €25 (no free tier); (2) club name + email/password form. Always stores `pending_checkout_plan: 'club'` or `'club_pro'` in localStorage.
-- `App.svelte` detects `pending_checkout_plan` on first login after `loadSubscription`, invokes `create-checkout-session`, and redirects to Stripe. The item is cleared from localStorage before redirecting.
-- `selectedPersonalPlan` (`null` | `'free'` | `'pro'`) and `selectedClubPlan` (`null` | `'club'` | `'club_pro'`) are reset to `null` in `reset()` whenever mode changes.
-
-### Button pattern — `goToSignup(mode)`
-All CTA and pricing buttons call `goToSignup(mode)` which sets the auth card mode then smooth-scrolls to `#signin`:
+**Button pattern:**
 ```javascript
 function goToSignup(m) {
   setMode(m)
   document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 ```
-- Free / Personal Pro → `goToSignup('personal')`
-- Club / Club Pro → `goToSignup('club')`
-- Hero "Get Started Free" → `goToSignup('choose')` (shows account type picker)
-- Custom/Enterprise → `mailto:` link (no JS needed)
 
-### Scroll reveal — IMPORTANT CSS GOTCHA
-Elements with `.reveal` start at `transform: translateY(24px)` and animate to `translateY(0)` when the `in` class is added by `IntersectionObserver`.
+### CRITICAL CSS Gotcha — Scroll Reveal in Landing.svelte
+**Do NOT add `opacity: 0` to `.reveal` in `Landing.svelte`.** Svelte compiles `.reveal.in` to `.reveal.in.svelte-xyz`, but the JS-added `in` class lacks the Svelte scope attribute, so opacity never restores and content stays invisible. Use `transform: translateY(24px)` only (no opacity). Public pages (`DocsPage`, etc.) DO use `opacity: 0` — that's fine because their styles are component-scoped.
 
-**Do NOT add `opacity: 0` to `.reveal`.** Svelte's scoped CSS compiles `.reveal.in` to `.reveal.in.svelte-xyz`, but the dynamically JS-added `in` class doesn't carry the Svelte scoping attribute, so the opacity rule never matches and content stays permanently invisible. The transform-only approach works because it doesn't require the `.in` class to restore visibility.
-
-A 1.5s fallback timer also force-adds `.in` to all reveals in case the observer doesn't fire:
-```javascript
-const fallback = setTimeout(() => revealEls.forEach(el => el.classList.add('in')), 1500)
-```
-
-### Pitch map mockup
-The "Spatial Intelligence" section SVG exactly replicates the real puckout zone heatmap from `Match.svelte`:
-- `viewBox="0 0 360 130"`, green background `#2d7a2d`
-- 5 columns: Short (x=5,w=70) / Own Half (x=75,w=70) / Midfield (x=145,w=70) / Opp Half (x=215,w=70) / Long (x=285,w=70)
-- 2 rows: top (y=8,h=52) / bottom (y=60,h=52), split by horizontal line at y=60
-- Zone fills: green overlay ≥67%, amber 40–66%, red <40%
-- Each zone shows `NW NL` on line 1 and `N%` on line 2, white text
-- Goal boxes at x=5 and x=337, DB END / OPP END labels, zone names along bottom
-
-### Analytics mockup
-The analytics section left panel shows an SVG of the actual match logging screen (`viewBox="0 0 300 200"`):
-- Top nav bar with team name, H1 timer, STATS button
-- Score area showing `0-07 vs 0-05`
-- Three player rows (B. Murphy / S. Collins / C. Ryan) each with player name, stat label, count, and `+` button styled with lime green
-- Bottom action bar with PUCKOUT / OPP SCORE / SUB buttons
+1.5s fallback: `setTimeout(() => revealEls.forEach(el => el.classList.add('in')), 1500)`
 
 ---
 
 ## Public Site (8 pages)
 
-All public pages share:
-- `LpNav.svelte` — fixed nav, Supabase-style CSS hover dropdowns (no JS), mobile hamburger overlay
-- `LpFooter.svelte` — 4-column grid footer
-- LP design tokens (defined in `app.css` under `.lp {}`) — dark theme separate from the app's light theme
-- `onNavigate(page)` prop — calls `navigatePublic(page)` in `App.svelte` to switch between public pages
+Routes: `/contact`, `/docs`, `/install`, `/pricing`, `/privacy`, `/terms` + `/` and `/app/*`.
 
-### Routing (SvelteKit)
-Public pages are now proper SvelteKit routes under `src/routes/`. Each public page (e.g. `/docs`, `/pricing`) has its own `+page.svelte` that renders the corresponding `*Page.svelte` component from `src/lib/`. Navigation uses `goto()` from `$app/navigation`. The old `publicPage` string + `navigatePublic()` pattern in `App.svelte` has been replaced by real URL-based routing.
-
-### LP design tokens
-Defined in `app.css` scoped to `.lp {}`:
+All share `LpNav.svelte` (CSS-only hover dropdowns, no JS) + `LpFooter.svelte`. LP design tokens in `app.css` scoped to `.lp {}`:
 ```
---lp-bg: #05080F   --lp-surface: #0C1422   --lp-border: #1e3a5f
---lp-lime: #BAFF29   --lp-amber: #FFB800   --lp-red: #FF3A3A
---lp-text: #E4EDF8   --lp-text2: #8CA3BF   --lp-text3: #4A6280
---lp-font-head: 'Bebas Neue'   --lp-font-sub: 'Barlow Condensed'   --lp-font-body: 'Outfit'
+--lp-bg: #05080F  --lp-surface: #0C1422  --lp-border: #1e3a5f
+--lp-lime: #BAFF29  --lp-amber: #FFB800  --lp-red: #FF3A3A
+--lp-text: #E4EDF8  --lp-text2: #8CA3BF  --lp-text3: #4A6280
+--lp-font-head: 'Bebas Neue'  --lp-font-sub: 'Barlow Condensed'  --lp-font-body: 'Outfit'
 ```
 
-### LpNav dropdowns
-CSS-only hover dropdowns — no JS toggle needed:
-```css
-.dd-menu { opacity: 0; pointer-events: none; transform: translateY(-6px); transition: ... }
-.dd-trigger:hover .dd-menu,
-.dd-menu:hover { opacity: 1; pointer-events: auto; transform: none; }
-```
-Three dropdown groups: **Product** (6 items, 2-col grid), **Resources** (User Guide + Quick Start, both link to /docs), **Company** (3 items: Privacy, Terms, Contact). Plus a standalone **Home** link as the first nav item. Each item has a coloured icon box + title + description line. Arrow pointer via `::before` clip-path triangle.
-
-### Scroll reveal — IMPORTANT CSS GOTCHA (applies to all public pages)
-Elements with `.reveal` use `opacity: 0; transform: translateY(20px)` and animate when `.in` is added by IntersectionObserver. **Unlike `Landing.svelte`**, the public pages DO use `opacity: 0` on `.reveal` — this works because the styles are defined inline in each component's `<style>` block with Svelte scoping, and the `.in` class is added by JS at component scope. The 1.5s fallback timer ensures `.in` is always added even if the observer doesn't fire.
+LpNav dropdowns: CSS `:hover` on `.dd-trigger`. Three groups: **Product**, **Resources**, **Company**. First item is standalone **Home** link.
 
 ---
 
 ## Stripe & Payments
 
-### Architecture
-Payments run through four Supabase Edge Functions (all deployed with `--no-verify-jwt`):
+Four Supabase Edge Functions (all `--no-verify-jwt`):
+- `create-checkout-session` — creates Stripe Checkout URL
+- `stripe-webhook` — syncs plan/status to DB
+- `cancel-subscription` — cancels at period end
+- `create-portal-session` — opens Stripe Customer Portal
 
-| Function | Purpose |
-|---|---|
-| `create-checkout-session` | Creates a Stripe Checkout session and returns the URL |
-| `stripe-webhook` | Receives Stripe events and syncs subscription state to DB |
-| `cancel-subscription` | Cancels at period end via Stripe; DB updated by webhook |
-| `create-portal-session` | Creates a Stripe Customer Portal session for billing management |
+**Subscription columns:** `plan`, `status`, `cancel_at_period_end`, `current_period_end`, `stripe_customer_id`, `stripe_subscription_id`. One row per user (`user_id` UNIQUE).
 
-### Webhook events handled
-- `checkout.session.completed` — activates plan after payment
-- `customer.subscription.updated` — syncs plan, status, period end, `cancel_at_period_end`
-- `customer.subscription.deleted` — downgrades to free
-- `invoice.payment_succeeded` — refreshes period end on renewal
-- `invoice.payment_failed` — marks status as `past_due`
+**Plans:** `free` | `personal` (€7.99/mo) | `club` (€15/mo) | `club_pro` (€25/mo)
 
-### DB columns (subscriptions table)
-| Column | Purpose |
-|---|---|
-| `plan` | `'free'` \| `'personal'` \| `'club'` \| `'club_pro'` |
-| `status` | `'active'` \| `'trialing'` \| `'past_due'` \| `'cancelled'` |
-| `cancel_at_period_end` | `true` when user has cancelled but period hasn't ended |
-| `current_period_end` | ISO timestamp of next billing date |
-| `stripe_customer_id` | Reused on resubscribe to avoid duplicate Stripe customers |
-| `stripe_subscription_id` | Used to match webhook events to DB rows |
-
-`user_id` has a UNIQUE constraint — one subscription row per user.
-
-### Supabase secrets required
-```
-STRIPE_SECRET_KEY       sk_test_... (or sk_live_... in production)
-STRIPE_WEBHOOK_SECRET   whsec_...
-```
-
-### Going live (test → production)
-1. Activate Stripe account (business details + bank account)
-2. Switch to live mode in Stripe
-3. Create the same 3 products/prices in live mode — copy the new `price_...` IDs
-4. Update the 3 price IDs in `supabase/functions/create-checkout-session/index.ts`
-5. Update the 3 price IDs in `supabase/functions/stripe-webhook/index.ts` (`PLAN_BY_PRICE`)
-6. Run: `supabase secrets set STRIPE_SECRET_KEY=sk_live_...`
-7. Create a new live webhook endpoint in Stripe pointing to the same URL, add the same 5 events
-8. Run: `supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_live_...`
-9. Redeploy all four functions
-
-### Deploying edge functions
-Requires the Supabase CLI (`~/Downloads/supabase` or install fresh):
+**Deploy functions:**
 ```bash
 supabase link --project-ref syikhsgovqogzkmmhuis
 supabase functions deploy create-checkout-session --no-verify-jwt
@@ -616,29 +265,20 @@ supabase functions deploy cancel-subscription --no-verify-jwt
 supabase functions deploy create-portal-session --no-verify-jwt
 ```
 
-### Stripe Customer Portal
-Activated. The "Manage billing" button in Settings opens the portal for the logged-in user (no email entry required — session is created server-side using their `stripe_customer_id`).
+**Secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 
-### Sandbox setup status
-All of the following are complete and confirmed working in test mode:
-- [x] SQL migrations run (`stripe_customer_id`, `stripe_subscription_id`, `cancel_at_period_end`, unique constraint on `user_id`)
-- [x] Webhook events registered: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
-- [x] Stripe Customer Portal activated
-- [x] All four edge functions deployed with `--no-verify-jwt`
-- [x] Supabase secrets set: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+**Going live:** Switch Stripe to live mode → create products/prices → update price IDs in `create-checkout-session` and `stripe-webhook` → update secrets → redeploy.
 
 ---
 
-## Related Projects
+## Still To Build
 
-| Project | Location | GitHub |
-|---|---|---|
-| Landing page | `~/gaa-stats-landing/` | https://github.com/Bressie10/gaa-stats-landing- |
+- [ ] PWA service worker: inject hashed CSS/JS asset URLs at build time (currently pre-caches fixed URLs)
 
 ---
 
-### Key Goals
-- Works fully offline at any GAA ground — no internet required during a match
+## Key Goals
+- Works fully offline at any GAA ground
 - Multiple coaches, multiple teams — fully isolated data per account
-- Fast enough to use one-handed on a phone while watching a match
+- Fast enough one-handed on a phone during a match
 - Data never lost — auto-save draft + Supabase cloud backup

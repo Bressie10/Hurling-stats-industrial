@@ -20,7 +20,7 @@
 
     <div class="legal-body">
       <div class="legal-intro">
-        Hurling Stats ("we", "our", "us") is committed to protecting your personal data.
+        GAAstat ("we", "our", "us") is committed to protecting your personal data.
         This policy explains what we collect, why we collect it, and your rights under GDPR
         and applicable Irish data protection law.
       </div>
@@ -28,8 +28,7 @@
       <section class="legal-section">
         <h2>1. Who we are</h2>
         <p>
-          Hurling Stats is operated by the Doora Barefield GAA project. Our contact email for
-          data protection queries is <a href="mailto:privacy@hurlingstats.com">privacy@hurlingstats.com</a>.
+          Our contact email for data protection queries is <a href="mailto:privacy@hurlingstats.com">privacy@hurlingstats.com</a>.
         </p>
       </section>
 
@@ -143,7 +142,7 @@
       <section class="legal-section">
         <h2>7. Cookies</h2>
         <p>
-          Hurling Stats uses only a Supabase authentication session cookie (essential,
+          GAAstat uses only a Supabase authentication session cookie (essential,
           first-party). We do not use advertising, analytics, or tracking cookies.
           No cookie consent banner is required because no non-essential cookies are set.
         </p>

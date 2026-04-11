@@ -185,9 +185,6 @@
       <div class="target-row">
         <div class="target-stat-wrap">
           <span class="target-stat">{stat.label}</span>
-          {#if stat.lowerIsBetter}
-            <span class="lower-badge">lower = better</span>
-          {/if}
           {#if stat.custom}
             <button class="remove-custom" onclick={() => removeCustomStat(stat.key)}><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           {/if}
@@ -323,7 +320,6 @@
   .target-row:last-child { border-bottom: none; }
   .target-stat-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .target-stat { font-size: 13px; font-weight: 500; color: var(--text); }
-  .lower-badge { font-size: 10px; color: var(--text-faint); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
   .remove-custom { background: none; border: none; color: var(--text-faint); font-size: 12px; cursor: pointer; padding: 2px; }
   .remove-custom:hover { color: #e53935; }
   .target-data { font-size: 13px; color: var(--text-muted); }

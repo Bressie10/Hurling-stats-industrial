@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte'
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
@@ -227,17 +226,6 @@
   let newCustomStat = $state('')
   let newPeriod = $state('')
 
-  const PRESET_COLORS = [
-    { label: 'Lime (Default)', color: '#5A8A00' },
-    { label: 'Maroon', color: '#6B1B2B' },
-    { label: 'Dublin Blue', color: '#003DA5' },
-    { label: 'Limerick Green', color: '#007A33' },
-    { label: 'Cork Red', color: '#C8102E' },
-    { label: 'Galway Maroon', color: '#7B1E3A' },
-    { label: 'Tipperary Navy', color: '#1B2A6B' },
-    { label: 'Antrim Saffron', color: '#B89300' },
-  ]
-
   const PRESET_PERIODS = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
   const REQUIRED_PERIODS = ['1st Half', '2nd Half']
 
@@ -314,34 +302,6 @@
   }
 
   const customPeriods = $derived(settings.periods.filter(p => !PRESET_PERIODS.includes(p)))
-
-  // ── Club colours ──
-  let customColorInput = $state(settings.clubPrimaryColor || '')
-
-  function getContrastPreview(hex) {
-    if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return '#ffffff'
-    const r = parseInt(hex.slice(1,3), 16)
-    const g = parseInt(hex.slice(3,5), 16)
-    const b = parseInt(hex.slice(5,7), 16)
-    return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.5 ? '#1A2015' : '#ffffff'
-  }
-
-  function handleCustomColor(e) {
-    settings = { ...settings, clubPrimaryColor: e.target.value }
-    customColorInput = e.target.value
-    autoSave()
-  }
-
-  function handleCustomColorText(e) {
-    const val = e.target.value
-    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-      settings = { ...settings, clubPrimaryColor: val }
-      autoSave()
-    } else if (!val) {
-      settings = { ...settings, clubPrimaryColor: null }
-      autoSave()
-    }
-  }
 
   // ── Data export ──
   async function exportData() {
@@ -540,7 +500,7 @@
         <input
           class="team-name-input"
           bind:value={setupClubName}
-          placeholder="Club name (e.g. Doora Barefield GAA)"
+          placeholder="Club name (e.g. Your Club GAA)"
           onkeydown={e => e.key === 'Enter' && handleSetupClub()}
         />
         <button class="team-save-btn" onclick={handleSetupClub} disabled={settingUpClub}>
@@ -629,7 +589,7 @@
     <div class="card">
       <div class="field-group">
         <label>Club name</label>
-        <input bind:value={settings.teamName} oninput={autoSave} placeholder="e.g. Doora Barefield" />
+        <input bind:value={settings.teamName} oninput={autoSave} placeholder="e.g. Your Club" />
       </div>
     </div>
   </div>
@@ -874,72 +834,6 @@
     </div>
   </div>
 
-  <!-- ── CLUB COLOURS (owners only) ── -->
-  {#if $subscriptionStore.isOwner || !$subscriptionStore.clubId}
-  <div class="section-block">
-    <div class="section-title">Club Colours</div>
-    <div class="card">
-      <div class="card-desc">Set your club's primary colour. This changes buttons, active states, and highlights throughout the app.</div>
-
-      <div class="color-presets">
-        {#each PRESET_COLORS as preset}
-          <button
-            class="color-swatch"
-            class:selected={settings.clubPrimaryColor === preset.color}
-            style="--swatch-color: {preset.color}"
-            onclick={() => {
-              settings = { ...settings, clubPrimaryColor: settings.clubPrimaryColor === preset.color ? null : preset.color }
-              autoSave()
-            }}
-            title={preset.label}
-          >
-            {#if preset.label.includes('Default')}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;opacity:0.7"><polyline points="20 6 9 17 4 12"/></svg>
-            {/if}
-          </button>
-        {/each}
-      </div>
-
-      <div class="color-custom-row">
-        <div class="field-group" style="flex:1">
-          <label>Custom colour</label>
-          <div class="color-input-wrap">
-            <input
-              type="color"
-              bind:value={customColorInput}
-              oninput={handleCustomColor}
-              class="color-picker"
-            />
-            <input
-              type="text"
-              bind:value={customColorInput}
-              oninput={handleCustomColorText}
-              placeholder="#BAFF29"
-              class="color-text-input"
-              maxlength="7"
-            />
-          </div>
-        </div>
-        {#if settings.clubPrimaryColor}
-          <button class="reset-color-btn" onclick={() => { settings = { ...settings, clubPrimaryColor: null }; customColorInput = ''; autoSave() }}>
-            Reset to default
-          </button>
-        {/if}
-      </div>
-
-      {#if settings.clubPrimaryColor}
-        <div class="color-preview">
-          <span class="color-preview-label">Preview</span>
-          <div class="color-preview-row">
-            <button class="preview-btn" style="background: {settings.clubPrimaryColor}; color: {getContrastPreview(settings.clubPrimaryColor)}">Primary button</button>
-            <div class="preview-badge" style="background: rgba(var(--primary-rgb), 0.12); border: 1px solid rgba(var(--primary-rgb), 0.25); color: var(--primary)">Active state</div>
-          </div>
-        </div>
-      {/if}
-    </div>
-  </div>
-  {/if}
-
   <!-- ── DATA BACKUP ── -->
   <div class="section-block">
     <div class="section-title">Data Backup</div>
@@ -963,7 +857,7 @@
     <div class="card about-card">
       <div class="about-row">
         <span class="about-label">Team</span>
-        <span class="about-val">{settings.teamName || 'GAA Stats'}</span>
+        <span class="about-val">{settings.teamName || 'GAAstat'}</span>
       </div>
       <div class="about-row">
         <span class="about-label">Signed in as</span>
@@ -1257,51 +1151,6 @@
     .page-header { flex-wrap: wrap; }
   }
 
-  /* Club colours */
-  .color-presets { display: flex; flex-wrap: wrap; gap: 8px; }
-  .color-swatch {
-    width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid transparent;
-    background: var(--swatch-color); cursor: pointer; transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; color: transparent;
-    flex-shrink: 0;
-  }
-  .color-swatch:hover { transform: scale(1.1); border-color: var(--border); }
-  .color-swatch.selected { border-color: var(--text); transform: scale(1.1); color: inherit; }
-
-  .color-custom-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-  .color-input-wrap { display: flex; align-items: center; gap: 8px; }
-  .color-picker {
-    width: 46px; height: 46px; border-radius: 10px; border: 1.5px solid var(--input-border);
-    padding: 2px; cursor: pointer; background: var(--surface-3);
-  }
-  .color-text-input {
-    flex: 1; padding: 13px 14px; border: 1.5px solid var(--input-border); border-radius: 10px;
-    font-size: 14px; font-family: monospace; background: var(--surface-3); color: var(--text);
-    min-height: 46px;
-  }
-  .color-text-input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
-  .reset-color-btn {
-    padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border);
-    background: none; color: var(--text-muted); font-size: 13px; font-weight: 500;
-    cursor: pointer; font-family: inherit; white-space: nowrap; min-height: 46px;
-    transition: all 0.15s; align-self: flex-end; flex-shrink: 0;
-  }
-  @media (max-width: 400px) {
-    .reset-color-btn { width: 100%; }
-  }
-  .reset-color-btn:hover { border-color: var(--text-muted); color: var(--text); }
-
-  .color-preview { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
-  .color-preview-label { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); display: block; margin-bottom: 10px; }
-  .color-preview-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .preview-btn {
-    padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600;
-    cursor: default; font-family: inherit;
-  }
-  .preview-badge {
-    padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;
-  }
-
   /* ── My Club (member view) ── */
   .member-info-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -1480,8 +1329,11 @@
   }
 
   /* Danger zone */
-  .danger-title { color: #c62828; }
-  .danger-card { border-color: #f5c0c0; background: #fff8f8; }
+  .danger-title { color: #ef5350; }
+  .danger-card {
+    border-color: rgba(239, 83, 80, 0.3);
+    background: rgba(239, 83, 80, 0.06);
+  }
   .danger-row {
     display: flex;
     align-items: center;
@@ -1526,7 +1378,7 @@
 
   .danger-divider {
     height: 1px;
-    background: var(--divider);
+    background: rgba(239, 83, 80, 0.15);
     margin: 4px 0;
   }
 

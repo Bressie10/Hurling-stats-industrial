@@ -189,7 +189,7 @@
         <div class="auth-dark-header">
           <img src="/gaastat-icon.svg" alt="GAAstat" class="auth-dark-logo-mark">
           <div>
-            <div class="auth-dark-title">GAA Stats App</div>
+            <div class="auth-dark-title">GAAstat</div>
             <div class="auth-dark-sub">Hurling match analytics</div>
           </div>
         </div>
@@ -415,7 +415,7 @@
             <div class="auth-dark-fields">
               <div class="auth-dark-field">
                 <label>Club name</label>
-                <input type="text" bind:value={clubName} placeholder="e.g. Doora Barefield GAA" />
+                <input type="text" bind:value={clubName} placeholder="e.g. Your Club GAA" />
               </div>
               <div class="auth-dark-field">
                 <label>Your email</label>
@@ -505,7 +505,7 @@
         <h2 class="section-title reveal reveal-delay-1">Every stat.<br>Every match.</h2>
       </div>
       <p class="section-body reveal reveal-delay-2">
-        GAA Stats App gives every sideline coach a full data team in their pocket. Tap to log, swipe to analyse, share with your selectors instantly.
+        GAAstat gives every sideline coach a full data team in their pocket. Tap to log, swipe to analyse, share with your selectors instantly.
       </p>
     </div>
     <div class="features-grid">
@@ -719,7 +719,7 @@
         <div class="section-eyebrow reveal">PWA Technology</div>
         <h2 class="section-title reveal reveal-delay-1">No signal?<br><span style="color:var(--lp-lime)">No problem.</span></h2>
         <p class="section-body reveal reveal-delay-2" style="margin-bottom:32px">
-          GAA grounds are notorious for poor mobile reception. GAA Stats App installs directly to your phone's home screen and works completely offline — every match, every stat, every time.
+          GAA grounds are notorious for poor mobile reception. GAAstat installs directly to your phone's home screen and works completely offline — every match, every stat, every time.
         </p>
         <ul class="check-list reveal reveal-delay-3">
           <li>Installs as a PWA — works like a native app</li>
@@ -745,7 +745,7 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#BAFF29" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
           <div>
-            <div class="ground-name">Doora Barefield GAA</div>
+            <div class="ground-name">Your Club GAA</div>
             <div class="ground-status">Signal: None · App status: <span>Fully operational</span></div>
           </div>
         </div>
@@ -806,7 +806,7 @@
       <div class="chart-mockup reveal">
         <div class="chart-header">
           <div class="chart-title">Live Match Logging</div>
-          <div class="chart-period">Doora Barefield vs Clarecastle</div>
+          <div class="chart-period">Your Club vs Opposition</div>
         </div>
         <div class="chart-area" style="height:auto">
           <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
@@ -1157,7 +1157,7 @@
         Data-driven<br><span class="lime">hurling</span> starts<br>here.
       </h2>
       <p class="cta-sub reveal reveal-delay-1">
-        Join GAA coaches already using GAA Stats App on the sideline. Works on any phone, fully offline. Free to start — Pro plans from €7.99/month.
+        Join GAA coaches already using GAAstat on the sideline. Works on any phone, fully offline. Free to start — Pro plans from €7.99/month.
       </p>
       <div class="cta-actions reveal reveal-delay-2">
         <button class="btn-large primary" on:click={() => goToSignup('personal')}>

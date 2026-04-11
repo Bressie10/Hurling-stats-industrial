@@ -276,7 +276,7 @@
     <!-- MATCH DETAIL VIEW -->
     <!-- Print-only report header (hidden on screen) -->
     <div class="print-header">
-      <div class="print-club">{$settingsStore.teamName || 'GAA Stats'} — Match Report</div>
+      <div class="print-club">{$settingsStore.teamName || 'GAAstat'} — Match Report</div>
       <div class="print-fixture">vs {selectedMatch.opposition} · {selectedMatch.date}{selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}</div>
     </div>
 

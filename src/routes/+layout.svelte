@@ -37,7 +37,7 @@
 
   $effect(() => {
     if (typeof document !== 'undefined') {
-      const name = $settingsStore.teamName || 'GAA Stats'
+      const name = $settingsStore.teamName || 'GAAstat'
       document.title = name
       document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', name)
 
@@ -247,7 +247,7 @@
       <nav class="top-nav">
         <div class="brand">
           <img class="brand-logo" src="/gaastat-icon.svg" alt="GAAstat">
-          <span class="brand-name">{$settingsStore.teamName || 'GAA Stats'}</span>
+          <span class="brand-name">{$settingsStore.teamName || 'GAAstat'}</span>
         </div>
 
         <!-- Desktop-only tab row -->

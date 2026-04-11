@@ -346,7 +346,6 @@
   onDestroy(() => { if (isLive) stopLive() })
 
   async function finishMatch() {
-    if (isLive) await stopLive()
     showFinishConfirm = true
   }
 
@@ -368,6 +367,7 @@
       // flag prevents the already-saved match from being auto-resumed and duplicated.
       await markDraftSaved()
       await clearDraftMatch()
+      if (isLive) await stopLive()
       // Reset all state
       clearInterval(timerInterval)
       timerRunning = false
@@ -689,7 +689,7 @@
     <img src="/gaastat-icon.svg" alt="GAAstat" class="hero-logo">
     <div>
       <h2>New Match</h2>
-      <p>{$settingsStore.teamName || 'GAA Stats'} · Hurling</p>
+      <p>{$settingsStore.teamName || 'GAAstat'} · Hurling</p>
     </div>
   </div>
 

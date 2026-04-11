@@ -52,7 +52,7 @@
     <div class="install-hero">
       <div class="install-tag">Installation</div>
       <h1>Install the App</h1>
-      <p class="install-lead">GAA Stats App is a Progressive Web App — no App Store needed. Install it directly from your browser and it works fully offline at any GAA ground.</p>
+      <p class="install-lead">GAAstat is a Progressive Web App — no App Store needed. Install it directly from your browser and it works fully offline at any GAA ground.</p>
     </div>
 
     <!-- Internet callout -->

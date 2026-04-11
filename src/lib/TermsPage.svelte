@@ -20,15 +20,15 @@
 
     <div class="legal-body">
       <div class="legal-intro">
-        By using Hurling Stats you agree to these terms. Please read them carefully.
+        By using GAAstat you agree to these terms. Please read them carefully.
         If you do not agree, do not use the service.
       </div>
 
       <section class="legal-section">
         <h2>1. Acceptance of terms</h2>
         <p>
-          These Terms of Service ("Terms") govern your access to and use of Hurling Stats
-          (the "Service"), operated by the Doora Barefield GAA project ("we", "our", "us").
+          These Terms of Service ("Terms") govern your access to and use of GAAstat
+          (the "Service"), operated by GAAstat ("we", "our", "us").
           By creating an account or using the Service you accept these Terms in full.
         </p>
       </section>

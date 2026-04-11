@@ -63,7 +63,7 @@
   </div>
 
   <div class="footer-bottom">
-    <div class="footer-copy">© {year} GAA Stats App. Built for GAA coaches.</div>
+    <div class="footer-copy">© {year} GAAstat. Built for GAA coaches.</div>
     <div class="footer-legal">
       <button on:click={() => nav('privacy')}>Privacy</button>
       <span>·</span>
