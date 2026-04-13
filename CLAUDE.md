@@ -302,6 +302,10 @@ Called from `Settings.svelte → doDeleteAccount()`. It's a PostgreSQL function 
 
 - [ ] PWA service worker: inject hashed CSS/JS asset URLs at build time (currently pre-caches fixed URLs)
 
+## PWA Manifest
+
+`static/manifest.json` — `short_name` is `"GAAstat"`, icon is `gaastat-icon.png` (192×512). Do not revert to `doora-barefield.png` or `"DB Stats"`.
+
 ---
 
 ## Key Goals
