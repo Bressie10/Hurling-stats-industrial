@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    const appUrl = req.headers.get('origin') ?? 'https://syikhsgovqogzkmmhuis.supabase.co'
+    const appUrl = req.headers.get('origin') ?? Deno.env.get('APP_URL') ?? 'https://gaastat.ie'
 
     const sessionParams: Record<string, unknown> = {
       mode: 'subscription',
