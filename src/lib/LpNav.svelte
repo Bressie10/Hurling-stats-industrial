@@ -188,7 +188,6 @@
     </li>
 
     <!-- Direct links -->
-    <li><button class="nav-link" on:click={() => nav('pricing')}>Pricing</button></li>
   </ul>
 
   <!-- Desktop CTAs -->
@@ -264,9 +263,6 @@
           </div>
         {/if}
       </div>
-
-      <div class="mob-divider"></div>
-      <button class="mob-section-head" on:click={() => nav('pricing')}>Pricing</button>
 
       <div class="mob-ctas">
         <button class="mob-signin" on:click={() => anchor('signin')}>Sign In</button>

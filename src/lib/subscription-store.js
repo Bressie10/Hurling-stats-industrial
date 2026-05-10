@@ -22,20 +22,11 @@ export const subscriptionStore = writable({
 
 const isActiveStatus = s => s.status === 'active' || s.status === 'trialing'
 
-export const isPro = derived(subscriptionStore, $s =>
-  $s.customFeatures?.isPro === true ||
-  (($s.plan === 'personal' || $s.plan === 'club' || $s.plan === 'club_pro') && isActiveStatus($s))
-)
+export const isPro = derived(subscriptionStore, () => true)
 
-export const isClub = derived(subscriptionStore, $s =>
-  $s.customFeatures?.isClub === true ||
-  (($s.plan === 'club' || $s.plan === 'club_pro') && isActiveStatus($s))
-)
+export const isClub = derived(subscriptionStore, () => true)
 
-export const isClubPro = derived(subscriptionStore, $s =>
-  $s.customFeatures?.isClubPro === true ||
-  ($s.plan === 'club_pro' && isActiveStatus($s))
-)
+export const isClubPro = derived(subscriptionStore, () => true)
 
 function generateTeamCode() {
   return String(Math.floor(100000 + Math.random() * 900000))

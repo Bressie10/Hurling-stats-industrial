@@ -189,9 +189,6 @@
         <button class="submit-btn" on:click={handlePersonalSignup} disabled={loading}>
           {loading ? 'Creating account…' : 'Create account'}
         </button>
-        <div class="tier-note">
-          Free to start · Upgrade to <strong>Personal Pro at €7.99/month</strong> for full analytics
-        </div>
       {/if}
 
     <!-- ── CLUB SETUP ── -->
@@ -224,7 +221,6 @@
         </button>
         <div class="tier-note">
           After signing in you'll create your teams and get codes to share with your coaches.
-          <br>Upgrade to <strong>Club at €15/month</strong> to unlock all features.
         </div>
       {/if}
     {/if}

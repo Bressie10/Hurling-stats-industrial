@@ -2,72 +2,19 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isPro, isClub, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
+  import { subscriptionStore, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
   import { showToast } from './toast.js'
   import ConfirmModal from './ConfirmModal.svelte'
 
   let deletingAccount = $state(false)
-  let cancellingSubscription = $state(false)
-  let cancelSuccess = $state(false)
-  let portalLoading = $state(false)
-  let checkoutLoading = $state(null)
-  let showCancelSubConfirm = $state(false)
   let showDeleteTeamConfirm = $state(false)
   let deletingTeamId = $state(null)
   let showLeaveTeamConfirm = $state(false)
   let leavingTeamId = $state(null)
   let leavingTeamName = $state('')
   let showDeleteAccountConfirm = $state(false)
-
-  async function openPortal() {
-    portalLoading = true
-    try {
-      const { data, error } = await supabase.functions.invoke('create-portal-session', {
-        body: { return_url: window.location.href }
-      })
-      if (error || !data?.url) throw new Error(error?.message ?? 'No portal URL')
-      window.location.href = data.url
-    } catch (e) {
-      showToast('Could not open billing portal: ' + e.message, 'error')
-      portalLoading = false
-    }
-  }
-
-  async function handleUpgrade(plan) {
-    checkoutLoading = plan
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: { plan }
-      })
-      if (error || !data?.url) throw new Error(error?.message ?? 'No checkout URL')
-      window.location.href = data.url
-    } catch (e) {
-      showToast('Could not start checkout: ' + e.message, 'error')
-      checkoutLoading = null
-    }
-  }
-
-  function handleCancelSubscription() {
-    showCancelSubConfirm = true
-  }
-
-  async function doCancelSub() {
-    showCancelSubConfirm = false
-    cancellingSubscription = true
-    try {
-      const { error } = await supabase.functions.invoke('cancel-subscription')
-      if (error) throw new Error(error.message)
-      // Reload subscription so UI reflects cancellation
-      if ($user) await loadSubscription($user.id)
-      cancelSuccess = true
-      setTimeout(() => cancelSuccess = false, 4000)
-    } catch (e) {
-      showToast('Failed to cancel subscription: ' + e.message, 'error')
-    }
-    cancellingSubscription = false
-  }
 
   // Teams management
   let teams = $state([])
@@ -85,7 +32,7 @@
 
   async function handleAddTeam() {
     if (!newTeamName.trim()) return
-    if (teams.length >= 4) { teamError = 'Maximum 4 teams on Club plan'; return }
+    if (teams.length >= 20) { teamError = 'Maximum 20 teams'; return }
     addingTeam = true
     teamError = ''
     try {
@@ -338,84 +285,6 @@
     <div class="saved-badge" class:visible={savedFlash}>Saved</div>
   </div>
 
-  <!-- ── SUBSCRIPTION (owners/personal only) ── -->
-  {#if $subscriptionStore.isOwner || (!$subscriptionStore.clubId)}
-  <div class="section-block">
-    <div class="section-title">Subscription</div>
-    <div class="card">
-      {#if $subscriptionStore.loading}
-        <div class="sub-loading">Loading…</div>
-      {:else if $isPro}
-        <div class="sub-active">
-          <div class="sub-badge pro">
-            {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : $subscriptionStore.plan === 'club' ? 'Club' : 'Personal Pro'}
-          </div>
-          <div class="sub-detail">
-            {#if $subscriptionStore.cancelAtPeriodEnd && $subscriptionStore.currentPeriodEnd}
-              <span class="sub-cancelling">Cancels {new Date($subscriptionStore.currentPeriodEnd).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            {:else if $subscriptionStore.status === 'past_due'}
-              <span class="sub-pastdue">Payment failed — please update your card</span>
-            {:else if $subscriptionStore.currentPeriodEnd}
-              Renews {new Date($subscriptionStore.currentPeriodEnd).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' })}
-            {:else}
-              Active
-            {/if}
-          </div>
-          {#if $subscriptionStore.clubCode}
-            <div class="sub-code-row">
-              <span class="sub-code-label">Club invite code</span>
-              <span class="sub-code">{$subscriptionStore.clubCode}</span>
-            </div>
-          {/if}
-          <button class="manage-btn" onclick={openPortal} disabled={portalLoading}>
-            {portalLoading ? 'Opening…' : 'Manage billing'}
-          </button>
-        </div>
-      {:else}
-        <div class="sub-free">
-          <div class="sub-badge free">Free</div>
-          <div class="sub-detail">Match logging · Squad · Last 3 matches</div>
-          {#if $subscriptionStore.clubCode}
-            <div class="sub-code-row">
-              <span class="sub-code-label">Club invite code</span>
-              <span class="sub-code">{$subscriptionStore.clubCode}</span>
-            </div>
-          {/if}
-          <div class="upgrade-options">
-            <div class="upgrade-option">
-              <div>
-                <strong>Personal Pro</strong>
-                <span>Full analytics, 1 coach</span>
-              </div>
-              <button class="upgrade-btn" onclick={() => handleUpgrade('personal')} disabled={checkoutLoading !== null}>
-                {checkoutLoading === 'personal' ? 'Redirecting…' : '€7.99/mo — Upgrade'}
-              </button>
-            </div>
-            <div class="upgrade-option">
-              <div>
-                <strong>Club — €15/mo</strong>
-                <span>4 teams, unlimited coaches, join codes</span>
-              </div>
-              <button class="upgrade-btn featured" onclick={() => handleUpgrade('club')} disabled={checkoutLoading !== null}>
-                {checkoutLoading === 'club' ? 'Redirecting…' : 'Upgrade to Club'}
-              </button>
-            </div>
-            <div class="upgrade-option">
-              <div>
-                <strong>Club Pro — €25/mo</strong>
-                <span>Everything in Club + live match sharing</span>
-              </div>
-              <button class="upgrade-btn featured" onclick={() => handleUpgrade('club_pro')} disabled={checkoutLoading !== null}>
-                {checkoutLoading === 'club_pro' ? 'Redirecting…' : 'Upgrade to Club Pro'}
-              </button>
-            </div>
-          </div>
-        </div>
-      {/if}
-    </div>
-  </div>
-  {/if}
-
   <!-- ── MY CLUB (member view) ── -->
   {#if !$subscriptionStore.isOwner && $subscriptionStore.clubId}
   <div class="section-block">
@@ -491,7 +360,7 @@
   {/if}
 
   <!-- ── CLUB SETUP (Club/Club Pro with no club yet) ── -->
-  {#if $isClub && !$subscriptionStore.isOwner && !$subscriptionStore.clubId}
+  {#if !$subscriptionStore.isOwner && !$subscriptionStore.clubId}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">
@@ -513,7 +382,7 @@
   {/if}
 
   <!-- ── CLAIM OWNERSHIP (Club/Club Pro with clubId but no owner row) ── -->
-  {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId && !$subscriptionStore.clubRole}
+  {#if !$subscriptionStore.isOwner && $subscriptionStore.clubId && !$subscriptionStore.clubRole}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">
@@ -527,7 +396,7 @@
   {/if}
 
   <!-- ── CLUB TEAMS ── -->
-  {#if $isClub && $subscriptionStore.isOwner}
+  {#if $subscriptionStore.isOwner}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">
@@ -878,20 +747,7 @@
   <div class="section-block">
     <div class="section-title danger-title">Danger Zone</div>
     <div class="card danger-card">
-      {#if $isPro && !$subscriptionStore.cancelAtPeriodEnd}
-        <div class="danger-row">
-          <div>
-            <strong>Cancel subscription</strong>
-            <p>You'll keep access until the end of your billing period.</p>
-            {#if cancelSuccess}<span class="cancel-success">Cancelled — you keep access until your billing period ends.</span>{/if}
-          </div>
-          <button class="cancel-sub-btn" onclick={handleCancelSubscription} disabled={cancellingSubscription}>
-            {cancellingSubscription ? 'Cancelling…' : 'Cancel subscription'}
-          </button>
-        </div>
-        <div class="danger-divider"></div>
-      {/if}
-      <div class="danger-row">
+<div class="danger-row">
         <div>
           <strong>Delete account</strong>
           <p>Permanently deletes your account and all data. Cannot be undone.</p>
@@ -905,16 +761,6 @@
 
 </div>
 
-{#if showCancelSubConfirm}
-  <ConfirmModal
-    title="Cancel your subscription?"
-    message="You'll keep access until the end of your current billing period."
-    confirmLabel="Cancel subscription"
-    confirmStyle="danger"
-    onConfirm={doCancelSub}
-    onCancel={() => showCancelSubConfirm = false}
-  />
-{/if}
 
 {#if showDeleteTeamConfirm}
   <ConfirmModal

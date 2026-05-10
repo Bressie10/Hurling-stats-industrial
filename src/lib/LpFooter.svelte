@@ -32,7 +32,6 @@
       <div class="footer-col-head">Product</div>
       <ul>
         <li><button on:click={() => nav('home')}>Features Overview</button></li>
-        <li><button on:click={() => nav('pricing')}>Pricing</button></li>
         <li><button on:click={() => nav('docs')}>User Guide</button></li>
         <li><button on:click={() => nav('install')}>How to Install</button></li>
       </ul>
@@ -45,7 +44,6 @@
         <li><button on:click={() => nav('home')}>Individual Coaches</button></li>
         <li><button on:click={() => nav('home')}>Club Teams</button></li>
         <li><button on:click={() => nav('home')}>Backroom Staff</button></li>
-        <li><button on:click={() => nav('pricing')}>Enterprise</button></li>
       </ul>
     </div>
 

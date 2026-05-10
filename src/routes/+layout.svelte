@@ -121,14 +121,7 @@
 
         let subVal; subscriptionStore.subscribe(s => subVal = s)()
 
-        const pendingPlan = localStorage.getItem('pending_checkout_plan')
-        if (pendingPlan && subVal.plan === 'free') {
-          localStorage.removeItem('pending_checkout_plan')
-          const { data } = await supabase.functions.invoke('create-checkout-session', { body: { plan: pendingPlan } })
-          if (data?.url) { window.location.href = data.url; return }
-        }
-
-        if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
+if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
           needsTeamSetup = true
         }
 

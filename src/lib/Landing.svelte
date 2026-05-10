@@ -13,8 +13,8 @@
   let loading = false
   let error = null
   let successMsg = null
-  let selectedPersonalPlan = null // null | 'free' | 'pro'
-  let selectedClubPlan = null     // null | 'club' | 'club_pro'
+  let selectedPersonalPlan = 'free'
+  let selectedClubPlan = 'club'
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
@@ -28,14 +28,9 @@
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
     try {
-      if (selectedPersonalPlan === 'pro') {
-        localStorage.setItem('pending_checkout_plan', 'personal')
-      }
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'personal' }))
       await signUp(email, password)
-      successMsg = selectedPersonalPlan === 'pro'
-        ? 'Check your email to confirm your account. Once you sign in you\'ll be taken to payment.'
-        : 'Check your email to confirm your account, then sign in.'
+      successMsg = 'Check your email to confirm your account, then sign in.'
     } catch (e) { error = e.message }
     loading = false
   }
@@ -45,10 +40,9 @@
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
     loading = true; error = null
     try {
-      localStorage.setItem('pending_checkout_plan', selectedClubPlan)
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'club', clubName: clubName.trim() }))
       await signUp(email, password)
-      successMsg = 'Check your email to confirm your account. Once you sign in you\'ll be taken to payment.'
+      successMsg = 'Check your email to confirm your account, then sign in.'
     } catch (e) { error = e.message }
     loading = false
   }
@@ -293,49 +287,12 @@
           {#if successMsg}
             <div class="auth-dark-success">{successMsg}</div>
             <button class="auth-dark-btn-primary" on:click={() => setMode('login')}>Go to sign in</button>
-          {:else if !selectedPersonalPlan}
-            <!-- Step 1: pick a plan -->
+          {:else}
             <div class="auth-dark-flow-header">
               <button class="auth-dark-back-btn" on:click={() => setMode('choose')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <span>Choose your plan</span>
-            </div>
-            <div class="signup-plan-cards">
-              <button class="signup-plan-card" on:click={() => selectedPersonalPlan = 'free'}>
-                <div class="spc-name">Free</div>
-                <div class="spc-price">€0<span>/month</span></div>
-                <ul class="spc-features">
-                  <li>1 coach · 1 team</li>
-                  <li>Full match logging</li>
-                  <li>3 matches in history</li>
-                  <li>100% offline</li>
-                </ul>
-                <div class="spc-cta">Get started free</div>
-              </button>
-              <button class="signup-plan-card featured" on:click={() => selectedPersonalPlan = 'pro'}>
-                <div class="spc-badge">Most popular</div>
-                <div class="spc-name">Personal Pro</div>
-                <div class="spc-price">€7.99<span>/month</span></div>
-                <ul class="spc-features">
-                  <li>Unlimited match history</li>
-                  <li>Player stats &amp; charts</li>
-                  <li>Team stats &amp; pitch map</li>
-                  <li>Match timeline</li>
-                  <li>Stat targets</li>
-                  <li>PDF match reports</li>
-                </ul>
-                <div class="spc-cta primary">Start Personal Pro →</div>
-              </button>
-            </div>
-
-          {:else}
-            <!-- Step 2: email + password -->
-            <div class="auth-dark-flow-header">
-              <button class="auth-dark-back-btn" on:click={() => selectedPersonalPlan = null}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <span>{selectedPersonalPlan === 'pro' ? 'Personal Pro' : 'Free account'}</span>
+              <span>Create account</span>
             </div>
             <div class="auth-dark-fields">
               <div class="auth-dark-field">
@@ -348,19 +305,8 @@
               </div>
               {#if error}<div class="auth-dark-error">{error}</div>{/if}
               <button class="auth-dark-btn-primary" on:click={handlePersonalSignup} disabled={loading}>
-                {#if loading}
-                  {selectedPersonalPlan === 'pro' ? 'Creating account…' : 'Creating account…'}
-                {:else if selectedPersonalPlan === 'pro'}
-                  Continue to payment →
-                {:else}
-                  Create free account
-                {/if}
+                {loading ? 'Creating account…' : 'Create account'}
               </button>
-              {#if selectedPersonalPlan === 'pro'}
-                <div class="auth-dark-tier-note">
-                  You'll be taken to payment after confirming your email. €7.99/month, cancel anytime.
-                </div>
-              {/if}
             </div>
           {/if}
 
@@ -369,48 +315,12 @@
           {#if successMsg}
             <div class="auth-dark-success">{successMsg}</div>
             <button class="auth-dark-btn-primary" on:click={() => setMode('login')}>Go to sign in</button>
-          {:else if !selectedClubPlan}
-            <!-- Step 1: pick Club or Club Pro -->
+          {:else}
             <div class="auth-dark-flow-header">
               <button class="auth-dark-back-btn" on:click={() => setMode('choose')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <span>Choose your plan</span>
-            </div>
-            <div class="signup-plan-cards">
-              <button class="signup-plan-card featured" on:click={() => selectedClubPlan = 'club'}>
-                <div class="spc-name">Club</div>
-                <div class="spc-price">€15<span>/month</span></div>
-                <ul class="spc-features">
-                  <li>Unlimited coaches</li>
-                  <li>Up to 4 teams</li>
-                  <li>Team join codes</li>
-                  <li>Full analytics</li>
-                  <li>100% offline</li>
-                </ul>
-                <div class="spc-cta primary">Set up Club →</div>
-              </button>
-              <button class="signup-plan-card" on:click={() => selectedClubPlan = 'club_pro'}>
-                <div class="spc-name">Club Pro</div>
-                <div class="spc-price">€25<span>/month</span></div>
-                <ul class="spc-features">
-                  <li>Everything in Club</li>
-                  <li>Live match sharing</li>
-                  <li>Live viewer mode</li>
-                  <li>Priority support</li>
-                  <li>Early access</li>
-                </ul>
-                <div class="spc-cta">Set up Club Pro →</div>
-              </button>
-            </div>
-
-          {:else}
-            <!-- Step 2: club details form -->
-            <div class="auth-dark-flow-header">
-              <button class="auth-dark-back-btn" on:click={() => selectedClubPlan = null}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <span>{selectedClubPlan === 'club_pro' ? 'Club Pro' : 'Club'}</span>
+              <span>Set up your club</span>
             </div>
             <div class="auth-dark-fields">
               <div class="auth-dark-field">
@@ -427,11 +337,8 @@
               </div>
               {#if error}<div class="auth-dark-error">{error}</div>{/if}
               <button class="auth-dark-btn-primary" on:click={handleClubSignup} disabled={loading}>
-                {loading ? 'Creating club…' : 'Continue to payment →'}
+                {loading ? 'Creating club…' : 'Create club account'}
               </button>
-              <div class="auth-dark-tier-note">
-                {selectedClubPlan === 'club_pro' ? '€25/month' : '€15/month'} · Cancel anytime · Teams set up after payment
-              </div>
             </div>
           {/if}
         {/if}
@@ -923,7 +830,7 @@
   <section class="club-section">
     <div class="club-inner">
       <div class="club-content reveal">
-        <div class="section-eyebrow">Club &amp; Pro plans</div>
+        <div class="section-eyebrow">For your club</div>
         <h2 class="section-title" style="max-width:480px">
           One app.<br>Your <span style="color:var(--lp-lime)">whole club.</span>
         </h2>
@@ -950,8 +857,8 @@
             </div>
           </div>
         </div>
-        <button class="btn-primary" on:click={() => onNavigate('pricing')} style="margin-top:8px">
-          Compare all plans →
+        <button class="btn-primary" on:click={() => goToSignup('club')} style="margin-top:8px">
+          Set up your club →
         </button>
       </div>
       <div class="club-visual reveal reveal-delay-2">
@@ -995,160 +902,6 @@
     </div>
   </section>
 
-  <!-- ── PRICING ─────────────────────────────────────────────────────────── -->
-  <section class="pricing-section" id="pricing">
-    <div class="pricing-header">
-      <div class="section-eyebrow reveal" style="justify-content:center">Simple pricing</div>
-      <h2 class="section-title reveal reveal-delay-1" style="text-align:center">
-        Pick your plan.<br><span style="color:var(--lp-lime)">Or build your own.</span>
-      </h2>
-      <p class="section-body reveal reveal-delay-2" style="text-align:center;margin:0 auto;max-width:500px">
-        Start free and upgrade when you're ready. Every plan includes offline-first logging, cloud sync, and squad management. Need something different? We'll build it with you.
-      </p>
-    </div>
-
-    <div class="pricing-grid reveal reveal-delay-2">
-
-      <!-- FREE -->
-      <div class="plan-card">
-        <div class="plan-name">Free</div>
-        <div class="plan-price">€0<span class="plan-period">/month</span></div>
-        <div class="plan-tagline">Get started today</div>
-        <ul class="plan-features">
-          <li>1 coach, 1 team</li>
-          <li>Full match logging</li>
-          <li>100% offline</li>
-          <li>Cloud sync & backup</li>
-          <li>Squad management</li>
-          <li class="plan-feature-faded">Advanced analytics</li>
-          <li class="plan-feature-faded">PDF match reports</li>
-          <li class="plan-feature-faded">Performance targets</li>
-        </ul>
-        <button class="plan-btn" on:click={() => goToSignup('personal')}>
-          Get Started Free
-        </button>
-      </div>
-
-      <!-- PERSONAL PRO -->
-      <div class="plan-card plan-featured">
-        <div class="plan-badge">Most Popular</div>
-        <div class="plan-name">Personal Pro</div>
-        <div class="plan-price">€7.99<span class="plan-period">/month</span></div>
-        <div class="plan-tagline">Full analytics for one coach</div>
-        <ul class="plan-features">
-          <li>1 coach, 1 team</li>
-          <li>Full match logging</li>
-          <li>100% offline</li>
-          <li>Cloud sync & backup</li>
-          <li>Squad management</li>
-          <li>Full player analytics</li>
-          <li>PDF match reports</li>
-          <li>Performance targets</li>
-        </ul>
-        <button class="plan-btn plan-btn-featured" on:click={() => goToSignup('personal')}>
-          Get Started
-        </button>
-      </div>
-
-      <!-- CLUB -->
-      <div class="plan-card">
-        <div class="plan-name">Club</div>
-        <div class="plan-price">€15<span class="plan-period">/month</span></div>
-        <div class="plan-tagline">Multiple teams, one club</div>
-        <ul class="plan-features">
-          <li>Multiple teams</li>
-          <li>Multi-coach access</li>
-          <li>Shared team codes</li>
-          <li>Full match logging</li>
-          <li>100% offline</li>
-          <li>Full player analytics</li>
-          <li>PDF match reports</li>
-          <li>Performance targets</li>
-        </ul>
-        <button class="plan-btn" on:click={() => goToSignup('club')}>
-          Set Up My Club
-        </button>
-      </div>
-
-      <!-- CLUB PRO -->
-      <div class="plan-card">
-        <div class="plan-name">Club Pro</div>
-        <div class="plan-price">€25<span class="plan-period">/month</span></div>
-        <div class="plan-tagline">Everything, for serious clubs</div>
-        <ul class="plan-features">
-          <li>Everything in Club</li>
-          <li>Priority support</li>
-          <li>Early access to features</li>
-          <li>Custom club branding</li>
-          <li>Export all data (CSV)</li>
-          <li>Season comparison tools</li>
-          <li>Live match sharing</li>
-          <li>Unlimited history</li>
-        </ul>
-        <button class="plan-btn" on:click={() => goToSignup('club')}>
-          Set Up My Club
-        </button>
-      </div>
-
-      <!-- CUSTOM -->
-      <div class="plan-card plan-custom">
-        <div class="plan-custom-badge">Enterprise</div>
-        <div class="plan-name">Custom Plan</div>
-        <div class="plan-price-custom">Let's talk</div>
-        <div class="plan-tagline">Built around your needs</div>
-        <ul class="plan-features">
-          <li>Everything in Club Pro</li>
-          <li>Custom stat types</li>
-          <li>White-label option</li>
-          <li>Multi-county / board</li>
-          <li>API access</li>
-          <li>Dedicated onboarding</li>
-          <li>SLA & priority support</li>
-          <li>Custom integrations</li>
-        </ul>
-        <a href="mailto:contact@gaastatsapp.com" class="plan-btn plan-btn-custom">
-          Contact Us
-        </a>
-        <div class="plan-custom-note">
-          Working with a county board, school, or large organisation? We'll design a plan that fits exactly what you need.
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── FAQ ─────────────────────────────────────────────────────────────── -->
-  <section class="faq-section">
-    <div class="faq-inner">
-      <div class="faq-header">
-        <div class="section-eyebrow reveal" style="justify-content:center">FAQ</div>
-        <h2 class="section-title reveal reveal-delay-1" style="text-align:center">Common questions</h2>
-      </div>
-      <div class="faq-grid">
-        {#each [
-          { q: 'Does it really work without internet?', a: 'Yes — completely. Every stat, squad member, and match is stored locally on your device using IndexedDB. You can log a full match with zero signal. Data syncs automatically to the cloud when you\'re next online.' },
-          { q: 'Do I need to install it from an app store?', a: 'No. Open the site in Safari (iOS) or Chrome (Android), tap "Add to Home Screen", and it installs as a full PWA. No App Store, no waiting, no permissions hassle.' },
-          { q: 'Can multiple coaches use the same club account?', a: 'On Club and Club Pro plans, yes. The club owner creates teams and shares a 6-digit join code. Each coach creates their own free account and joins with the code. Their match data stays private to them.' },
-          { q: 'What is live match sharing?', a: 'Club Pro\'s standout feature. The coach logging the match can broadcast live data to backroom staff watching on the sideline or anywhere in the world. Viewers see the live score, stats, and puckout breakdown updating in real time.' },
-          { q: 'Can I cancel anytime?', a: 'Yes. Cancel from Settings → Manage billing. You keep full access until the end of your current billing period. No lock-ins.' },
-          { q: 'What happens to my data if I downgrade?', a: 'Your data is always yours. If you downgrade from Pro, your match history is preserved — you just won\'t be able to view analytics until you upgrade again. You can export everything as JSON at any time from Settings.' },
-        ] as item, i}
-          <div class="faq-item reveal" style="--delay:{i * 0.05}s">
-            <div class="faq-q">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              {item.q}
-            </div>
-            <div class="faq-a">{item.a}</div>
-          </div>
-        {/each}
-      </div>
-      <div class="faq-more reveal">
-        <span>More questions?</span>
-        <button class="faq-docs-link" on:click={() => onNavigate('docs')}>Read the full docs →</button>
-      </div>
-    </div>
-  </section>
-
   <!-- ── CTA ────────────────────────────────────────────────────────────── -->
   <section class="cta-section" id="cta">
     <div class="cta-inner">
@@ -1157,7 +910,7 @@
         Data-driven<br><span class="lime">hurling</span> starts<br>here.
       </h2>
       <p class="cta-sub reveal reveal-delay-1">
-        Join GAA coaches already using GAAstat on the sideline. Works on any phone, fully offline. Free to start — Pro plans from €7.99/month.
+        Join GAA coaches already using GAAstat on the sideline. Works on any phone, fully offline.
       </p>
       <div class="cta-actions reveal reveal-delay-2">
         <button class="btn-large primary" on:click={() => goToSignup('personal')}>
