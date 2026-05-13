@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { signIn, signUp } from './auth-store.js'
+  import { signIn, signUp, resetPassword } from './auth-store.js'
   import { goto } from '$app/navigation'
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
@@ -8,7 +8,7 @@
   export let onNavigate = () => {}
 
   // Auth state
-  let mode = 'login' // 'login' | 'choose' | 'personal' | 'club' | 'join'
+  let mode = 'login' // 'login' | 'choose' | 'personal' | 'club' | 'join' | 'forgot'
   let email = '', password = '', clubName = '', teamCode = ''
   let loading = false
   let error = null
@@ -56,6 +56,16 @@
       localStorage.setItem('signup_intent', JSON.stringify({ type: 'join', teamCode: code }))
       await signUp(email, password)
       successMsg = 'Check your email to confirm your account, then sign in.'
+    } catch (e) { error = e.message }
+    loading = false
+  }
+
+  async function handleForgot() {
+    if (!email.trim()) { error = 'Please enter your email'; return }
+    loading = true; error = null
+    try {
+      await resetPassword(email.trim())
+      successMsg = 'Check your email for a password reset link.'
     } catch (e) { error = e.message }
     loading = false
   }
@@ -208,7 +218,36 @@
             <button class="auth-dark-btn-outline" on:click={() => setMode('choose')}>
               Create an account
             </button>
+            <button type="button" class="auth-dark-link" on:click={() => setMode('forgot')}>
+              Forgot password?
+            </button>
           </div>
+
+        <!-- FORGOT PASSWORD -->
+        {:else if mode === 'forgot'}
+          {#if successMsg}
+            <div class="auth-dark-success">{successMsg}</div>
+            <button class="auth-dark-btn-primary" on:click={() => setMode('login')}>Back to sign in</button>
+          {:else}
+            <div class="auth-dark-flow-header">
+              <button class="auth-dark-back-btn" on:click={() => setMode('login')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span>Reset password</span>
+            </div>
+            <div class="auth-dark-fields">
+              <div class="auth-dark-field">
+                <label>Email</label>
+                <input type="email" bind:value={email} placeholder="coach@example.com"
+                  on:keydown={e => e.key === 'Enter' && handleForgot()} />
+                <div class="auth-dark-hint">We'll send you a link to set a new password.</div>
+              </div>
+              {#if error}<div class="auth-dark-error">{error}</div>{/if}
+              <button class="auth-dark-btn-primary" on:click={handleForgot} disabled={loading}>
+                {loading ? 'Sending…' : 'Send reset link'}
+              </button>
+            </div>
+          {/if}
 
         <!-- CHOOSE -->
         {:else if mode === 'choose'}
@@ -1132,6 +1171,12 @@
     cursor: pointer; font-family: var(--lp-font-body); text-align: center; padding: 4px 0;
   }
   .auth-dark-back:hover { color: var(--lp-lime); }
+  .auth-dark-link {
+    background: none; border: none; color: var(--lp-text2); font-size: 13px;
+    cursor: pointer; font-family: var(--lp-font-body); text-align: center; padding: 4px 0;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .auth-dark-link:hover { color: var(--lp-lime); }
   .auth-dark-flow-header { display: flex; align-items: center; gap: 10px; }
   .auth-dark-flow-header span { font-size: 15px; font-weight: 600; color: var(--lp-text); font-family: var(--lp-font-sub); text-transform: uppercase; letter-spacing: 0.04em; }
   .auth-dark-back-btn {
