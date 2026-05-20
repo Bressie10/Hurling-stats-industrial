@@ -5,7 +5,7 @@ const CACHE = 'gaa-v2-__CACHE_VERSION__'
 const PRECACHE = [
   '/',
   '/index.html',
-  '/doora-barefield.png',
+  '/gaastat-icon.svg',
   '/favicon.svg',
 ]
 
