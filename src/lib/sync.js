@@ -10,7 +10,10 @@ import {
 // are kept as exports for backward compatibility with existing callers. Under
 // the hood they all funnel through the outbox + merge pipeline below.
 
-let draining = false
+// Tracked as a promise (not a bool) so that concurrent callers — Squad.svelte
+// after a save, signOut, the visibility listener — all await the same in-flight
+// drain instead of getting a bare `false` and racing with clearAllData.
+let drainPromise = null
 let pulling = false
 let listenersInstalled = false
 let activeUserId = null
@@ -50,36 +53,47 @@ export function deleteMatchFromCloud(userId, _matchId) {
   scheduleAutoSync(userId)
 }
 
+// Public flush — used by signOut to make sure pending mutations reach Supabase
+// before clearAllData wipes the outbox. Returns a promise that resolves to true
+// iff the outbox is empty when we finish.
+export function flushOutbox(userId) {
+  if (!userId) return Promise.resolve(false)
+  activeUserId = userId
+  installListeners()
+  return drainOutbox(userId)
+}
+
 // ── Drain worker ────────────────────────────────────────────────────────────
 // Processes outbox mutations in FIFO order. On per-item failure, marks the row
 // with attempts++/last_error/next_retry_at (exponential backoff up to 5 min)
 // and moves on. Returns true iff the outbox is empty when we finish.
-async function drainOutbox(userId) {
-  if (draining) return false
-  draining = true
-  try {
-    while (true) {
-      const ready = await getReadyMutations(50)
-      if (ready.length === 0) break
-      let progressed = false
-      for (const m of ready) {
-        try {
-          await applyMutation(userId, m)
-          await markMutationDone(m.id)
-          progressed = true
-        } catch (e) {
-          await markMutationFailed(m.id, e?.message || String(e))
+function drainOutbox(userId) {
+  if (drainPromise) return drainPromise
+  drainPromise = (async () => {
+    try {
+      while (true) {
+        const ready = await getReadyMutations(50)
+        if (ready.length === 0) break
+        let progressed = false
+        for (const m of ready) {
+          try {
+            await applyMutation(userId, m)
+            await markMutationDone(m.id)
+            progressed = true
+          } catch (e) {
+            await markMutationFailed(m.id, e?.message || String(e))
+          }
         }
+        // No item in this batch succeeded — every ready item is now backed off.
+        // Stop; the online/visibility listeners or the next mutation will retrigger.
+        if (!progressed) break
       }
-      // No item in this batch succeeded — every ready item is now backed off.
-      // Stop here; we'll be retriggered by the online/visibility listeners or
-      // by the next mutation.
-      if (!progressed) break
+      return (await getOutboxCount()) === 0
+    } finally {
+      drainPromise = null
     }
-    return (await getOutboxCount()) === 0
-  } finally {
-    draining = false
-  }
+  })()
+  return drainPromise
 }
 
 async function applyMutation(userId, m) {
@@ -215,14 +229,18 @@ async function pullFromCloud(userId) {
       await tx.done
     }
 
-    // Squad: roster-level updated_at (max over players). Cloud wins only when
-    // strictly newer than the freshest local player. Local edits won't be
-    // squashed; they're already queued in the outbox and will push up next drain.
+    // Squad: roster-level updated_at (max over players). Cloud wins when
+    // strictly newer, OR when local is empty and cloud has data — that second
+    // clause is what restores squads after a sign-out wipe on legacy rows
+    // (which have no data.updated_at and would otherwise tie at 0 forever).
+    // Local edits aren't squashed; they sit in the outbox until the next drain.
     if (squadRes.data) {
       const localSquad = await loadSquad()
       const localMax = localSquad.reduce((m, p) => Math.max(m, p.updated_at || 0), 0)
       const cloudMax = squadRes.data.reduce((m, r) => Math.max(m, r.data?.updated_at || 0), 0)
-      if (squadRes.data.length > 0 && cloudMax > localMax) {
+      const cloudHasData = squadRes.data.length > 0
+      const localEmpty = localSquad.length === 0
+      if (cloudHasData && (localEmpty || cloudMax > localMax)) {
         const tx = db.transaction('squad', 'readwrite')
         tx.store.clear()
         for (const row of squadRes.data) {
