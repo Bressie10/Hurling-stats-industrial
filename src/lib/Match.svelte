@@ -156,26 +156,39 @@
       lineup = draft.lineup || {}
       if (draft.players?.length > 0) players = draft.players
 
-      // Restore timer — if it was running when app closed, calculate real elapsed time
-      if (draft.timerStartedAt) {
-        const elapsed = Math.floor((Date.now() - draft.timerStartedAt) / 1000)
-        timerSeconds = (draft.timerSeconds || 0) + elapsed
-        timerStartedAt = Date.now()
-        timerInterval = setInterval(() => { timerSeconds++; saveDraft() }, 1000)
-        timerRunning = true
+      // Restore timer. New drafts carry timerAccumulatedMs + timerAnchorMs;
+      // legacy drafts carry timerSeconds + timerStartedAt. Either way the
+      // anchor is wall-clock, so elapsed time while the app was closed is
+      // automatically included on first render — no manual top-up needed.
+      if (typeof draft.timerAccumulatedMs === 'number') {
+        timerAccumulatedMs = draft.timerAccumulatedMs
+        timerAnchorMs = (typeof draft.timerAnchorMs === 'number') ? draft.timerAnchorMs : null
       } else {
-        timerSeconds = draft.timerSeconds || 0
+        timerAccumulatedMs = (draft.timerSeconds || 0) * 1000
+        timerAnchorMs = (typeof draft.timerStartedAt === 'number') ? draft.timerStartedAt : null
       }
+      nowMs = Date.now()
+      if (timerAnchorMs !== null) startTimerTick()
 
       screen = draft.screen === 'stats' ? 'stats' : 'match'
+    }
+
+    // Re-sync the clock immediately whenever the tab becomes visible again.
+    // setInterval is throttled (Chrome) or paused entirely (iOS PWA when the
+    // screen locks) in the background — without this, the display can show
+    // a stale value for a fraction of a second after the user returns.
+    if (typeof document !== 'undefined') {
+      timerVisibilityHandler = () => { if (document.visibilityState === 'visible') tickClock() }
+      document.addEventListener('visibilitychange', timerVisibilityHandler)
     }
   })
 
   async function discardDraft() {
     await clearDraftMatch()
-    clearInterval(timerInterval)
-    timerRunning = false
-    timerStartedAt = null
+    stopTimerTick()
+    timerAccumulatedMs = 0
+    timerAnchorMs = null
+    nowMs = Date.now()
     opposition = ''
     venue = ''
     competition = ''
@@ -188,7 +201,6 @@
     matchScore = { home: { goals: 0, points: 0 }, away: { goals: 0, points: 0 } }
     notes = ''
     customStats = []
-    timerSeconds = 0
     period = $settingsStore.defaultPeriod || '1st Half'
     screen = 'setup'
   }
@@ -333,8 +345,12 @@
         puckouts,
         oppScores,
         lineup,
+        timerAccumulatedMs,
+        timerAnchorMs,
+        // Back-compat: older app versions reading this draft still expect
+        // timerSeconds (whole seconds) and timerStartedAt (wall-clock anchor).
         timerSeconds,
-        timerStartedAt: timerRunning ? timerStartedAt : null,
+        timerStartedAt: timerAnchorMs,
         screen: screen === 'stats' ? 'stats' : 'match'
       }))
     } catch (e) {
@@ -343,7 +359,14 @@
     broadcastLive()
   }
 
-  onDestroy(() => { if (isLive) stopLive() })
+  onDestroy(() => {
+    stopTimerTick()
+    if (timerVisibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', timerVisibilityHandler)
+      timerVisibilityHandler = null
+    }
+    if (isLive) stopLive()
+  })
 
   async function finishMatch() {
     showFinishConfirm = true
@@ -353,8 +376,10 @@
     showFinishConfirm = false
     if (finishing) return
     finishing = true
-    clearInterval(timerInterval)
-    timerRunning = false
+    // Freeze the timer cleanly. pauseTimer() rolls the current run-segment
+    // into timerAccumulatedMs so that, on error, startTimer() can resume from
+    // the exact elapsed time without losing the partial second.
+    pauseTimer()
     try {
       await saveMatch($state.snapshot({
         id: Date.now(), date: matchDate, opposition, venue, competition,
@@ -369,9 +394,10 @@
       await clearDraftMatch()
       if (isLive) await stopLive()
       // Reset all state
-      clearInterval(timerInterval)
-      timerRunning = false
-      timerStartedAt = null
+      stopTimerTick()
+      timerAccumulatedMs = 0
+      timerAnchorMs = null
+      nowMs = Date.now()
       opposition = ''
       venue = ''
       competition = ''
@@ -384,7 +410,6 @@
       matchScore = { home: { goals: 0, points: 0 }, away: { goals: 0, points: 0 } }
       notes = ''
       customStats = []
-      timerSeconds = 0
       period = $settingsStore.defaultPeriod || '1st Half'
       screen = 'setup'
       // FIX: Trigger auto-sync so the finished match is backed up without
@@ -393,12 +418,10 @@
       showToast('Match saved!', 'success')
     } catch (e) {
       showToast('Save failed — please try again. Your match data is still safe.', 'error')
-      // FIX: Restore timerStartedAt so wall-clock recovery works correctly
-      // if the app closes after this failure. Without this, reopening the app
-      // would calculate elapsed from the wrong reference point.
-      timerStartedAt = Date.now() - timerSeconds * 1000
-      timerInterval = setInterval(() => { timerSeconds++; saveDraft() }, 1000)
-      timerRunning = true
+      // Resume from where pauseTimer() left off. timerAccumulatedMs already
+      // holds the full elapsed time; startTimer() just sets a new wall-clock
+      // anchor so the seconds continue advancing.
+      startTimer()
     } finally {
       finishing = false
     }
@@ -435,30 +458,81 @@
   }
 
   // ── TIMER ────────────────────────────────────
-  let timerSeconds = $state(0)
-  let timerRunning = $state(false)
+  // Wall-clock derived stopwatch. The displayed seconds are *always* computed
+  // from Date.now() — never incremented by a setInterval tick — so the clock
+  // cannot drift when the tab is throttled, the device sleeps, the PWA is
+  // backgrounded on iOS, or the CPU is busy. The setInterval below only nudges
+  // a reactive `nowMs` value to drive UI updates; it never counts time.
+  //
+  // State model:
+  //   timerAccumulatedMs  ms of game time accumulated *before* the current
+  //                       run-segment. Frozen when paused, bumped when starting
+  //                       a new run-segment after a pause.
+  //   timerAnchorMs       Date.now() at the start of the current run-segment,
+  //                       or null when paused/stopped.
+  //   nowMs               reactive clock; ticked every TIMER_TICK_MS while
+  //                       running and on visibilitychange so the UI re-renders.
+  //
+  // Persisted to draft as `timerAccumulatedMs` + `timerAnchorMs` (with
+  // legacy `timerSeconds` + `timerStartedAt` kept for back-compat reads).
+  const TIMER_TICK_MS = 250
+  let timerAccumulatedMs = $state(0)
+  let timerAnchorMs = $state(null)
+  let nowMs = $state(Date.now())
   let timerInterval = null
-  let timerStartedAt = $state(null)  // Date.now() when timer last started — survives app close
+  let timerPersistAt = 0
+  let timerVisibilityHandler = null
 
+  let timerRunning = $derived(timerAnchorMs !== null)
+
+  let timerElapsedMs = $derived(
+    timerAccumulatedMs + (timerAnchorMs !== null ? Math.max(0, nowMs - timerAnchorMs) : 0)
+  )
+  let timerSeconds = $derived(Math.floor(timerElapsedMs / 1000))
   let timerOverTime = $derived(timerSeconds >= ($settingsStore.periodLength || 30) * 60)
 
+  function tickClock() { nowMs = Date.now() }
+
+  function startTimerTick() {
+    if (timerInterval) return
+    tickClock()
+    timerPersistAt = nowMs
+    timerInterval = setInterval(() => {
+      tickClock()
+      // Persist draft at ~1Hz, not every UI tick, to avoid IndexedDB churn.
+      if (nowMs - timerPersistAt >= 1000) { timerPersistAt = nowMs; saveDraft() }
+    }, TIMER_TICK_MS)
+  }
+
+  function stopTimerTick() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null }
+  }
+
+  function startTimer() {
+    if (timerRunning) return
+    timerAnchorMs = Date.now()
+    startTimerTick()
+  }
+
+  function pauseTimer() {
+    if (!timerRunning) return
+    const now = Date.now()
+    timerAccumulatedMs += Math.max(0, now - timerAnchorMs)
+    timerAnchorMs = null
+    nowMs = now
+    stopTimerTick()
+    saveDraft()
+  }
+
   function toggleTimer() {
-    if (timerRunning) {
-      clearInterval(timerInterval)
-      timerRunning = false
-      timerStartedAt = null
-    } else {
-      timerStartedAt = Date.now()
-      timerInterval = setInterval(() => { timerSeconds++; saveDraft() }, 1000)
-      timerRunning = true
-    }
+    if (timerRunning) pauseTimer(); else startTimer()
   }
 
   function resetTimer() {
-    clearInterval(timerInterval)
-    timerRunning = false
-    timerStartedAt = null
-    timerSeconds = 0
+    stopTimerTick()
+    timerAccumulatedMs = 0
+    timerAnchorMs = null
+    nowMs = Date.now()
     saveDraft()
   }
   function formatTime(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}` }
