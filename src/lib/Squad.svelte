@@ -1,6 +1,8 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import { saveSquad, loadSquad, clearAllData } from './db.js'
+  import { scheduleAutoSync } from './sync.js'
+  import { user } from './auth-store.js'
 
   let players = $state([])
   let nextId = $state(21)
@@ -103,7 +105,10 @@
   // on the browser's task queue even after the component is gone.
   onDestroy(() => {
     if (!saved && !saving && !loading) {
-      saveSquad($state.snapshot(players)).catch(e => console.warn('Squad auto-save on destroy failed:', e))
+      const uid = $user?.id
+      saveSquad($state.snapshot(players))
+        .then(() => scheduleAutoSync(uid))
+        .catch(e => console.warn('Squad auto-save on destroy failed:', e))
     }
   })
 
@@ -113,6 +118,7 @@
     saveError = false
     try {
       await saveSquad($state.snapshot(players))
+      scheduleAutoSync($user?.id)
       saved = true
       setTimeout(() => { saved = false }, 3000)
     } catch (e) {

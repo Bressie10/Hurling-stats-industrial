@@ -1,9 +1,9 @@
 <script>
   import { onMount } from 'svelte'
-  import { loadMatches, getDB } from './db.js'
+  import { loadMatches, deleteMatch as deleteMatchLocal } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user } from './auth-store.js'
-  import { deleteMatchFromCloud } from './sync.js'
+  import { scheduleAutoSync } from './sync.js'
   import Upgrade from './Upgrade.svelte'
   import { jsPDF } from 'jspdf'
   import html2canvas from 'html2canvas'
@@ -29,13 +29,11 @@
   async function deleteMatch(id, e) {
     e.stopPropagation()
     if (!confirm('Delete this match permanently?')) return
-    // Delete locally first — UI updates immediately even if cloud delete is slow
-    const db = await getDB()
-    await db.delete('matches', id)
+    // Atomic local delete + outbox enqueue, then nudge the drain worker.
+    // If we're offline the delete still lands in the cloud once we reconnect.
+    await deleteMatchLocal(id)
     matches = matches.filter(m => m.id !== id)
-    // FIX: Also delete from Supabase. Previously, deleted matches would reappear
-    // after the next login because syncFromSupabase re-downloaded them.
-    deleteMatchFromCloud($user?.id, id)
+    scheduleAutoSync($user?.id)
   }
 
   let filtered = $derived(matches.filter(m => {

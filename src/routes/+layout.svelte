@@ -1,10 +1,10 @@
 <script>
   import '../app.css'
-  import { clearAllData } from '$lib/db.js'
+  import { clearAllData, getLastUserId, setLastUserId } from '$lib/db.js'
   import TeamSetup from '$lib/TeamSetup.svelte'
   import TeamPicker from '$lib/TeamPicker.svelte'
   import { user, authLoading, signOut } from '$lib/auth-store.js'
-  import { syncToSupabase, syncFromSupabase } from '$lib/sync.js'
+  import { syncToSupabase, syncFromSupabase, scheduleAutoSync } from '$lib/sync.js'
   import { settingsStore } from '$lib/settings-store.js'
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
@@ -56,7 +56,11 @@
     }
   })
 
-  const LAST_USER_KEY = 'doora_last_user_id'
+  // The "last authenticated user" sentinel lives in IndexedDB (device_state
+  // store), not localStorage. iOS Safari evicts localStorage for PWAs much
+  // sooner than IDB, and an evicted sentinel used to trigger a false-positive
+  // "different user" path here that wiped IDB on every relaunch — destroying
+  // unsynced drafts, squads, and finished matches.
 
   let syncing = $state(false)
   let syncMsg = $state('')
@@ -108,13 +112,30 @@
         await ensureProfile(u.id)
         await loadSubscription(u.id)
 
-        const previousUserId = localStorage.getItem(LAST_USER_KEY)
+        // Decide whether this is the same user returning (preserve all local
+        // data) or a genuinely different user signing in on this device
+        // (privacy wipe). Source of truth lives in IDB, not localStorage.
+        const previousUserId = await getLastUserId()
 
         if (previousUserId === u.id) {
+          // Same user — drain any pending mutations from prior offline use,
+          // then merge cloud → local. Never destructive.
+          scheduleAutoSync(u.id)
+          syncFromSupabase(u.id).catch(e => console.warn('Cloud merge failed:', e))
+          dataReady = true
+        } else if (previousUserId && previousUserId !== u.id) {
+          // Different user on a shared device. Best-effort push of the prior
+          // user's queued mutations before wiping (they may fail if the new
+          // session's auth header is now in effect — still worth attempting).
+          try { await syncToSupabase(previousUserId) } catch {}
+          await clearAllData()
+          await setLastUserId(u.id)
+          await syncFromSupabase(u.id)
           dataReady = true
         } else {
-          localStorage.setItem(LAST_USER_KEY, u.id)
-          await clearAllData()
+          // First sign-in on this device (or post-signOut clean slate). Local
+          // stores are already empty; just record the user and pull cloud.
+          await setLastUserId(u.id)
           await syncFromSupabase(u.id)
           dataReady = true
         }
@@ -175,7 +196,6 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
 
   async function doSignOut() {
     showSignOutConfirm = false
-    localStorage.removeItem(LAST_USER_KEY)
     await signOut()
     dataReady = false
     lastUserId = null
