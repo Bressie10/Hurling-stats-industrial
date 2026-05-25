@@ -47,26 +47,11 @@
       </ul>
     </div>
 
-    <!-- Company col -->
-    <div class="footer-col">
-      <div class="footer-col-head">Company</div>
-      <ul>
-        <li><button on:click={() => nav('about')}>About</button></li>
-        <li><button on:click={() => nav('privacy')}>Privacy Policy</button></li>
-        <li><button on:click={() => nav('terms')}>Terms of Service</button></li>
-        <li><button on:click={() => nav('contact')}>Contact Us</button></li>
-      </ul>
-    </div>
-
   </div>
 
   <div class="footer-bottom">
     <div class="footer-copy">© {year} GAAstat. Built for GAA coaches.</div>
     <div class="footer-legal">
-      <button on:click={() => nav('privacy')}>Privacy</button>
-      <span>·</span>
-      <button on:click={() => nav('terms')}>Terms</button>
-      <span>·</span>
       <a href="mailto:contact@gaastatsapp.com">Contact</a>
     </div>
   </div>
@@ -81,7 +66,7 @@
 
   .footer-top {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr;
     gap: 48px;
     margin-bottom: 48px;
   }

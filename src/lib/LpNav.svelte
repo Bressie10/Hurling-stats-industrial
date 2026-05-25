@@ -148,45 +148,6 @@
       </div>
     </li>
 
-    <!-- Company dropdown -->
-    <li class="nav-dropdown-wrap">
-      <button class="nav-link nav-link-drop">
-        Company
-        <svg class="drop-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <div class="dropdown dropdown-narrow">
-        <div class="dropdown-inner">
-          <button class="dd-item" on:click={() => nav('privacy')}>
-            <div class="dd-icon dd-icon-lime">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <div class="dd-text">
-              <div class="dd-title">Privacy Policy</div>
-              <div class="dd-desc">How we handle and protect your data</div>
-            </div>
-          </button>
-          <button class="dd-item" on:click={() => nav('terms')}>
-            <div class="dd-icon dd-icon-amber">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </div>
-            <div class="dd-text">
-              <div class="dd-title">Terms of Service</div>
-              <div class="dd-desc">Terms and conditions of use</div>
-            </div>
-          </button>
-          <button class="dd-item" on:click={() => nav('contact')}>
-            <div class="dd-icon dd-icon-blue">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            </div>
-            <div class="dd-text">
-              <div class="dd-title">Contact</div>
-              <div class="dd-desc">Get in touch with the team</div>
-            </div>
-          </button>
-        </div>
-      </div>
-    </li>
-
     <!-- Direct links -->
   </ul>
 
@@ -245,21 +206,6 @@
             <button class="mob-item" on:click={() => nav('docs')}>User Guide</button>
             <button class="mob-item" on:click={() => nav('docs')}>Quick Start</button>
             <button class="mob-item" on:click={() => nav('install')}>How to Install</button>
-          </div>
-        {/if}
-      </div>
-
-      <!-- Company accordion -->
-      <div class="mob-section">
-        <button class="mob-section-head" on:click={() => toggleMobileAccordion('company')}>
-          Company
-          <svg class="mob-chevron" class:open={mobileExpanded === 'company'} width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-        {#if mobileExpanded === 'company'}
-          <div class="mob-items">
-            <button class="mob-item" on:click={() => nav('privacy')}>Privacy Policy</button>
-            <button class="mob-item" on:click={() => nav('terms')}>Terms of Service</button>
-            <button class="mob-item" on:click={() => nav('contact')}>Contact</button>
           </div>
         {/if}
       </div>
