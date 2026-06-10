@@ -111,6 +111,21 @@
     assistant.stopTalking()
   }
 
+  function isTextEntryTarget(target) {
+    const tagName = target?.tagName?.toLowerCase()
+    return target?.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select'
+  }
+
+  function handleKeyDown(event) {
+    if (event?.code !== 'Space' || event.repeat || isTextEntryTarget(event.target) || !sessionActive) return
+    startTalk(event)
+  }
+
+  function handleKeyUp(event) {
+    if (event?.code !== 'Space' || isTextEntryTarget(event.target) || !sessionActive) return
+    stopTalk(event)
+  }
+
   function updateTranscript({ role, text, final = false } = {}) {
     if (!role || !text) return
     if (!final) {
@@ -140,7 +155,13 @@
   onDestroy(() => stop())
 </script>
 
-<svelte:window onpointerup={stopTalk} onpointercancel={stopTalk} onblur={stopTalk} />
+<svelte:window
+  onpointerup={stopTalk}
+  onpointercancel={stopTalk}
+  onblur={stopTalk}
+  onkeydown={handleKeyDown}
+  onkeyup={handleKeyUp}
+/>
 
 <div class="sideline-ai">
   <div class="sideline-main">
