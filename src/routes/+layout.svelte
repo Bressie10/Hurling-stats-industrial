@@ -1,6 +1,6 @@
 <script>
   import '../app.css'
-  import { clearAllData, getLastUserId, setLastUserId } from '$lib/db.js'
+  import { clearAllData, getLastUserId, getOutboxSummary, setLastUserId } from '$lib/db.js'
   import TeamSetup from '$lib/TeamSetup.svelte'
   import TeamPicker from '$lib/TeamPicker.svelte'
   import { user, authLoading, signOut } from '$lib/auth-store.js'
@@ -64,6 +64,8 @@
 
   let syncing = $state(false)
   let syncMsg = $state('')
+  let syncPending = $state(0)
+  let syncFailed = $state(0)
   let dataReady = $state(false)
   let lastUserId = $state(null)
   let showMoreSheet = $state(false)
@@ -75,12 +77,39 @@
 
   const isAppRoute = $derived(page.url.pathname.startsWith('/app/'))
   const moreActive = $derived(['/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(page.url.pathname))
+  const syncStatusLabel = $derived(syncFailed > 0 ? `${syncFailed} failed` : syncPending > 0 ? `${syncPending} pending` : '')
   $effect(() => { if (!$authLoading && $user && page.url.pathname === '/') goto('/app/match') })
 
   function navigateTo(routeName) {
     goto('/app/' + routeName)
     showMoreSheet = false
   }
+
+  async function refreshSyncStatus() {
+    if (!$user) {
+      syncPending = 0
+      syncFailed = 0
+      return
+    }
+    try {
+      const summary = await getOutboxSummary()
+      syncPending = summary.pending || 0
+      syncFailed = summary.failed || 0
+    } catch (_) {}
+  }
+
+  onMount(() => {
+    refreshSyncStatus()
+    const syncStatusTimer = setInterval(refreshSyncStatus, 5000)
+    const handleWake = () => refreshSyncStatus()
+    window.addEventListener('online', handleWake)
+    document.addEventListener('visibilitychange', handleWake)
+    return () => {
+      clearInterval(syncStatusTimer)
+      window.removeEventListener('online', handleWake)
+      document.removeEventListener('visibilitychange', handleWake)
+    }
+  })
 
   onMount(async () => {
     const params = new URLSearchParams(window.location.search)
@@ -123,6 +152,7 @@
           scheduleAutoSync(u.id)
           syncFromSupabase(u.id).catch(e => console.warn('Cloud merge failed:', e))
           dataReady = true
+          refreshSyncStatus()
         } else if (previousUserId && previousUserId !== u.id) {
           // Different user on a shared device. Best-effort push of the prior
           // user's queued mutations before wiping (they may fail if the new
@@ -132,12 +162,14 @@
           await setLastUserId(u.id)
           await syncFromSupabase(u.id)
           dataReady = true
+          refreshSyncStatus()
         } else {
           // First sign-in on this device (or post-signOut clean slate). Local
           // stores are already empty; just record the user and pull cloud.
           await setLastUserId(u.id)
           await syncFromSupabase(u.id)
           dataReady = true
+          refreshSyncStatus()
         }
 
         let subVal; subscriptionStore.subscribe(s => subVal = s)()
@@ -187,6 +219,7 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
     const ok = await syncToSupabase($user.id)
     syncMsg = ok ? 'Synced!' : 'Sync failed'
     syncing = false
+    await refreshSyncStatus()
     setTimeout(() => syncMsg = '', 3000)
   }
 
@@ -317,6 +350,9 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
               Sync
             {/if}
           </button>
+          {#if syncStatusLabel}
+            <span class="sync-status-pill" class:failed={syncFailed > 0}>{syncStatusLabel}</span>
+          {/if}
           <button class="signout-btn" onclick={handleSignOut}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign out
@@ -387,6 +423,9 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
           </div>
           <!-- Sync + sign out in more sheet on mobile -->
           <div class="more-actions">
+            {#if syncStatusLabel}
+              <div class="more-sync-status" class:failed={syncFailed > 0}>{syncStatusLabel}</div>
+            {/if}
             <button class="more-sync-btn" class:syncing onclick={handleSync} disabled={syncing}>
               {#if syncing}Syncing…{:else if syncMsg}{syncMsg}{:else}↑ Sync to cloud{/if}
             </button>
@@ -565,6 +604,21 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
   }
   .sync-btn:hover { background: var(--primary); color: white; }
   .sync-btn.syncing { opacity: 0.6; cursor: not-allowed; }
+  .sync-status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .sync-status-pill.failed {
+    background: rgba(229,57,53,0.12);
+    color: #e53935;
+  }
   .signout-btn {
     display: inline-flex;
     align-items: center;
@@ -822,6 +876,19 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
     }
     .more-sync-btn:hover { background: var(--primary); color: white; }
     .more-sync-btn.syncing { opacity: 0.6; cursor: not-allowed; }
+    .more-sync-status {
+      text-align: center;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: rgba(var(--primary-rgb), 0.1);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .more-sync-status.failed {
+      background: rgba(229,57,53,0.12);
+      color: #e53935;
+    }
     .more-signout-btn {
       width: 100%;
       padding: 13px;

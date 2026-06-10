@@ -247,6 +247,17 @@
     return `${last.stat} — ${player?.name || (player ? '#' + player.number : '#' + last.playerId)}`
   })())
 
+  let recentEventPlayers = $derived((() => {
+    const ids = []
+    for (let i = events.length - 1; i >= 0 && ids.length < 4; i--) {
+      const id = events[i]?.playerId
+      if (id != null && !ids.includes(id)) ids.push(id)
+    }
+    return ids
+      .map(id => players.find(p => p.id === id && p.name?.trim()))
+      .filter(Boolean)
+  })())
+
   function undoLastStat() {
     if (events.length === 0) return
     const last = events[events.length - 1]
@@ -285,14 +296,21 @@
   let oppositionError = $state('')
   let showCancelConfirm = $state(false)
   let showFinishConfirm = $state(false)
+  const pitchCaptureStats = new Set(['Point', 'Goal', 'Wide'])
 
   function openPlayerPicker(stat) { selectedStat = stat; showPlayerPicker = true }
+
+  function shouldCapturePitch(stat) {
+    if (!$settingsStore.trackPitchCoords) return false
+    if ($settingsStore.pitchCaptureMode === 'all-stats') return true
+    return pitchCaptureStats.has(stat)
+  }
 
   function logStat(playerId, stat) {
     pendingLog = { playerId, stat }
     showPlayerPicker = false
     selectedStat = null
-    if ($settingsStore.trackPitchCoords) {
+    if (shouldCapturePitch(stat)) {
       showPitchPicker = true
     } else {
       confirmLogWithCoords(null, null, null)
@@ -595,7 +613,7 @@
   }
 
   function logPuckout() {
-    if (!puckoutOutcome) return
+    if (!puckoutOutcome || !puckoutSection) return
     recordPuckout({
       outcome: puckoutOutcome,
       ourPlayer: puckoutOurPlayer,
@@ -857,14 +875,26 @@
     const summary = `${stat.toLowerCase()} #${number}`
     if (!args.confirm) return sidelinePendingResult(action, number, summary)
 
-    pendingLog = { playerId: player.id, stat }
-    voicePitchPrompt = `Tap pitch location to finish.`
-    showPitchPicker = true
+    if (shouldCapturePitch(stat)) {
+      pendingLog = { playerId: player.id, stat }
+      voicePitchPrompt = `Tap pitch location to finish.`
+      showPitchPicker = true
+      return {
+        ok: true,
+        action,
+        needsPitchLocation: true,
+        message: 'Tap location.',
+        player: player.name,
+        playerNumber: number,
+        stat
+      }
+    }
+
+    recordStat(player.id, stat, null, null, null)
     return {
       ok: true,
       action,
-      needsPitchLocation: true,
-      message: 'Tap location.',
+      message: 'Logged.',
       player: player.name,
       playerNumber: number,
       stat
@@ -1145,7 +1175,7 @@
 {/if}
 
 {#if screen === 'match'}
-<div class="screen">
+<div class="screen match-live">
 
   <div class="match-header">
     <div class="match-info">
@@ -1340,6 +1370,16 @@
     <div class="modal-backdrop" onclick={() => showPlayerPicker = false}>
       <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">Who got the <strong>{selectedStat}</strong>?</div>
+        {#if recentEventPlayers.length > 0}
+          <div class="modal-section-label">Recent</div>
+          <div class="recent-player-row">
+            {#each recentEventPlayers as player}
+              <button class="recent-player-btn" onclick={() => logStat(player.id, selectedStat)}>
+                <span>#{player.number}</span>{player.name || 'Player'}
+              </button>
+            {/each}
+          </div>
+        {/if}
         <div class="modal-section-label">Starters</div>
         <div class="player-grid">
           {#each starters as player}
@@ -1503,143 +1543,118 @@
     <button class="cancel-match-btn" onclick={cancelMatch}>Cancel Match</button>
   </div>
 
-  <!-- PUCKOUT MODAL — 4 sequential steps -->
+  <div class="match-action-rail">
+    <div class="rail-status">
+      <span>{period}</span>
+      <span>{formatTime(timerSeconds)}</span>
+      <strong>{formatScore(matchScore.home)} - {formatScore(matchScore.away)}</strong>
+    </div>
+    <div class="rail-actions">
+      <button class="rail-btn" disabled={!lastEventLabel} onclick={undoLastStat}>Undo</button>
+      <button class="rail-btn" onclick={openStatsView}>Stats</button>
+      {#if $settingsStore.trackPuckouts}
+        <button class="rail-btn" onclick={openPuckoutModal}>Puckout</button>
+      {/if}
+      <button class="rail-btn" onclick={openSubModal}>Sub</button>
+      <button class="rail-btn end" disabled={finishing} onclick={finishMatch}>End</button>
+    </div>
+  </div>
+
+  <!-- PUCKOUT MODAL -->
   {#if showPuckoutModal}
     <div class="modal-backdrop" onclick={() => showPuckoutModal = false}>
       <div class="modal" onclick={(e) => e.stopPropagation()}>
+        <div class="modal-title">Log Puckout</div>
 
-        <!-- Step indicator -->
-        <div class="step-indicator">
-          {#each [1,2,3,4] as s}
-            <div class="step-dot" class:active={puckoutStep === s} class:done={puckoutStep > s}></div>
+        <div class="modal-section-label">Result</div>
+        <div class="outcome-row">
+          <button
+            class="outcome-btn won"
+            class:selected={puckoutOutcome === 'won'}
+            onclick={() => puckoutOutcome = 'won'}
+          >We Won</button>
+          <button
+            class="outcome-btn lost"
+            class:selected={puckoutOutcome === 'lost'}
+            onclick={() => puckoutOutcome = 'lost'}
+          >They Won</button>
+        </div>
+
+        <div class="modal-section-label">
+          Zone
+          {#if puckoutSection}<span class="zone-hint">{formatZoneLabel(puckoutSection)}</span>{/if}
+        </div>
+        <div class="puckout-pitch-wrap">
+          <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
+            <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
+            {#each puckoutRows as row}
+              {#each puckoutCols as col}
+                {@const zkey = col.key + '-' + row.key}
+                <rect
+                  x={col.x} y={row.y} width={col.w} height={row.h}
+                  fill={puckoutSection === zkey ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)'}
+                  stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
+                  stroke-width={puckoutSection === zkey ? '2' : '0.5'}
+                  style="cursor:pointer"
+                  onclick={() => puckoutSection = zkey}
+                />
+                <text
+                  x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
+                  text-anchor="middle" fill="white"
+                  font-size="6.5"
+                  font-weight={puckoutSection === zkey ? 'bold' : 'normal'}
+                  opacity={puckoutSection === zkey ? '1' : '0.65'}
+                  style="pointer-events:none"
+                >{col.label}</text>
+              {/each}
+            {/each}
+            {#each [62, 120, 180, 238] as dx}
+              <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
+            {/each}
+            <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
+            <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
+            <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+            <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+            <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()}</text>
+            <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{(opposition || 'Opposition').slice(0,8).toUpperCase()}</text>
+          </svg>
+        </div>
+
+        <div class="modal-section-label">Our player <span class="optional-tag">(optional)</span></div>
+        <div class="compact-player-row">
+          <button
+            class="compact-player-btn"
+            class:selected-player={puckoutOurPlayer === null}
+            onclick={() => puckoutOurPlayer = null}
+          >Skip</button>
+          {#each [...starters, ...subs].filter(p => p.name?.trim()) as player}
+            {@const label = player.name?.trim() || `#${player.number}`}
+            <button
+              class="compact-player-btn"
+              class:selected-player={puckoutOurPlayer === label}
+              onclick={() => puckoutOurPlayer = label}
+            >
+              <span>#{player.number}</span>{player.name?.trim()}
+            </button>
           {/each}
         </div>
 
-        {#if puckoutStep === 1}
-          <!-- Step 1: Outcome -->
-          <div class="modal-title">Log Puckout</div>
-          <div class="modal-section-label">Result</div>
-          <div class="outcome-row">
-            <button
-              class="outcome-btn won"
-              class:selected={puckoutOutcome === 'won'}
-              onclick={() => { puckoutOutcome = 'won'; puckoutStep = 2 }}
-            >We Won</button>
-            <button
-              class="outcome-btn lost"
-              class:selected={puckoutOutcome === 'lost'}
-              onclick={() => { puckoutOutcome = 'lost'; puckoutStep = 2 }}
-            >They Won</button>
-          </div>
-          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
+        <div class="modal-section-label">Opposition number <span class="optional-tag">(optional)</span></div>
+        <input
+          class="modal-input compact-opp-input"
+          inputmode="numeric"
+          bind:value={puckoutOppPlayer}
+          placeholder="Opposition #"
+        />
 
-        {:else if puckoutStep === 2}
-          <!-- Step 2: Our player -->
-          <div class="modal-title">Our player involved</div>
-          <div class="modal-section-label">Starters</div>
-          <div class="player-grid">
-            {#each starters as player}
-              {@const label = player.name?.trim() || `#${player.number}`}
-              <button
-                class="player-btn"
-                class:selected-player={puckoutOurPlayer === label}
-                onclick={() => { puckoutOurPlayer = label; puckoutStep = 3 }}
-              >
-                <span class="player-num">#{player.number}</span>
-                <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
-              </button>
-            {/each}
-          </div>
-          {#if subs.length > 0}
-            <div class="modal-section-label">Subs</div>
-            <div class="player-grid">
-              {#each subs as player}
-                {@const label = player.name?.trim() || `#${player.number}`}
-                <button
-                  class="player-btn sub"
-                  class:selected-player={puckoutOurPlayer === label}
-                  onclick={() => { puckoutOurPlayer = label; puckoutStep = 3 }}
-                >
-                  <span class="player-num">#{player.number}</span>
-                  <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
-                </button>
-              {/each}
-            </div>
-          {/if}
-          <div class="step-nav">
-            <button class="step-back-btn" onclick={() => puckoutStep = 1}>← Back</button>
-            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 3}>Skip</button>
-          </div>
-          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
-
-        {:else if puckoutStep === 3}
-          <!-- Step 3: Zone picker -->
-          <div class="modal-title">Where did it land?</div>
-          {#if puckoutSection}
-            <div class="selected-zone-badge">{formatZoneLabel(puckoutSection)}</div>
-          {/if}
-          <div class="puckout-pitch-wrap">
-            <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
-              <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
-              {#each puckoutRows as row}
-                {#each puckoutCols as col}
-                  {@const zkey = col.key + '-' + row.key}
-                  <rect
-                    x={col.x} y={row.y} width={col.w} height={row.h}
-                    fill={puckoutSection === zkey ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)'}
-                    stroke={puckoutSection === zkey ? 'white' : 'rgba(255,255,255,0.18)'}
-                    stroke-width={puckoutSection === zkey ? '2' : '0.5'}
-                    style="cursor:pointer"
-                    onclick={() => { puckoutSection = zkey; puckoutStep = 4 }}
-                  />
-                  <text
-                    x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
-                    text-anchor="middle" fill="white"
-                    font-size="6.5"
-                    font-weight={puckoutSection === zkey ? 'bold' : 'normal'}
-                    opacity={puckoutSection === zkey ? '1' : '0.65'}
-                    style="pointer-events:none"
-                  >{col.label}</text>
-                {/each}
-              {/each}
-              {#each [62, 120, 180, 238] as dx}
-                <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
-              {/each}
-              <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
-              <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
-              <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-              <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-              <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()}</text>
-              <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{(opposition || 'Opposition').slice(0,8).toUpperCase()}</text>
-            </svg>
-          </div>
-          <div class="step-nav">
-            <button class="step-back-btn" onclick={() => puckoutStep = 2}>← Back</button>
-            <button class="confirm-log-btn step-next" onclick={() => puckoutStep = 4}>Skip</button>
-          </div>
-          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
-
-        {:else if puckoutStep === 4}
-          <!-- Step 4: Opposition player number -->
-          <div class="modal-title">
-            {puckoutOutcome === 'lost' ? 'Which opposition player won it?' : 'Opposition player number'}
-          </div>
-          <div class="modal-section-label">Opposition jersey number <span class="optional-tag">(optional)</span></div>
-          <div class="opp-num-grid">
-            {#each Array.from({length: 25}, (_, i) => String(i + 1)) as num}
-              <button
-                class="opp-num-btn"
-                class:selected-player={puckoutOppPlayer === num}
-                onclick={() => { puckoutOppPlayer = num; logPuckout() }}
-              >{num}</button>
-            {/each}
-          </div>
-          <div class="step-nav">
-            <button class="step-back-btn" onclick={() => puckoutStep = 3}>← Back</button>
-            <button class="confirm-log-btn step-next" onclick={logPuckout}>Log Puckout</button>
-          </div>
-          <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
-        {/if}
+        <button
+          class="confirm-log-btn"
+          disabled={!puckoutOutcome || !puckoutSection}
+          onclick={logPuckout}
+        >
+          {puckoutOutcome && puckoutSection ? `Log ${puckoutOutcome} puckout` : 'Pick result and zone'}
+        </button>
+        <button class="cancel-btn" onclick={() => showPuckoutModal = false}>Cancel</button>
 
       </div>
     </div>
@@ -2289,8 +2304,29 @@
   .player-btn { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--surface); cursor: pointer; transition: all 0.15s; gap: 4px; font-family: inherit; min-height: 64px; }
   .player-btn:active { transform: scale(0.96); border-color: var(--primary); background: rgba(var(--primary-rgb),0.08); }
   .player-btn.sub { opacity: 0.7; }
-  .player-num { font-size: 11px; color: var(--text-muted); }
-  .player-name { font-size: 13px; font-weight: 600; color: var(--text); text-align: center; }
+  .player-num { font-size: 18px; color: var(--text); font-weight: 800; line-height: 1; }
+  .player-name { font-size: 12px; font-weight: 600; color: var(--text-muted); text-align: center; }
+  .recent-player-row, .compact-player-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 3px; scrollbar-width: none; }
+  .recent-player-row::-webkit-scrollbar, .compact-player-row::-webkit-scrollbar { display: none; }
+  .recent-player-btn, .compact-player-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--input-border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .recent-player-btn span, .compact-player-btn span { font-size: 15px; font-weight: 800; color: var(--primary); }
+  .compact-opp-input { margin-bottom: 0; }
+  .match-action-rail { display: none; }
   .cancel-btn { width: 100%; margin-top: 1rem; padding: 15px; border-radius: 10px; border: 1px solid var(--input-border); background: none; font-size: 16px; color: var(--text-muted); cursor: pointer; font-family: inherit; min-height: 50px; }
   .optional-tag { font-size: 12px; font-weight: 400; color: var(--text-faint); margin-left: 6px; }
   .pitch-wrap { margin: 0.75rem 0; border-radius: 8px; overflow: hidden; cursor: crosshair; }
@@ -2302,6 +2338,7 @@
   textarea { width: 100%; min-height: 80px; border: 1px solid var(--input-border); border-radius: 8px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: var(--text); resize: vertical; background: var(--surface); }
   textarea:focus { outline: none; border-color: var(--primary); }
   @media (max-width: 480px) {
+    .screen.match-live { padding-bottom: calc(8.75rem + env(safe-area-inset-bottom)); }
     .match-header { flex-direction: column; align-items: flex-start; }
     .scoreboard { width: 100%; justify-content: center; }
     .score-val { font-size: 26px; }
@@ -2326,12 +2363,105 @@
     .ht-breakdown-row { flex-wrap: wrap; }
     .ht-breakdown-vals { flex-shrink: 1; }
     .ht-score-bar-val { font-size: 22px; }
+    .match-action-rail {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(64px + env(safe-area-inset-bottom));
+      z-index: 95;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 616px;
+      margin: 0 auto;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 -8px 28px rgba(26,32,21,0.16);
+      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(14px);
+    }
+    .rail-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .rail-status strong { color: var(--text); font-size: 13px; }
+    .rail-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 6px; }
+    .rail-btn {
+      min-height: 42px;
+      padding: 7px 4px;
+      border: 1px solid var(--input-border);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .rail-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .rail-btn.end { background: var(--text); border-color: var(--text); color: var(--bg); }
   }
   @media (min-width: 481px) and (max-width: 768px) {
     .stat-grid { grid-template-columns: repeat(3, 1fr); }
     .player-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
     .opp-num-grid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
     .opp-num-btn { padding: 14px 4px; min-height: 52px; }
+  }
+  @media (min-width: 481px) and (max-width: 640px) {
+    .screen.match-live { padding-bottom: calc(8.75rem + env(safe-area-inset-bottom)); }
+    .match-action-rail {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(64px + env(safe-area-inset-bottom));
+      z-index: 95;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 616px;
+      margin: 0 auto;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 -8px 28px rgba(26,32,21,0.16);
+      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(14px);
+    }
+    .rail-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .rail-status strong { color: var(--text); font-size: 13px; }
+    .rail-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 6px; }
+    .rail-btn {
+      min-height: 42px;
+      padding: 7px 4px;
+      border: 1px solid var(--input-border);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .rail-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .rail-btn.end { background: var(--text); border-color: var(--text); color: var(--bg); }
   }
   @media (min-width: 769px) {
     .stat-grid { grid-template-columns: repeat(4, 1fr); }
@@ -2471,18 +2601,6 @@
   .outcome-btn.lost { color: #e53935; }
   .outcome-btn.lost.selected { background: #e53935; color: white; border-color: #e53935; }
   .outcome-btn:not(.selected):hover { border-color: var(--primary); }
-
-  .selected-zone-badge {
-    display: inline-block;
-    background: rgba(var(--primary-rgb), 0.1);
-    color: var(--primary);
-    border: 1px solid rgba(var(--primary-rgb), 0.25);
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 12px;
-    margin-bottom: 0.75rem;
-  }
 
   .modal-input {
     width: 100%;

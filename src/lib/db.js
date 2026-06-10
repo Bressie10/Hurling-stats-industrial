@@ -216,6 +216,17 @@ export async function getOutboxCount() {
   return db.count('sync_outbox')
 }
 
+export async function getOutboxSummary() {
+  const db = await getDB()
+  const all = await db.getAll('sync_outbox')
+  const failed = all.filter(m => m.last_error).length
+  return {
+    pending: all.length,
+    failed,
+    lastError: all.find(m => m.last_error)?.last_error || null
+  }
+}
+
 // ── Device state ────────────────────────────────────────────────────────────
 // The login flow reads/writes last_user_id here instead of localStorage.
 // IDB survives iOS Safari's localStorage eviction, which is the root cause of

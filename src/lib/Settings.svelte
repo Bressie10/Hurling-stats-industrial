@@ -638,7 +638,7 @@
       <div class="toggle-row">
         <div class="toggle-info">
           <div class="toggle-label">Pitch coordinates</div>
-          <div class="toggle-sub">Show the pitch map after each stat to record where it happened</div>
+          <div class="toggle-sub">Record where shots and key events happened on the pitch</div>
         </div>
         <button
           class="toggle-switch"
@@ -647,6 +647,17 @@
           aria-label="Toggle pitch coordinates"
         ><span class="toggle-thumb"></span></button>
       </div>
+
+      {#if settings.trackPitchCoords}
+        <div class="field-group">
+          <label>Pitch capture</label>
+          <select bind:value={settings.pitchCaptureMode} onchange={autoSave}>
+            <option value="scores-only">Scores and wides only</option>
+            <option value="all-stats">Every stat</option>
+          </select>
+          <div class="field-hint">Use scores-only for faster sideline logging. Every stat restores the old full pitch prompt.</div>
+        </div>
+      {/if}
     </div>
   </div>
 

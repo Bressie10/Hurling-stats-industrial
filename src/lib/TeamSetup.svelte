@@ -1,6 +1,7 @@
 <script>
   import { subscriptionStore, createTeam, loadClubTeams, deleteTeam, loadSubscription } from './subscription-store.js'
   import { user } from './auth-store.js'
+  import ConfirmModal from './ConfirmModal.svelte'
 
   const { onDone = () => {} } = $props()
 
@@ -11,6 +12,7 @@
   let adding = $state(false)
   let addError = $state(null)
   let loading = $state(true)
+  let teamDeleteId = $state(null)
 
   async function load() {
     if (!$subscriptionStore.clubId) { loading = false; return }
@@ -34,10 +36,16 @@
     adding = false
   }
 
-  async function removeTeam(teamId) {
-    if (!confirm('Delete this team? Coaches using it will lose access.')) return
-    await deleteTeam(teamId)
-    teams = teams.filter(t => t.id !== teamId)
+  function removeTeam(teamId) {
+    teamDeleteId = teamId
+  }
+
+  async function doRemoveTeam() {
+    if (!teamDeleteId) return
+    const id = teamDeleteId
+    teamDeleteId = null
+    await deleteTeam(id)
+    teams = teams.filter(t => t.id !== id)
   }
 
   function copyCode(code) {
@@ -133,6 +141,17 @@
     {/if}
   </div>
 </div>
+
+{#if teamDeleteId}
+  <ConfirmModal
+    title="Delete this team?"
+    message="Coaches using it will lose access."
+    confirmLabel="Delete Team"
+    confirmStyle="danger"
+    onConfirm={doRemoveTeam}
+    onCancel={() => teamDeleteId = null}
+  />
+{/if}
 
 <style>
   .setup-wrap {

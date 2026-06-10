@@ -3,6 +3,8 @@
   import { saveSquad, loadSquad, clearAllData } from './db.js'
   import { scheduleAutoSync } from './sync.js'
   import { user } from './auth-store.js'
+  import ConfirmModal from './ConfirmModal.svelte'
+  import { showToast } from './toast.js'
 
   let players = $state([])
   let nextId = $state(21)
@@ -13,6 +15,7 @@
   let loading = $state(true)
   let viewMode = $state('list') // 'list' | 'pitch'
   let autosaveTimer = null
+  let showClearDataConfirm = $state(false)
 
   // Pitch slot state
   let pitchSlotTarget = $state(null)
@@ -162,6 +165,15 @@
       autosaveTimer = null
     }
     await saveCurrentSquad({ showSaved: true })
+  }
+
+  async function clearSquadData() {
+    showClearDataConfirm = false
+    await clearAllData()
+    players = []
+    nextId = 1
+    saved = false
+    showToast('All data cleared.', 'success')
   }
 
   // ── PITCH VIEW ──────────────────────────────────
@@ -486,18 +498,21 @@
         <div class="danger-title">Clear all data</div>
         <div class="danger-sub">Deletes all matches, stats and squad data permanently.</div>
       </div>
-      <button class="danger-btn" onclick={async () => {
-        if (confirm('Are you sure? This will delete everything permanently.')) {
-          await clearAllData()
-          players = []
-          nextId = 1
-          saved = false
-          alert('All data cleared.')
-        }
-      }}>Clear data</button>
+      <button class="danger-btn" onclick={() => showClearDataConfirm = true}>Clear data</button>
     </div>
   </div>
 </div>
+
+{#if showClearDataConfirm}
+  <ConfirmModal
+    title="Clear all data?"
+    message="This permanently deletes all matches, stats, and squad data on this device."
+    confirmLabel="Clear Data"
+    confirmStyle="danger"
+    onConfirm={clearSquadData}
+    onCancel={() => showClearDataConfirm = false}
+  />
+{/if}
 
 <!-- PITCH SLOT PICKER MODAL -->
 {#if showPitchModal}

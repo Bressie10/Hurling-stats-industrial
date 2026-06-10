@@ -22,6 +22,7 @@ const defaults = {
   trackPuckouts: true,
   trackOppScores: true,
   trackPitchCoords: true,
+  pitchCaptureMode: 'scores-only',
 
   // Quick View Stats — which accordions start open
   quickViewSections: {
@@ -69,6 +70,7 @@ function createSettingsStore() {
     periods: parsed.periods?.length ? parsed.periods : defaults.periods,
     defaultStats: parsed.defaultStats?.length ? parsed.defaultStats : defaults.defaultStats,
     clubPrimaryColor: parsed.clubPrimaryColor ?? defaults.clubPrimaryColor,
+    pitchCaptureMode: parsed.pitchCaptureMode || defaults.pitchCaptureMode,
   }
 
   const { subscribe, set, update } = writable(initial)

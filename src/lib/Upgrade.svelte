@@ -2,6 +2,7 @@
   export let feature = 'this feature'  // e.g. "Player Stats"
 
   import { supabase } from './supabase.js'
+  import { showToast } from './toast.js'
 
   let loading = null  // 'personal' | 'club' | 'club_pro' | null
 
@@ -15,7 +16,7 @@
       window.location.href = data.url
     } catch (e) {
       console.error('Checkout error:', e)
-      alert('Could not start checkout. Please try again.')
+      showToast('Could not start checkout. Please try again.', 'error')
       loading = null
     }
   }

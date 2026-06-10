@@ -5,6 +5,8 @@
   import { user } from './auth-store.js'
   import { scheduleAutoSync } from './sync.js'
   import Upgrade from './Upgrade.svelte'
+  import ConfirmModal from './ConfirmModal.svelte'
+  import { showToast } from './toast.js'
   import { jsPDF } from 'jspdf'
   import html2canvas from 'html2canvas'
 
@@ -17,6 +19,9 @@
   let filterResult = $state('all')
   let selectedMatch = $state(null)
   let pdfGenerating = $state(false)
+  let showDeleteMatchConfirm = $state(false)
+  let deleteMatchId = $state(null)
+  let closeSelectedAfterDelete = $state(false)
 
   onMount(async () => {
     matches = await loadMatches()
@@ -26,13 +31,24 @@
   let visibleMatches = $derived(proAccess ? filtered : filtered.slice(0, FREE_MATCH_LIMIT))
   let lockedCount = $derived(proAccess ? 0 : Math.max(0, filtered.length - FREE_MATCH_LIMIT))
 
-  async function deleteMatch(id, e) {
-    e.stopPropagation()
-    if (!confirm('Delete this match permanently?')) return
+  function deleteMatch(id, e, { closeSelected = false } = {}) {
+    e?.stopPropagation?.()
+    deleteMatchId = id
+    closeSelectedAfterDelete = closeSelected
+    showDeleteMatchConfirm = true
+  }
+
+  async function doDeleteMatch() {
+    if (!deleteMatchId) return
+    const id = deleteMatchId
+    showDeleteMatchConfirm = false
+    deleteMatchId = null
     // Atomic local delete + outbox enqueue, then nudge the drain worker.
     // If we're offline the delete still lands in the cloud once we reconnect.
     await deleteMatchLocal(id)
     matches = matches.filter(m => m.id !== id)
+    if (closeSelectedAfterDelete) selectedMatch = null
+    closeSelectedAfterDelete = false
     scheduleAutoSync($user?.id)
   }
 
@@ -478,7 +494,7 @@
 
     } catch(err) {
       console.error('PDF generation failed:', err)
-      alert('PDF generation failed. Please try again.')
+      showToast('PDF generation failed. Please try again.', 'error')
     } finally {
       pdfGenerating = false
     }
@@ -1250,10 +1266,7 @@
       </div>
     {/if}
 
-    <button class="delete-match-btn" data-print-hide onclick={async (e) => {
-      await deleteMatch(selectedMatch.id, e)
-      selectedMatch = null
-    }}>
+    <button class="delete-match-btn" data-print-hide onclick={(e) => deleteMatch(selectedMatch.id, e, { closeSelected: true })}>
       Delete this match
     </button>
 
@@ -1382,6 +1395,21 @@
 
   {/if}
 </div>
+
+{#if showDeleteMatchConfirm}
+  <ConfirmModal
+    title="Delete this match?"
+    message="This match will be removed from this device and cloud sync will delete it online."
+    confirmLabel="Delete Match"
+    confirmStyle="danger"
+    onConfirm={doDeleteMatch}
+    onCancel={() => {
+      showDeleteMatchConfirm = false
+      deleteMatchId = null
+      closeSelectedAfterDelete = false
+    }}
+  />
+{/if}
 
 <style>
   .history-paywall {
