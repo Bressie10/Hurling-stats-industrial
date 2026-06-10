@@ -9,8 +9,10 @@
   let saved = $state(false)
   let saving = $state(false)
   let saveError = $state(false)
+  let saveErrorMessage = $state('')
   let loading = $state(true)
   let viewMode = $state('list') // 'list' | 'pitch'
+  let autosaveTimer = null
 
   // Pitch slot state
   let pitchSlotTarget = $state(null)
@@ -88,45 +90,78 @@
 
   function addPlayer() {
     players = [...players, { id: nextId++, name: '', number: nextAvailableNumber(), position: 'Sub' }]
-    saved = false
+    markChanged()
   }
 
   function removePlayer(id) {
     if (players.length <= 1) return
     players = players.filter(p => p.id !== id)
-    saved = false
+    markChanged()
   }
 
-  function markChanged() { saved = false }
+  function markChanged() {
+    saved = false
+    saveError = false
+    saveErrorMessage = ''
+    queueAutosave()
+  }
+
+  function queueAutosave() {
+    if (loading) return
+    if (autosaveTimer) clearTimeout(autosaveTimer)
+    autosaveTimer = setTimeout(() => {
+      autosaveTimer = null
+      saveCurrentSquad({ showSaved: false })
+    }, 800)
+  }
+
+  async function saveCurrentSquad({ showSaved = true } = {}) {
+    if (saving) {
+      queueAutosave()
+      return
+    }
+    saving = true
+    saveError = false
+    saveErrorMessage = ''
+    try {
+      await saveSquad($state.snapshot(players))
+      scheduleAutoSync($user?.id)
+      saved = true
+      if (showSaved) setTimeout(() => { saved = false }, 3000)
+    } catch (e) {
+      console.warn('Squad save failed:', e)
+      saveError = true
+      saveErrorMessage = e?.message || String(e)
+      if (showSaved) setTimeout(() => {
+        saveError = false
+        saveErrorMessage = ''
+      }, 6000)
+    } finally {
+      saving = false
+    }
+  }
 
   // FIX: Auto-save when the component is destroyed (i.e. the coach navigates
   // away without pressing Save). Previously any unsaved changes were silently
   // lost. onDestroy fires synchronously but the async IndexedDB write continues
   // on the browser's task queue even after the component is gone.
   onDestroy(() => {
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer)
+      autosaveTimer = null
+    }
     if (!saved && !saving && !loading) {
-      const uid = $user?.id
-      saveSquad($state.snapshot(players))
-        .then(() => scheduleAutoSync(uid))
+      saveCurrentSquad({ showSaved: false })
         .catch(e => console.warn('Squad auto-save on destroy failed:', e))
     }
   })
 
   async function handleSave() {
-    if (saving) return
-    saving = true
-    saveError = false
-    try {
-      await saveSquad($state.snapshot(players))
-      scheduleAutoSync($user?.id)
-      saved = true
-      setTimeout(() => { saved = false }, 3000)
-    } catch (e) {
-      saveError = true
-      setTimeout(() => { saveError = false }, 4000)
-    } finally {
-      saving = false
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer)
+      autosaveTimer = null
     }
+    await saveCurrentSquad({ showSaved: true })
   }
 
   // ── PITCH VIEW ──────────────────────────────────
@@ -172,7 +207,7 @@
     showPitchModal = false
     addingNewPlayer = false
     newPlayerName = ''
-    saved = false
+    markChanged()
   }
 
   function addNewPlayerToSlot() {
@@ -193,13 +228,13 @@
     showPitchModal = false
     addingNewPlayer = false
     newPlayerName = ''
-    saved = false
+    markChanged()
   }
 
   function removeSubFromPitch(playerId) {
     if (players.length <= 1) return
     players = players.filter(p => p.id !== playerId)
-    saved = false
+    markChanged()
   }
 
   let starters = $derived(players.filter(p => p.number >= 1 && p.number <= 15 && p.position !== 'Sub'))
@@ -256,6 +291,9 @@
       </button>
     </div>
   </div>
+  {#if saveErrorMessage}
+    <div class="save-error-message">Squad save failed: {saveErrorMessage}</div>
+  {/if}
 
   {#if loading}
     <div class="loading">Loading squad...</div>
@@ -586,6 +624,12 @@
   .save-btn.error { background: #c0392b; color: white; }
   .save-btn:hover:not(:disabled) { background: var(--primary-hover); }
   .save-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+  .save-error-message {
+    margin: -0.5rem 0 0.75rem;
+    color: #c0392b;
+    font-size: 12px;
+    line-height: 1.35;
+  }
 
   /* ── INFO CARD ── */
   .info-card {

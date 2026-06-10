@@ -44,17 +44,19 @@ export async function saveSquad(players) {
   const stamped = players.map(p => ({ ...p, updated_at: now() }))
   const tx = db.transaction(['squad', 'sync_outbox'], 'readwrite')
   const squad = tx.objectStore('squad')
-  squad.clear()
-  stamped.forEach(p => squad.put(p))
-  tx.objectStore('sync_outbox').add({
+  const writes = [
+    squad.clear(),
+    ...stamped.map(p => squad.put(p)),
+    tx.objectStore('sync_outbox').add({
     op: 'upsert_squad',
     payload: stamped,
     created_at: now(),
     attempts: 0,
     last_error: null,
     next_retry_at: 0
-  })
-  await tx.done
+    })
+  ]
+  await Promise.all([...writes, tx.done])
 }
 
 export async function loadSquad() {
