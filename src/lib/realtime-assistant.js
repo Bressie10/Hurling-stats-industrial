@@ -19,7 +19,10 @@ For score, answer one line: "Score: 1-06 to 0-09."
 For match summary, use one short line. No paragraphs.
 If the player has no stats, say "#X Name: no stats."
 After write tools, say only the tool message or error.
-You can log our goals, points, and wides by jersey number, log opposition goals and points, and undo the last stat event.
+You can add or remove any available player stat by jersey number, including custom stats.
+Use change_player_stat for tackles, blocks, turnovers, frees, cards, penalties, and custom stats.
+Use operation "add" for new stats and operation "remove" for corrections.
+You can log opposition goals and points, and undo the last stat event.
 You can also log puckouts with outcome "won" or "lost" and one exact section value.
 Supported puckout sections are: short-top, own-half-top, midfield-top, opp-half-top, long-top, short-bottom, own-half-bottom, midfield-bottom, opp-half-bottom, long-bottom.
 For puckout phrases, use the exact top or bottom zone the user says. For example: "puckout won long top" means log_puckout with outcome "won", section "long-top", confirm false. "puckout lost midfield bottom" means outcome "lost", section "midfield-bottom", confirm false. "puckout won short bottom by number 6" means section "short-bottom" and playerNumber 6.
@@ -30,6 +33,8 @@ If the user says "goal for number X" or "log a goal for number X", call log_goal
 If the user says "log a point for number X", call log_point with playerNumber X and confirm false.
 If the user says "score for number X", treat that as a point and call log_point with playerNumber X and confirm false.
 If the user says "wide for number X", call log_wide with playerNumber X and confirm false.
+If the user says "tackle/block/turnover won/turnover lost/free won/card/penalty/CUSTOM STAT for number X", call change_player_stat with that stat, operation "add", playerNumber X, and confirm false.
+If the user says "remove/subtract/take away STAT for number X", call change_player_stat with that stat, operation "remove", playerNumber X, and confirm false.
 If the user says "undo last event", call undo_last_event with confirm false.
 If the user says "puckout won/lost SECTION", call log_puckout with outcome, section, optional playerNumber, and confirm false.
 If the user says "point conceded", call log_opposition_score with type "point" and confirm false.
@@ -39,7 +44,7 @@ If the user says "goal for opposition number X", call log_opposition_score with 
 If a tool returns needsConfirmation, say only "Pending ACTION. Confirm?"
 If the user says "confirm" while a pending write exists, call the matching pending write tool with confirm true.
 If the user says cancel while a write is pending, call cancel_pending_action.
-Do not claim you can log substitutions, custom stats, notes, or sync changes yet.
+Do not claim you can log substitutions, notes, or sync changes yet.
 If asked for unsupported writes, say "Not supported."
 `
 
@@ -147,6 +152,35 @@ export const SIDELINE_AI_TOOLS = [
     parameters: {
       type: 'object',
       properties: {},
+      additionalProperties: false
+    }
+  },
+  {
+    type: 'function',
+    name: 'change_player_stat',
+    description: 'Prepare or confirm adding/removing any available player stat for one of our players by jersey number. Use this for all non-score stats and custom stats. With confirm false, this only creates a pending action and must not change match state. With confirm true, it applies only the current matching pending action.',
+    parameters: {
+      type: 'object',
+      properties: {
+        stat: {
+          type: 'string',
+          description: 'The stat name spoken by the user, for example Tackle, Block, Turnover Won, Free Won, Yellow Card, or a custom stat.'
+        },
+        playerNumber: {
+          type: 'number',
+          description: 'The player jersey number.'
+        },
+        operation: {
+          type: 'string',
+          enum: ['add', 'remove'],
+          description: 'Use add to log/increment the stat, remove to subtract/correct the stat.'
+        },
+        confirm: {
+          type: 'boolean',
+          description: 'Set true only after the user explicitly confirms the pending stat change.'
+        }
+      },
+      required: ['stat', 'playerNumber', 'operation'],
       additionalProperties: false
     }
   },
@@ -307,7 +341,7 @@ export const SIDELINE_AI_TOOLS = [
   }
 ]
 
-const WRITE_TOOL_NAMES = new Set(['log_goal', 'log_point', 'log_wide', 'undo_last_event', 'log_puckout', 'log_opposition_score'])
+const WRITE_TOOL_NAMES = new Set(['change_player_stat', 'log_goal', 'log_point', 'log_wide', 'undo_last_event', 'log_puckout', 'log_opposition_score'])
 const PENDING_ACTION_TTL_MS = 20_000
 
 export async function startAssistant({
@@ -513,6 +547,8 @@ export async function startAssistant({
     if (!pendingAction || pendingAction.toolName !== name) return false
     if (pendingAction.playerNumber != null && args?.playerNumber != null && Number(args.playerNumber) !== Number(pendingAction.playerNumber)) return false
     if (pendingAction.type != null && args?.type != null && String(args.type) !== String(pendingAction.type)) return false
+    if (pendingAction.stat != null && args?.stat != null && String(args.stat).toLowerCase() !== String(pendingAction.stat).toLowerCase()) return false
+    if (pendingAction.operation != null && args?.operation != null && String(args.operation) !== String(pendingAction.operation)) return false
     if (pendingAction.oppPlayerNum != null && args?.oppPlayerNum != null && Number(args.oppPlayerNum) !== Number(pendingAction.oppPlayerNum)) return false
     if (pendingAction.outcome != null && args?.outcome != null && String(args.outcome) !== String(pendingAction.outcome)) return false
     if (pendingAction.section != null && args?.section != null && String(args.section) !== String(pendingAction.section)) return false
@@ -638,13 +674,79 @@ export async function startAssistant({
     }
     const result = await runLocalWriteFallback(pendingAction.toolName, { ...pendingAction.args, confirm: true })
     if (result?.needsPitchLocation) onText('Tap location.')
-    else if (result?.ok) onText('Logged.')
+    else if (result?.ok) onText(result.message || 'Logged.')
     return result
   }
 
   const numberFromTranscript = (text, pattern) => {
     const match = text.match(pattern)
     return match ? Number(match[1]) : null
+  }
+
+  const fallbackStatAliases = {
+    point: 'Point',
+    points: 'Point',
+    goal: 'Goal',
+    goals: 'Goal',
+    wide: 'Wide',
+    wides: 'Wide',
+    tackle: 'Tackle',
+    tackles: 'Tackle',
+    block: 'Block',
+    blocks: 'Block',
+    'turnover won': 'Turnover Won',
+    'turnovers won': 'Turnover Won',
+    'turnover lost': 'Turnover Lost',
+    'turnovers lost': 'Turnover Lost',
+    'free won': 'Free Won',
+    'frees won': 'Free Won',
+    free: 'Free Won',
+    frees: 'Free Won',
+    'yellow card': 'Yellow Card',
+    'yellow cards': 'Yellow Card',
+    yellow: 'Yellow Card',
+    'red card': 'Red Card',
+    'red cards': 'Red Card',
+    red: 'Red Card',
+    'penalty won': 'Penalty Won',
+    'penalties won': 'Penalty Won',
+    'penalty scored': 'Penalty Scored',
+    'penalties scored': 'Penalty Scored'
+  }
+
+  const normalizeFallbackStat = (rawStat) => {
+    const context = getMatchContext?.() || {}
+    const available = context.availableStats || context.allStats || []
+    const cleaned = String(rawStat || '')
+      .toLowerCase()
+      .replace(/\b(a|an|the)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (!cleaned) return null
+    const aliased = fallbackStatAliases[cleaned] || cleaned
+    return available.find(stat => stat.toLowerCase() === String(aliased).toLowerCase()) || null
+  }
+
+  const genericPlayerStatChangeFromTranscript = (text) => {
+    const numberMatch = text.match(/\b(?:for|from|to|by)?\s*(?:number\s+|#)(\d+)\b/) ||
+      text.match(/\b(?:for|from|to|by)\s+(\d+)\b/)
+    if (!numberMatch) return null
+
+    const playerNumber = Number(numberMatch[1])
+    if (!Number.isInteger(playerNumber) || playerNumber <= 0) return null
+
+    const operation = /\b(remove|removed|subtract|subtracted|decrement|decremented|minus|delete|deleted|take away|took away)\b/.test(text)
+      ? 'remove'
+      : 'add'
+    const statPhrase = text
+      .replace(/\b(remove|removed|subtract|subtracted|decrement|decremented|minus|delete|deleted|take away|took away|log|logged|add|added|record|recorded|mark|marked|give|gave|put down)\b/g, ' ')
+      .replace(/\b(?:for|from|to|by)?\s*(?:number\s+|#)\d+\b.*$/, ' ')
+      .replace(/\b(?:for|from|to|by)\s+\d+\b.*$/, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const stat = normalizeFallbackStat(statPhrase)
+    if (!stat) return null
+    return { stat, playerNumber, operation }
   }
 
   const puckoutSectionFromTranscript = (text) => {
@@ -695,8 +797,10 @@ export async function startAssistant({
       return
     }
 
+    const isRemovalCommand = /\b(remove|removed|subtract|subtracted|decrement|decremented|minus|delete|deleted|take away|took away)\b/.test(text)
+
     const goalNumber = numberFromTranscript(text, /(?:log\s+)?(?:a\s+)?goal\s+(?:for\s+)?(?:number\s+|#)?(\d+)\b/)
-    if (goalNumber) {
+    if (goalNumber && !isRemovalCommand) {
       runLocalWriteFallback('log_goal', { playerNumber: goalNumber, confirm: false })
       return
     }
@@ -713,7 +817,7 @@ export async function startAssistant({
     }
 
     const pointNumber = numberFromTranscript(text, /(?:log\s+)?(?:a\s+)?(?:point|score)\s+(?:for\s+)?(?:number\s+|#)?(\d+)\b/)
-    if (pointNumber) {
+    if (pointNumber && !isRemovalCommand) {
       runLocalWriteFallback('log_point', { playerNumber: pointNumber, confirm: false })
       return
     }
@@ -730,8 +834,14 @@ export async function startAssistant({
     }
 
     const wideNumber = numberFromTranscript(text, /(?:log\s+)?(?:a\s+)?wide\s+(?:for\s+)?(?:number\s+|#)?(\d+)\b/)
-    if (wideNumber) {
+    if (wideNumber && !isRemovalCommand) {
       runLocalWriteFallback('log_wide', { playerNumber: wideNumber, confirm: false })
+      return
+    }
+
+    const genericStatChange = genericPlayerStatChangeFromTranscript(text)
+    if (genericStatChange) {
+      runLocalWriteFallback('change_player_stat', { ...genericStatChange, confirm: false })
       return
     }
 

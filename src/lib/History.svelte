@@ -1,11 +1,13 @@
 <script>
   import { onMount } from 'svelte'
+  import { goto } from '$app/navigation'
   import { loadMatches, deleteMatch as deleteMatchLocal } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user } from './auth-store.js'
   import { scheduleAutoSync } from './sync.js'
   import Upgrade from './Upgrade.svelte'
   import ConfirmModal from './ConfirmModal.svelte'
+  import { analyzeMatch } from './match-insights.js'
   import { showToast } from './toast.js'
   import { jsPDF } from 'jspdf'
   import html2canvas from 'html2canvas'
@@ -99,6 +101,20 @@
     return `${s.goals}-${String(s.points).padStart(2, '0')}`
   }
 
+  function readTargetConfig() {
+    try {
+      const raw = localStorage.getItem('doora-team-targets')
+      if (!raw) return { targets: {}, customStats: [] }
+      const parsed = JSON.parse(raw)
+      return {
+        targets: parsed.targets || {},
+        customStats: parsed.customStats || []
+      }
+    } catch (_) {
+      return { targets: {}, customStats: [] }
+    }
+  }
+
   async function generatePDF() {
     pdfGenerating = true
     try {
@@ -156,6 +172,24 @@
         y += 7
       }
 
+      function drawWrappedTextBlock(label, text) {
+        if (!text) return
+        const lines = doc.splitTextToSize(String(text), CW - 8)
+        const blockH = lines.length * 4.5 + 9
+        checkPage(blockH + 3)
+        doc.setFillColor('#f9f9f9')
+        doc.rect(M, y, CW, blockH, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8)
+        doc.setTextColor('#555555')
+        doc.text(label, M + 4, y + 5)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor('#111111')
+        doc.text(lines, M + 4, y + 10)
+        y += blockH + 4
+      }
+
       // Capture an SVG or canvas element that may be inside .print-only (hidden)
       // Uses html2canvas with fallback to XMLSerializer for SVG
       async function captureEl(el) {
@@ -208,6 +242,7 @@
 
       const clubName = $settingsStore.teamName || 'GAAstat'
       const opposition = selectedMatch.opposition || 'Opposition'
+      const reportInsights = analyzeMatch(selectedMatch, matches, readTargetConfig())
 
       // ══════════════════════════════════════════════════════════
       // PAGE 1 — Header + Match Summary + Player Stats
@@ -265,6 +300,29 @@
       doc.text(awayScore, PW - M - 5, y + 17, { align: 'right' })
 
       y += 28
+
+      if (reportInsights) {
+        sectionTitle('Coaching Insights')
+        const summary = selectedMatch.coachSummary || reportInsights.defaultCoachSummary
+        const workOns = Array.isArray(selectedMatch.workOns) && selectedMatch.workOns.length
+          ? selectedMatch.workOns
+          : reportInsights.workOns
+        drawWrappedTextBlock('Summary', summary)
+        if (workOns.length > 0) {
+          workOns.slice(0, 5).forEach((item, i) => {
+            drawWrappedTextBlock(`Work-on ${i + 1}`, item)
+          })
+        }
+        drawTableHeader(['Metric', 'Value'], [70, 110])
+        const insightMetricRows = [
+          ['Shooting accuracy', reportInsights.shots.accuracy === null ? '—' : `${reportInsights.shots.accuracy}% (${reportInsights.shots.scores}/${reportInsights.shots.attempts})`],
+          ['Puckouts', reportInsights.puckouts.total ? `${reportInsights.puckouts.won}/${reportInsights.puckouts.total} won (${reportInsights.puckouts.winPct}%)` : '—'],
+          ['Targets met', reportInsights.targets.length ? `${reportInsights.targets.filter(t => t.status === 'met').length}/${reportInsights.targets.length}` : 'No targets set'],
+          ['Turnover balance', `${teamTotals['Turnover Won'] || 0} won / ${teamTotals['Turnover Lost'] || 0} lost`]
+        ]
+        insightMetricRows.forEach((row, i) => drawTableRow(row, [70, 110], i))
+        y += 6
+      }
 
       // Player stats table
       sectionTitle('Player Stats')
@@ -702,14 +760,19 @@
     <div class="detail-header">
       <div class="detail-top-row">
         <button class="back-btn" data-print-hide onclick={() => selectedMatch = null}>← Back</button>
-        <button class="print-btn" onclick={generatePDF} disabled={pdfGenerating}>
-          {#if pdfGenerating}
-            Generating…
-          {:else}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Print / Save PDF
-          {/if}
-        </button>
+        <div class="detail-actions">
+          <button class="review-btn" onclick={() => goto(`/app/insights?match=${selectedMatch.id}`)}>
+            Review
+          </button>
+          <button class="print-btn" onclick={generatePDF} disabled={pdfGenerating}>
+            {#if pdfGenerating}
+              Generating…
+            {:else}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Print / Save PDF
+            {/if}
+          </button>
+        </div>
       </div>
       <div class="detail-title">vs {selectedMatch.opposition}</div>
       <div class="detail-meta">{selectedMatch.date}{selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}</div>
@@ -1520,15 +1583,17 @@
 
   .detail-header { margin-bottom: 4px; }
   .detail-top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .detail-actions { display: flex; align-items: center; gap: 8px; }
   .back-btn { background: none; border: none; color: var(--primary); font-size: 14px; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; }
-  .print-btn {
+  .print-btn, .review-btn {
     display: flex; align-items: center; gap: 6px;
     padding: 8px 14px; border-radius: 8px;
     border: 1.5px solid var(--primary); background: none; color: var(--primary);
     font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
     transition: all 0.15s; white-space: nowrap;
   }
-  .print-btn:hover { background: var(--primary); color: white; }
+  .review-btn { background: var(--primary); color: var(--primary-text); }
+  .print-btn:hover { background: var(--primary); color: var(--primary-text); }
   .detail-title { font-size: 20px; font-weight: 700; color: var(--text); }
   .detail-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 

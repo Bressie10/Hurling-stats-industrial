@@ -7,9 +7,10 @@
   import { subscriptionStore, isClubPro } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { showToast } from './toast.js'
+  import { goto } from '$app/navigation'
   import ConfirmModal from './ConfirmModal.svelte'
   import SidelineAI from './SidelineAI.svelte'
-  import { buildSidelineToolHandlers, getCurrentPeriodAndTime, getScore } from './match-tools.js'
+  import { buildSidelineToolHandlers, getCurrentPeriodAndTime, getScore, normalizeStatName } from './match-tools.js'
 
   // ── LIVE SHARING ─────────────────────────────────────────
   let liveSessionId = $state(null)
@@ -72,6 +73,8 @@
   let matchDate = $state(new Date().toISOString().split('T')[0])
   let nextId = $state(21)
   let events = $state([])
+  let lastSavedMatchId = $state(null)
+  let lastSavedFixture = $state('')
 
   // ── LINEUP ───────────────────────────────────
   // Auto-populated from squad jersey numbers; saved with match for PDF export
@@ -414,8 +417,10 @@
     // the exact elapsed time without losing the partial second.
     pauseTimer()
     try {
+      const savedMatchId = Date.now()
+      const savedFixture = opposition
       await saveMatch($state.snapshot({
-        id: Date.now(), date: matchDate, opposition, venue, competition,
+        id: savedMatchId, date: matchDate, opposition, venue, competition,
         period, score: matchScore, stats, notes, customStats, events,
         subs_log, puckouts, oppScores, lineup,
         players: players.map(p => ({ ...p }))
@@ -445,6 +450,8 @@
       customStats = []
       period = $settingsStore.defaultPeriod || '1st Half'
       screen = 'setup'
+      lastSavedMatchId = savedMatchId
+      lastSavedFixture = savedFixture
       // FIX: Trigger auto-sync so the finished match is backed up without
       // requiring the coach to manually tap Sync.
       scheduleAutoSync($user?.id)
@@ -856,24 +863,73 @@
     return null
   }
 
-  function sidelinePendingResult(action, playerNumber, summary) {
+  function sidelinePendingResult(action, playerNumber, summary, extra = {}) {
     return {
       ok: false,
       needsConfirmation: true,
-      pendingAction: { action, playerNumber, summary },
+      pendingAction: { action, playerNumber, summary, ...extra },
       message: `Pending ${summary}. Confirm?`
     }
   }
 
-  function sidelineLogStat(stat, action, args = {}) {
+  function getSidelineStat(stat) {
+    const requested = String(stat || '').trim()
+    if (!requested) return { error: 'Need stat.' }
+    const normalized = normalizeStatName({ allStats }, requested)
+    const match = allStats.find(s => s.toLowerCase() === String(normalized).toLowerCase())
+    if (!match) return { error: `No stat "${requested}".` }
+    return { stat: match }
+  }
+
+  function removeStatEvent(playerId, stat) {
+    if (!stats[playerId] || (stats[playerId][stat] || 0) === 0) {
+      return { ok: false, error: `No ${stat.toLowerCase()} to remove.` }
+    }
+
+    stats[playerId][stat]--
+    if (stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
+    if (stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
+
+    const idx = findLastIndex(events, e => e.playerId === playerId && e.stat === stat)
+    if (idx !== -1) events = events.filter((_, i) => i !== idx)
+
+    saveDraft()
+    scheduleAutoSync($user?.id)
+    return { ok: true }
+  }
+
+  function sidelineChangePlayerStat(args = {}, action = 'change_player_stat') {
     const unavailable = sidelineWriteUnavailable()
     if (unavailable) return unavailable
 
     const { player, number, error } = getSidelinePlayerByNumber(args.playerNumber)
     if (error) return { ok: false, error }
 
-    const summary = `${stat.toLowerCase()} #${number}`
-    if (!args.confirm) return sidelinePendingResult(action, number, summary)
+    const statResult = getSidelineStat(args.stat)
+    if (statResult.error) return { ok: false, error: statResult.error }
+    const stat = statResult.stat
+    const operation = String(args.operation || 'add').toLowerCase() === 'remove' ? 'remove' : 'add'
+    const summary = `${operation === 'remove' ? 'remove ' : ''}${stat.toLowerCase()} #${number}`
+    if (!args.confirm) {
+      return sidelinePendingResult(action, number, summary, {
+        stat,
+        operation
+      })
+    }
+
+    if (operation === 'remove') {
+      const result = removeStatEvent(player.id, stat)
+      if (!result.ok) return result
+      return {
+        ok: true,
+        action,
+        message: 'Removed.',
+        player: player.name,
+        playerNumber: number,
+        stat,
+        operation
+      }
+    }
 
     if (shouldCapturePitch(stat)) {
       pendingLog = { playerId: player.id, stat }
@@ -897,8 +953,13 @@
       message: 'Logged.',
       player: player.name,
       playerNumber: number,
-      stat
+      stat,
+      operation
     }
+  }
+
+  function sidelineLogStat(stat, action, args = {}) {
+    return sidelineChangePlayerStat({ ...args, stat, operation: 'add' }, action)
   }
 
   function sidelineUndoLastEvent(args = {}) {
@@ -1094,6 +1155,7 @@
 
   const sidelineTools = {
     ...buildSidelineToolHandlers(getSidelineMatchContext),
+    change_player_stat: (args) => sidelineChangePlayerStat(args),
     log_goal: (args) => sidelineLogStat('Goal', 'log_goal', args),
     log_point: (args) => sidelineLogStat('Point', 'log_point', args),
     log_wide: (args) => sidelineLogStat('Wide', 'log_wide', args),
@@ -1114,6 +1176,16 @@
       <p>{$settingsStore.teamName || 'GAAstat'} · Hurling</p>
     </div>
   </div>
+
+  {#if lastSavedMatchId}
+    <div class="review-next-card">
+      <div>
+        <div class="review-next-title">Match saved</div>
+        <div class="review-next-sub">Review vs {lastSavedFixture || 'opposition'} while the details are fresh.</div>
+      </div>
+      <button onclick={() => goto(`/app/insights?match=${lastSavedMatchId}`)}>Review</button>
+    </div>
+  {/if}
 
   <div class="setup-card">
     <div class="setup-card-title">Match Details</div>
@@ -2098,7 +2170,7 @@
 {/if}
 
 <style>
-  .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
+  .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; max-width: 720px; width: 100%; margin: 0 auto; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
 
   /* ── RECOVERY SCREEN ── */
@@ -2171,7 +2243,7 @@
     width: 100%;
     padding: 15px;
     background: var(--primary);
-    color: white;
+    color: var(--primary-text);
     border: none;
     border-radius: 10px;
     font-size: 16px;
@@ -2216,22 +2288,26 @@
   .squad-stat-label { font-size: 12px; opacity: 0.7; margin-top: 4px; }
   .squad-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.2); }
   .squad-preview-hint { font-size: 12px; opacity: 0.6; text-align: center; }
+  .review-next-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.35); border-radius: 12px; padding: 14px; }
+  .review-next-title { font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 3px; }
+  .review-next-sub { color: var(--text-2); font-size: 13px; line-height: 1.3; }
+  .review-next-card button { border: none; border-radius: 8px; background: var(--primary); color: var(--primary-text); font-size: 13px; font-weight: 800; padding: 9px 12px; cursor: pointer; }
   .start-btn { width: 100%; padding: 16px; background: var(--primary); color: var(--primary-text); border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: background 0.15s; }
   .start-btn:hover { opacity: 0.85; }
   .start-arrow { font-size: 20px; }
-  .match-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .match-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
   .match-title { font-size: 17px; font-weight: 700; color: var(--text); }
   .vs { font-weight: 400; color: var(--text-muted); margin: 0 6px; }
   .match-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .scoreboard { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 10px; padding: 8px 16px; }
-  .score-block { text-align: center; }
+  .scoreboard { display: flex; align-items: flex-start; gap: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  .score-block { text-align: center; min-width: 52px; }
   .score-label { font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; }
-  .score-val { font-size: 22px; font-weight: 700; color: var(--text); }
-  .score-divider { font-size: 22px; color: var(--text-faint); }
-  .opp-btns { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
-  .opp-btn { padding: 6px 10px; font-size: 12px; font-weight: 600; border: 1px solid var(--input-border); border-radius: 6px; background: var(--surface); cursor: pointer; color: var(--text-2); font-family: inherit; min-height: 36px; min-width: 36px; }
+  .score-val { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .score-divider { font-size: 22px; color: var(--text-faint); margin-top: 13px; }
+  .opp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+  .opp-btn { padding: 6px 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--input-border); border-radius: 6px; background: var(--surface); cursor: pointer; color: var(--text-2); font-family: inherit; min-height: 34px; min-width: 34px; transition: all 0.15s; }
   .opp-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .timer-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .timer-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .timer-left { display: flex; align-items: center; gap: 10px; }
   .timer-display { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); min-width: 80px; }
   .timer-display.running { color: var(--primary); }
@@ -2239,10 +2315,10 @@
   .timer-display.overtime.running { color: #e53935; }
   .timer-btns { display: flex; gap: 6px; }
   .timer-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; border: 1.5px solid var(--input-border); background: none; color: var(--text-2); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 44px; }
-  .timer-btn.primary { background: var(--primary); border-color: var(--primary); color: white; }
+  .timer-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
   .period-pills { display: flex; gap: 6px; flex-wrap: wrap; }
   .period-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--input-border); background: none; font-size: 13px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 40px; }
-  .period-btn.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
+  .period-btn.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); font-weight: 600; }
   .undo-row { display: flex; justify-content: flex-end; }
   .undo-btn {
     padding: 8px 16px; border-radius: 8px;
@@ -2254,9 +2330,9 @@
   .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .mode-toggle { display: flex; border: 1px solid var(--input-border); border-radius: 8px; overflow: hidden; }
   .mode-toggle button { padding: 10px 20px; border: none; background: none; font-size: 14px; color: var(--text-muted); cursor: pointer; font-family: inherit; min-height: 44px; }
-  .mode-toggle button.active { background: var(--primary); color: white; font-weight: 600; }
+  .mode-toggle button.active { background: var(--primary); color: var(--primary-text); font-weight: 600; }
   .sub-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: 1.5px solid var(--primary); background: none; color: var(--primary); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; min-height: 44px; }
-  .sub-btn:hover { background: var(--primary); color: white; }
+  .sub-btn:hover { background: var(--primary); color: var(--primary-text); }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
   .stat-btn { position: relative; padding: 18px 12px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--surface); font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center; font-family: inherit; min-height: 64px; }
@@ -2267,11 +2343,11 @@
   .custom-tag { display: block; font-size: 10px; font-weight: 400; color: var(--text-faint); margin-top: 4px; }
   .add-stat-input { display: flex; align-items: center; gap: 6px; padding: 10px 12px; }
   .add-stat-input input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; min-width: 0; background: transparent; color: var(--text); }
-  .confirm-btn { padding: 4px 10px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .confirm-btn { padding: 4px 10px; background: var(--primary); color: var(--primary-text); border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .cancel-small { background: none; border: none; color: var(--text-faint); font-size: 14px; cursor: pointer; padding: 2px 4px; }
   .custom-stat-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
   .custom-stat-btn { padding: 7px 16px; border-radius: 8px; border: 1.5px dashed var(--primary); background: rgba(var(--primary-rgb),0.06); color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-  .custom-stat-btn:hover { background: var(--primary); color: white; }
+  .custom-stat-btn:hover { background: var(--primary); color: var(--primary-text); }
   .custom-stat-input-wrap { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1.5px solid var(--primary); border-radius: 8px; padding: 6px 10px; width: 100%; max-width: 320px; }
   .custom-stat-input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; min-width: 0; background: transparent; }
   .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
@@ -2509,14 +2585,14 @@
     min-height: 44px;
     transition: all 0.15s;
   }
-  .stats-view-btn:hover { background: var(--primary); color: white; }
+  .stats-view-btn:hover { background: var(--primary); color: var(--primary-text); }
 
   /* ── BACK TO MATCH BUTTON ── */
   .back-to-match-btn {
     width: 100%;
     padding: 15px;
     background: var(--primary);
-    color: white;
+    color: var(--primary-text);
     border: none;
     border-radius: 12px;
     font-size: 16px;
@@ -2625,7 +2701,7 @@
     border-radius: 10px;
     border: none;
     background: var(--primary);
-    color: white;
+    color: var(--primary-text);
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
@@ -2745,12 +2821,12 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    color: white;
+    color: var(--primary-text);
   }
   .ht-badge {
     display: inline-block;
-    background: rgba(255,255,255,0.18);
-    color: white;
+    background: rgba(0,0,0,0.14);
+    color: var(--primary-text);
     border-radius: 20px;
     font-size: 11px;
     font-weight: 700;
@@ -2891,6 +2967,6 @@
     font-family: inherit;
     flex-shrink: 0;
   }
-  .zone-filter-clear:hover { background: var(--primary); color: white; }
+  .zone-filter-clear:hover { background: var(--primary); color: var(--primary-text); }
 
 </style>

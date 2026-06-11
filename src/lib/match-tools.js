@@ -21,7 +21,17 @@ const STAT_ALIASES = {
   'free won': 'Free Won',
   'frees won': 'Free Won',
   free: 'Free Won',
-  frees: 'Free Won'
+  frees: 'Free Won',
+  'yellow card': 'Yellow Card',
+  'yellow cards': 'Yellow Card',
+  yellow: 'Yellow Card',
+  'red card': 'Red Card',
+  'red cards': 'Red Card',
+  red: 'Red Card',
+  'penalty won': 'Penalty Won',
+  'penalties won': 'Penalty Won',
+  'penalty scored': 'Penalty Scored',
+  'penalties scored': 'Penalty Scored'
 }
 
 function formatScore(score = {}) {
@@ -50,7 +60,7 @@ function resolvePlayerByNumber(context, playerNumber) {
   return { player: matches[0], number }
 }
 
-function normalizeStatName(context, stat) {
+export function normalizeStatName(context, stat) {
   const value = String(stat || '').trim().toLowerCase()
   return STAT_ALIASES[value] || (context.allStats || []).find(s => s.toLowerCase() === value) || stat
 }

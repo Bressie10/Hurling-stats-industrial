@@ -76,7 +76,7 @@
   let liveSession = $state(null)
 
   const isAppRoute = $derived(page.url.pathname.startsWith('/app/'))
-  const moreActive = $derived(['/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(page.url.pathname))
+  const moreActive = $derived(['/app/insights', '/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(page.url.pathname))
   const syncStatusLabel = $derived(syncFailed > 0 ? `${syncFailed} failed` : syncPending > 0 ? `${syncPending} pending` : '')
   $effect(() => { if (!$authLoading && $user && page.url.pathname === '/') goto('/app/match') })
 
@@ -314,6 +314,10 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Team Stats
           </button>
+          <button class:active={page.url.pathname === '/app/insights'} onclick={() => navigateTo('insights')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/><circle cx="19" cy="9" r="1.5"/><circle cx="14" cy="14" r="1.5"/><circle cx="10" cy="10" r="1.5"/></svg>
+            Insights
+          </button>
           <button class:active={page.url.pathname === '/app/history'} onclick={() => navigateTo('history')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             History
@@ -396,6 +400,12 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
           <div class="more-handle"></div>
           <div class="more-sheet-title">More</div>
           <div class="more-grid">
+            <button class="more-item" class:active={page.url.pathname === '/app/insights'} onclick={() => navigateTo('insights')}>
+              <div class="more-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/><circle cx="19" cy="9" r="1.5"/><circle cx="14" cy="14" r="1.5"/><circle cx="10" cy="10" r="1.5"/></svg>
+              </div>
+              <span>Insights</span>
+            </button>
             <button class="more-item" class:active={page.url.pathname === '/app/timeline'} onclick={() => navigateTo('timeline')}>
               <div class="more-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
