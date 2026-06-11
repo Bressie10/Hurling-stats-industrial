@@ -18,6 +18,16 @@ let pulling = false
 let listenersInstalled = false
 let activeUserId = null
 
+function squadCloudId(userId, localId) {
+  return `${userId}:${localId}`
+}
+
+function squadLocalIdFromRow(row) {
+  const localId = row?.data?.local_id ?? row?.id
+  if (typeof localId === 'string' && /^\d+$/.test(localId)) return Number(localId)
+  return localId
+}
+
 // Cheap, idempotent. Call this from any mutation site after persisting locally.
 // The local write has already enqueued an outbox entry atomically, so this just
 // nudges the drain worker.
@@ -123,9 +133,10 @@ async function applyMutation(userId, m) {
     const players = m.payload || []
     if (players.length > 0) {
       const rows = players.map(p => ({
-        id: String(p.id),
+        id: squadCloudId(userId, p.id),
         user_id: userId,
         data: {
+          local_id: p.id,
           name: p.name,
           number: p.number,
           position: p.position,
@@ -134,7 +145,7 @@ async function applyMutation(userId, m) {
       }))
       const { error } = await supabase
         .from('squad')
-        .upsert(rows, { onConflict: 'id,user_id' })
+        .upsert(rows)
       if (error) throw error
     }
     // Reconcile deletions: anything in cloud but not in our roster is gone.
@@ -142,7 +153,7 @@ async function applyMutation(userId, m) {
       .from('squad').select('id').eq('user_id', userId)
     if (selErr) throw selErr
     if (remote) {
-      const keep = new Set(players.map(p => String(p.id)))
+      const keep = new Set(players.map(p => squadCloudId(userId, p.id)))
       const toDelete = remote.filter(r => !keep.has(String(r.id))).map(r => r.id)
       if (toDelete.length > 0) {
         const { error } = await supabase
@@ -245,7 +256,7 @@ async function pullFromCloud(userId) {
         tx.store.clear()
         for (const row of squadRes.data) {
           tx.store.put({
-            id: row.id,
+            id: squadLocalIdFromRow(row),
             name: row.data?.name,
             number: row.data?.number,
             position: row.data?.position,
