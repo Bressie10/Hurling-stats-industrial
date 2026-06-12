@@ -11,7 +11,7 @@ Last updated: 2026-06-12
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: web app is in store-readiness hardening before native wrapper generation. The next external dependency is a real support email mailbox. Android/iOS wrapper projects have not been generated yet.
+- Current stage: web app is in store-readiness hardening before native wrapper generation. Support email is configured as `support@gaastat.com`; external delivery still needs a final test after DNS/routing propagation. Android/iOS wrapper projects have not been generated yet.
 
 ## URLs
 
@@ -71,6 +71,11 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `scripts/verify-store-release.mjs` now includes `Settings.svelte` in the native store-mode checks
   - `src/lib/LiveViewer.svelte` no longer captures initial match data in a Svelte state initializer
   - `src/routes/app/live/+page.svelte` now styles the actual live loading screen selector
+- Support email setup was completed in code/docs:
+  - Cloudflare Email Routing MX/SPF records are visible for `gaastat.com`
+  - user-facing contact links now use `support@gaastat.com`
+  - `native/shared/release.json` now uses `support@gaastat.com`
+  - the old misspelled domain was removed from user-facing docs
 
 ## Important Files
 
@@ -135,8 +140,8 @@ PWABuilder optional warnings are not the release target. The release target is A
 
 Recommended order from here:
 
-1. Set up a real support mailbox. Recommended final address is `support@gaastat.com`, with `contact@gaastat.com` as an alias if useful. Current code/docs still reference `contact@gaastatsapp.com` until the mailbox is confirmed.
-2. After the final mailbox exists, update `src/lib/LegalPage.svelte`, `src/lib/LpFooter.svelte`, `docs/store-release.md`, `native/shared/release.json`, and store metadata.
+1. Test `support@gaastat.com` from an external email account and confirm delivery to the monitored destination inbox.
+2. Add `support@gaastat.com` to App Store Connect and Google Play store metadata when those records are created.
 3. Verify queued offline match/squad mutations drain on the deployed preview/production app.
 4. Create a seeded reviewer account with realistic match/squad data and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
 5. Build the Android wrapper as a Trusted Web Activity:
@@ -171,5 +176,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md and docs/store-release.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done; next confirm the real support email, update code/docs/store metadata with that mailbox, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md and docs/store-release.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Next confirm external email delivery, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
 ```

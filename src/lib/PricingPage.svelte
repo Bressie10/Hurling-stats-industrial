@@ -96,7 +96,7 @@
     { q: 'Is there an annual pricing option?', a: 'Not yet, but it\'s on the roadmap. Monthly billing gives you maximum flexibility for now.' },
     { q: 'Can I try Pro features before paying?', a: 'Yes — sign up free and you\'ll have full access to match logging, squad management, and puckout tracking immediately. Upgrade to Pro when you want analytics and unlimited history.' },
     { q: 'What is live match sharing?', a: 'A Club Pro feature. The coach logging the match starts a live session, and anyone with the link can watch the live score, stats, and puckout breakdown update in real time — perfect for selectors not at the ground.' },
-    { q: 'Is there a custom/enterprise plan?', a: 'Yes. For county boards, schools, or large organisations needing custom stat types, white-labelling, or API access — contact us at contact@gaastatsapp.com and we\'ll build something around your needs.' },
+    { q: 'Is there a custom/enterprise plan?', a: 'Yes. For county boards, schools, or large organisations needing custom stat types, white-labelling, or API access — contact us at support@gaastat.com and we\'ll build something around your needs.' },
   ]
   const storeFaqs = [
     { q: 'Can I use an existing account?', a: 'Yes. Sign in with the same GAAstat account to access the tools and entitlements already attached to that account.' },
@@ -182,7 +182,7 @@
           <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated onboarding &amp; SLA</li>
         </ul>
         {#if !IS_NATIVE_STORE_BUILD}
-          <a href="mailto:contact@gaastatsapp.com" class="pp-cta pp-cta-enterprise">Contact Us</a>
+          <a href="mailto:support@gaastat.com" class="pp-cta pp-cta-enterprise">Contact Us</a>
         {:else}
           <div class="pp-store-note">Enterprise purchasing is not available inside this app.</div>
         {/if}

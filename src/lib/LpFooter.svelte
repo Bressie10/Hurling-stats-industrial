@@ -56,7 +56,7 @@
   <div class="footer-bottom">
     <div class="footer-copy">© {year} GAAstat. Built for GAA coaches.</div>
     <div class="footer-legal">
-      <a href="mailto:contact@gaastatsapp.com">Contact</a>
+      <a href="mailto:support@gaastat.com">Contact</a>
       <button on:click={() => nav('support')}>Support</button>
       <button on:click={() => nav('privacy')}>Privacy</button>
       <button on:click={() => nav('terms')}>Terms</button>

@@ -29,7 +29,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - Support: `https://www.gaastat.com/support`
 - Account deletion: `https://www.gaastat.com/account/delete`
 
-Before submission, set up and monitor a real support mailbox. Recommended final address is `support@gaastat.com`, with `contact@gaastat.com` as an alias if useful. Current code/docs still reference `contact@gaastatsapp.com` until the mailbox is confirmed. After confirmation, update `src/lib/LegalPage.svelte`, `src/lib/LpFooter.svelte`, `native/shared/release.json`, and any store metadata.
+Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been configured for the domain and code/docs now use this address. Before submission, send a real external test email to `support@gaastat.com` and confirm it reaches the monitored inbox. `contact@gaastat.com` can remain an optional alias if useful.
 
 ## Android / Google Play
 

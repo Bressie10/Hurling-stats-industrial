@@ -5,7 +5,7 @@
   export let pageType = 'privacy'
   export let onNavigate = () => {}
 
-  const contactEmail = 'contact@gaastatsapp.com'
+  const contactEmail = 'support@gaastat.com'
 
   const meta = {
     privacy: {

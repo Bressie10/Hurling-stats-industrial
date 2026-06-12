@@ -66,7 +66,7 @@
         {/each}
       </nav>
       <div class="sidebar-footer">
-        <a href="mailto:contact@gaastatsapp.com" class="sidebar-help">
+        <a href="mailto:support@gaastat.com" class="sidebar-help">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Can't find something?
         </a>
@@ -108,7 +108,7 @@
         <p class="docs-lead">Everything you need to go from zero to logging your first match in under 5 minutes.</p>
 
         <h2>Creating an account</h2>
-        <p>Visit <strong>gaastatsapp.com</strong> in any browser and tap <strong>Get Started Free</strong>. Choose your account type:</p>
+        <p>Visit <strong>gaastat.com</strong> in any browser and tap <strong>Get Started Free</strong>. Choose your account type:</p>
         <div class="docs-steps">
           <div class="docs-step"><div class="step-num">1</div><div><strong>Personal</strong> — one coach, one team. Best if you're using this on your own.</div></div>
           <div class="docs-step"><div class="step-num">2</div><div><strong>Club</strong> — you're setting up a club and will invite other coaches via team join codes.</div></div>

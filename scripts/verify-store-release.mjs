@@ -111,6 +111,7 @@ async function checkNativeConfig() {
 
   check(release.appId === 'com.gaastat.app', 'shared release appId is com.gaastat.app')
   check(release.productionUrl === 'https://www.gaastat.com/', 'shared release production URL is gaastat.com')
+  check(release.supportEmail === 'support@gaastat.com', 'shared release support email is support@gaastat.com')
   check(release.ios?.launchUrl === 'https://www.gaastat.com/?store_build=ios', 'iOS launch URL uses store_build=ios')
   check(release.android?.launchUrl === 'https://www.gaastat.com/?store_build=android', 'Android launch URL uses store_build=android')
   check(twa.packageId === release.android?.packageName, 'Android TWA package matches shared release config')

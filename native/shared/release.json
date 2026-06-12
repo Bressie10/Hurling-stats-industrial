@@ -2,7 +2,7 @@
   "appName": "GAAstat",
   "appId": "com.gaastat.app",
   "productionUrl": "https://www.gaastat.com/",
-  "supportEmail": "contact@gaastatsapp.com",
+  "supportEmail": "support@gaastat.com",
   "storeMode": {
     "queryParam": "store_build",
     "localStorageKey": "gaastat-store-build",

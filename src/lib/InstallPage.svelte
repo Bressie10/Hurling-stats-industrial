@@ -271,7 +271,7 @@
         <p>Drop us an email and we'll help you get set up. We typically reply within a day.</p>
       </div>
       <div class="cta-actions">
-        <a href="mailto:contact@gaastatsapp.com" class="cta-btn cta-btn-primary">Email us</a>
+        <a href="mailto:support@gaastat.com" class="cta-btn cta-btn-primary">Email us</a>
         <button class="cta-btn cta-btn-ghost" on:click={() => onNavigate('docs')}>User Guide</button>
       </div>
     </div>
