@@ -131,6 +131,11 @@ async function checkStoreModeCode() {
   check(config.includes('gaastat-store-build'), 'config persists store build mode')
   check(config.includes('PUBLIC_STORE_BUILD'), 'config supports PUBLIC_STORE_BUILD')
 
+  const appHtml = await readText('src/app.html')
+  check(!appHtml.includes("register('./pwabuilder-sw.js'"), 'service worker registration is not relative to the current route')
+  check(appHtml.includes("new URL('pwabuilder-sw.js'"), 'service worker registration derives the root/base worker URL')
+  check(appHtml.includes('.catch((err) =>'), 'service worker registration errors are handled')
+
   for (const file of [
     'src/lib/Upgrade.svelte',
     'src/lib/PricingPage.svelte',

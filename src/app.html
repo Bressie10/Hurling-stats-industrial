@@ -21,8 +21,14 @@
 		<script>
 			if ('serviceWorker' in navigator) {
 				window.addEventListener('load', () => {
-					navigator.serviceWorker.register('./pwabuilder-sw.js', {
-						scope: './'
+					const manifestHref = document.querySelector('link[rel="manifest"]')?.href
+					const workerUrl = new URL('pwabuilder-sw.js', manifestHref || window.location.origin + '/manifest.json')
+					const workerScope = new URL('./', workerUrl).pathname
+
+					navigator.serviceWorker.register(workerUrl.href, {
+						scope: workerScope
+					}).catch((err) => {
+						console.warn('Service worker registration failed', err)
 					})
 
 					// Unregister the legacy /sw.js worker so existing installs migrate
@@ -31,6 +37,8 @@
 						for (const reg of regs) {
 							if (reg.active && reg.active.scriptURL.endsWith('/sw.js')) reg.unregister()
 						}
+					}).catch((err) => {
+						console.warn('Legacy service worker cleanup failed', err)
 					})
 				})
 			}
