@@ -15,7 +15,7 @@ PWA for GAA coaches to track hurling match stats in real time. Coaches log stats
 | Charts | Chart.js |
 | PDF export | jsPDF 4.x + html2canvas 1.4.x |
 | Styling | Scoped CSS inside Svelte components |
-| PWA | `sw.js` + `manifest.json` in `static/` |
+| PWA | SvelteKit-native `src/service-worker.js` + `manifest.json` in `static/` |
 | Deployment | Vercel |
 
 **Svelte 5 mode — mixed:** App surfaces such as `Match.svelte`, `SidelineAI.svelte`, `History.svelte`, `Insights.svelte`, `Settings.svelte`, `Squad.svelte`, `PlayerStats.svelte`, `TeamStats.svelte`, and `Timeline.svelte` use runes (`$state`, `$derived`, `$props`, `$effect`). Some public/older components still use legacy syntax. Preserve each file's existing mode and do not mix rune and legacy syntax within a single file.
@@ -29,6 +29,7 @@ PWA for GAA coaches to track hurling match stats in real time. Coaches log stats
 ```
 src/
 ├── app.html / app.css
+├── service-worker.js      # SvelteKit SW: precaches hashed build assets via $service-worker
 ├── lib/
 │   ├── db.js              # IndexedDB ops
 │   ├── supabase.js        # Supabase client (env vars)
@@ -54,10 +55,12 @@ src/
         ├── +layout.svelte
         └── history|live|match|player|settings|squad|targets|team|timeline/+page.svelte
 static/
-├── gaastat-icon.svg     # App icon and PWA manifest icon
+├── gaastat-icon.svg     # App icon source (in-app + favicon)
 ├── gaastat-logo.svg
-├── manifest.json
-└── sw.js
+├── icons/               # Generated PNGs (192/512 manifest, 180 apple-touch, 1024 store art)
+└── manifest.json
+scripts/
+└── generate-icons.mjs   # Regenerates static/icons/ from gaastat-icon.svg (uses sharp)
 ```
 
 ---
@@ -309,13 +312,11 @@ Called from `Settings.svelte → doDeleteAccount()`. It's a PostgreSQL function 
 
 ---
 
-## Still To Build
+## PWA
 
-- [ ] PWA service worker: inject hashed CSS/JS asset URLs at build time (currently pre-caches fixed URLs)
+**Service worker:** `src/service-worker.js` (SvelteKit-native, auto-registered in prod — no manual `register()` call). Gets `build`/`files`/`version` from `$service-worker`, so hashed asset URLs are always current and the cache name bumps per deploy. Strategy: network-first for Supabase and navigations (cached `/` shell as offline fallback), cache-first for everything else. `app.html` contains a snippet that unregisters the legacy `/sw.js` worker — keep it until existing installs have migrated.
 
-## PWA Manifest
-
-`static/manifest.json` — `name` and `short_name` are `"GAAstat"`, and both icon entries point at `gaastat-icon.svg` with `type: "image/svg+xml"` and `sizes: "any"`. Do not revert to missing PNG icon paths or `"DB Stats"`.
+**Manifest:** `static/manifest.json` — `name`/`short_name` are `"GAAstat"`. Icons are PNGs in `static/icons/` (192 + 512, declared for both `any` and `maskable`; white background, generated via `node scripts/generate-icons.mjs`). Do not revert to SVG-only manifest icons (Play Store/TWA packaging requires PNG) or `"DB Stats"`. `icon-1024.png` is store listing art, not referenced by the manifest. Apple touch icon: `/icons/apple-touch-icon.png` (iOS ignores SVG there).
 
 ---
 
