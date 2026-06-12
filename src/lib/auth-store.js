@@ -9,6 +9,10 @@ export const authLoading = writable(true)
 supabase.auth.getSession().then(({ data }) => {
   user.set(data.session?.user ?? null)
   authLoading.set(false)
+}).catch((e) => {
+  console.warn('Initial auth session failed:', e)
+  user.set(null)
+  authLoading.set(false)
 })
 
 supabase.auth.onAuthStateChange((event, session) => {
@@ -57,5 +61,10 @@ export async function signOut() {
     console.warn('Pre-signout drain failed:', e)
   }
   await clearAllData()
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('active-team-id')
+    localStorage.removeItem('doora-team-targets')
+    localStorage.removeItem('signup_intent')
+  }
   await supabase.auth.signOut()
 }

@@ -15,6 +15,7 @@
   const { proAccess = false } = $props()
 
   const FREE_MATCH_LIMIT = 3
+  const DEFAULT_PERIOD_ORDER = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
 
   let matches = $state([])
   let search = $state('')
@@ -38,6 +39,17 @@
     deleteMatchId = id
     closeSelectedAfterDelete = closeSelected
     showDeleteMatchConfirm = true
+  }
+
+  function periodIndex(period) {
+    const order = $settingsStore.periods?.length ? $settingsStore.periods : DEFAULT_PERIOD_ORDER
+    const index = order.indexOf(period)
+    return index === -1 ? order.length + 1 : index
+  }
+
+  function compareByPeriodTime(a, b) {
+    return periodIndex(a.period) - periodIndex(b.period) ||
+      (a.time ?? 999999) - (b.time ?? 999999)
   }
 
   async function doDeleteMatch() {
@@ -630,7 +642,7 @@
     ;(selectedMatch.oppScores || []).forEach(s => {
       events.push({ team: 'away', type: s.type === 'goal' ? 'Goal' : 'Point', name: s.oppPlayerNum ? `#${s.oppPlayerNum}` : '?', marker: s.marker, time: s.time ?? null, period: s.period })
     })
-    events.sort((a, b) => (a.time ?? 9999) - (b.time ?? 9999))
+    events.sort(compareByPeriodTime)
     return events.map(e => {
       if (e.team === 'home') { if (e.type === 'Goal') homeG++; else homeP++ }
       else { if (e.type === 'Goal') awayG++; else awayP++ }
@@ -713,7 +725,7 @@
   let fullEventLog = $derived((() => {
     if (!selectedMatch?.events?.length) return []
     return [...selectedMatch.events]
-      .sort((a, b) => (a.time ?? 9999) - (b.time ?? 9999))
+      .sort(compareByPeriodTime)
       .map(e => {
         const player = selectedMatch.players?.find(p => p.id === e.playerId)
         return { ...e, playerName: player?.name || `#${player?.number || '?'}` }
@@ -842,7 +854,7 @@
         <div class="section-label" style="margin-bottom:8px">Substitutions</div>
         {#each selectedMatch.subs_log as sub}
           <div class="sub-row">
-            <span class="sub-time">{sub.time}</span>
+            <span class="sub-time">{sub.time != null ? formatTime(sub.time) : '—'}</span>
             <span class="sub-detail"><svg style="width:12px;height:12px;color:#e53935" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> {sub.off} → <svg style="width:12px;height:12px;color:#2d7a2d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> {sub.on}</span>
             <span class="sub-period">{sub.period}</span>
           </div>

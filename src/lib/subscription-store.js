@@ -21,12 +21,49 @@ export const subscriptionStore = writable({
 })
 
 const isActiveStatus = s => s.status === 'active' || s.status === 'trialing'
+const hasFeature = (s, key) => s.customFeatures?.[key] === true
 
-export const isPro = derived(subscriptionStore, () => true)
+export const isPro = derived(subscriptionStore, s =>
+  isActiveStatus(s) && (
+    ['personal', 'club', 'club_pro'].includes(s.plan) ||
+    hasFeature(s, 'isPro') ||
+    hasFeature(s, 'isClub') ||
+    hasFeature(s, 'isClubPro')
+  )
+)
 
-export const isClub = derived(subscriptionStore, () => true)
+export const isClub = derived(subscriptionStore, s =>
+  isActiveStatus(s) && (
+    ['club', 'club_pro'].includes(s.plan) ||
+    hasFeature(s, 'isClub') ||
+    hasFeature(s, 'isClubPro')
+  )
+)
 
-export const isClubPro = derived(subscriptionStore, () => true)
+export const isClubPro = derived(subscriptionStore, s =>
+  isActiveStatus(s) && (s.plan === 'club_pro' || hasFeature(s, 'isClubPro'))
+)
+
+function parseSignupIntent(value) {
+  if (!value) return { type: 'personal' }
+  try {
+    return JSON.parse(value) || { type: 'personal' }
+  } catch (_) {
+    return { type: 'personal' }
+  }
+}
+
+function parseCustomFeatures(value) {
+  if (!value) return {}
+  if (typeof value === 'object' && !Array.isArray(value)) return value
+  if (typeof value !== 'string') return {}
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch (_) {
+    return {}
+  }
+}
 
 function generateTeamCode() {
   return String(Math.floor(100000 + Math.random() * 900000))
@@ -46,7 +83,7 @@ export async function ensureProfile(userId) {
   if (existing) return
 
   const intentStr = localStorage.getItem('signup_intent')
-  const intent = intentStr ? JSON.parse(intentStr) : { type: 'personal' }
+  const intent = parseSignupIntent(intentStr)
   localStorage.removeItem('signup_intent')
 
   if (intent.type === 'club') {
@@ -67,18 +104,11 @@ export async function ensureProfile(userId) {
 
   } else if (intent.type === 'join') {
     const code = (intent.teamCode || '').trim()
-    const { data: team } = await supabase
-      .from('teams').select('id, club_id').eq('code', code).maybeSingle()
+    const { data: joinedTeam, error: joinErr } = await supabase
+      .rpc('join_team_with_code', { p_code: code })
+    const team = Array.isArray(joinedTeam) ? joinedTeam[0] : joinedTeam
 
-    if (team) {
-      // Club-level membership (role: coach)
-      await supabase.from('club_members').insert({
-        club_id: team.club_id, user_id: userId, role: 'coach'
-      })
-      // Team-level membership
-      await supabase.from('team_members').insert({
-        club_id: team.club_id, team_id: team.id, user_id: userId, role: 'coach'
-      })
+    if (!joinErr && team?.club_id) {
       await supabase.from('profiles').insert({
         id: userId, club_id: team.club_id
       })
@@ -165,7 +195,7 @@ export async function loadSubscription(userId) {
       activeTeamName: activeTeam?.name ?? null,
       activeTeamCode: activeTeam?.code ?? null,
       currentPeriodEnd: sub?.current_period_end ?? null,
-      customFeatures: sub?.custom_features ?? {},
+      customFeatures: parseCustomFeatures(sub?.custom_features),
       loading: false
     })
   } catch (e) {
@@ -196,33 +226,13 @@ export async function joinTeam(teamCode, userId) {
   const code = (teamCode || '').trim()
   if (!code) throw new Error('Enter a team code')
 
-  const { data: team } = await supabase
-    .from('teams').select('id, club_id').eq('code', code).maybeSingle()
-  if (!team) throw new Error('Team not found — check the code and try again')
+  const { data: joinedTeam, error } = await supabase.rpc('join_team_with_code', { p_code: code })
+  if (error) throw new Error(error.message || 'Team not found - check the code and try again')
 
-  // Ensure user has a club-level membership (handles cross-club joining too)
-  const { data: existingMember } = await supabase
-    .from('club_members')
-    .select('id')
-    .eq('club_id', team.club_id)
-    .eq('user_id', userId)
-    .maybeSingle()
+  const team = Array.isArray(joinedTeam) ? joinedTeam[0] : joinedTeam
+  if (!team?.team_id) throw new Error('Team not found - check the code and try again')
 
-  if (!existingMember) {
-    const { error: clubErr } = await supabase.from('club_members').insert({
-      club_id: team.club_id, user_id: userId, role: 'coach'
-    })
-    if (clubErr) throw clubErr
-
-    // Update profile club_id if not set
-    await supabase.from('profiles').upsert({ id: userId, club_id: team.club_id })
-  }
-
-  // Join the team — UNIQUE constraint means re-joining is silently ignored
-  const { error } = await supabase.from('team_members').insert({
-    club_id: team.club_id, team_id: team.id, user_id: userId, role: 'coach'
-  })
-  if (error && error.code !== '23505') throw error  // 23505 = duplicate, already joined
+  await supabase.from('profiles').upsert({ id: userId, club_id: team.club_id })
 
   await loadSubscription(userId)
 }

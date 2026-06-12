@@ -131,23 +131,24 @@ async function applyMutation(userId, m) {
 
   if (m.op === 'upsert_squad') {
     const players = m.payload || []
-    if (players.length > 0) {
-      const rows = players.map(p => ({
-        id: squadCloudId(userId, p.id),
-        user_id: userId,
-        data: {
-          local_id: p.id,
-          name: p.name,
-          number: p.number,
-          position: p.position,
-          updated_at: p.updated_at || 0
-        }
-      }))
-      const { error } = await supabase
-        .from('squad')
-        .upsert(rows)
-      if (error) throw error
-    }
+    if (players.length === 0) return
+
+    const rows = players.map(p => ({
+      id: squadCloudId(userId, p.id),
+      user_id: userId,
+      data: {
+        local_id: p.id,
+        name: p.name,
+        number: p.number,
+        position: p.position,
+        updated_at: p.updated_at || 0
+      }
+    }))
+    const { error } = await supabase
+      .from('squad')
+      .upsert(rows)
+    if (error) throw error
+
     // Reconcile deletions: anything in cloud but not in our roster is gone.
     const { data: remote, error: selErr } = await supabase
       .from('squad').select('id').eq('user_id', userId)
@@ -184,8 +185,25 @@ function matchToData(m) {
     puckouts: m.puckouts ?? [],
     oppScores: m.oppScores ?? [],
     lineup: m.lineup ?? {},
+    coachSummary: m.coachSummary ?? '',
+    workOns: m.workOns ?? [],
     updated_at: m.updated_at || 0
   }
+}
+
+async function getPendingDeleteMatchIds(db) {
+  const all = await db.getAll('sync_outbox')
+  return new Set(
+    all
+      .filter(m => m.op === 'delete_match')
+      .map(m => String(m.entity_id))
+  )
+}
+
+function matchLocalIdFromCloud(rowId, localMatch) {
+  if (localMatch) return localMatch.id
+  const id = String(rowId)
+  return /^\d+$/.test(id) ? Number(id) : rowId
 }
 
 // ── Cloud → local merge ─────────────────────────────────────────────────────
@@ -209,15 +227,17 @@ async function pullFromCloud(userId) {
     if (matchRes.data) {
       const localMatches = await loadMatches()
       const localById = new Map(localMatches.map(m => [String(m.id), m]))
+      const pendingDeletes = await getPendingDeleteMatchIds(db)
       const tx = db.transaction('matches', 'readwrite')
       for (const row of matchRes.data) {
+        if (pendingDeletes.has(String(row.id))) continue
         const d = row.data || {}
         const cloudTs = d.updated_at || 0
         const localM = localById.get(String(row.id))
         const localTs = localM?.updated_at || 0
         if (!localM || cloudTs > localTs) {
           tx.store.put({
-            id: row.id,
+            id: matchLocalIdFromCloud(row.id, localM),
             date: d.date,
             opposition: d.opposition,
             venue: d.venue,
@@ -233,6 +253,8 @@ async function pullFromCloud(userId) {
             puckouts: d.puckouts ?? [],
             oppScores: d.oppScores ?? [],
             lineup: d.lineup ?? {},
+            coachSummary: d.coachSummary ?? '',
+            workOns: d.workOns ?? [],
             updated_at: cloudTs
           })
         }

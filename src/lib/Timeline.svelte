@@ -1,10 +1,12 @@
 <script>
   import { onMount } from 'svelte'
   import { loadMatches } from './db.js'
+  import { settingsStore } from './settings-store.js'
 
   let matches = $state([])
   let selectedMatch = $state(null)
   let filter = $state('all')  // 'all' | 'puckouts'
+  const DEFAULT_PERIOD_ORDER = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
 
   onMount(async () => {
     matches = await loadMatches()
@@ -30,6 +32,17 @@
     if (stat === 'Tackle' || stat === 'Block') return 'blue'
     if (stat === 'Free Won') return 'amber'
     return 'gray'
+  }
+
+  function periodIndex(period) {
+    const order = $settingsStore.periods?.length ? $settingsStore.periods : DEFAULT_PERIOD_ORDER
+    const index = order.indexOf(period)
+    return index === -1 ? order.length + 1 : index
+  }
+
+  function compareByPeriodTime(a, b) {
+    return periodIndex(a.period) - periodIndex(b.period) ||
+      (a.time ?? 999999) - (b.time ?? 999999)
   }
 
   let timeline = $derived((() => {
@@ -65,7 +78,7 @@
         section: p.section
       })
     })
-    items.sort((a, b) => a.time - b.time)
+    items.sort(compareByPeriodTime)
     return items
   })())
 
@@ -74,7 +87,6 @@
     : timeline)
 
   let grouped = $derived((() => {
-    const order = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
     const groups = {}
     filteredItems.forEach(item => {
       const p = item.period || 'Unknown'
@@ -82,9 +94,7 @@
       groups[p].push(item)
     })
     return Object.entries(groups).sort((a, b) => {
-      const ai = order.indexOf(a[0])
-      const bi = order.indexOf(b[0])
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+      return periodIndex(a[0]) - periodIndex(b[0])
     })
   })())
 </script>

@@ -16,20 +16,29 @@
   let liveSessionId = $state(null)
   let liveChannel = $state(null)
   let isLive = $state(false)
+  let startingLive = $state(false)
   let liveError = $state(null)
+  let lastLiveTimerBroadcastAt = 0
 
   async function startLive() {
+    if (isLive || startingLive) return
     if (!$subscriptionStore.activeTeamId) { liveError = 'No team set up'; return }
-    const { data, error } = await supabase
-      .from('live_sessions')
-      .insert({ team_id: $subscriptionStore.activeTeamId, host_user_id: $user.id, match_data: getLivePayload() })
-      .select().single()
-    if (error) { liveError = error.message; return }
-    liveSessionId = data.id
-    liveChannel = supabase.channel(`live:${liveSessionId}`)
-    await liveChannel.subscribe()
-    isLive = true
-    liveError = null
+    startingLive = true
+    try {
+      const { data, error } = await supabase
+        .from('live_sessions')
+        .insert({ team_id: $subscriptionStore.activeTeamId, host_user_id: $user.id, match_data: getLivePayload() })
+        .select().single()
+      if (error) { liveError = error.message; return }
+      liveSessionId = data.id
+      liveChannel = supabase.channel(`live:${liveSessionId}`)
+      await liveChannel.subscribe()
+      isLive = true
+      liveError = null
+      lastLiveTimerBroadcastAt = Date.now()
+    } finally {
+      startingLive = false
+    }
   }
 
   async function stopLive() {
@@ -39,6 +48,7 @@
     if (liveChannel) { supabase.removeChannel(liveChannel); liveChannel = null }
     liveSessionId = null
     isLive = false
+    lastLiveTimerBroadcastAt = 0
   }
 
   function getLivePayload() {
@@ -296,6 +306,8 @@
   let pendingLog = $state(null)
   let showPitchPicker = $state(false)
   let voicePitchPrompt = $state(null)
+  let pendingPuckoutLog = $state(null)
+  let voicePuckoutPrompt = $state(null)
   let oppositionError = $state('')
   let showCancelConfirm = $state(false)
   let showFinishConfirm = $state(false)
@@ -336,6 +348,35 @@
     voicePitchPrompt = null
   }
 
+  function speakSidelineReply(message) {
+    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return
+    try {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(message)
+      utterance.rate = 1.05
+      window.speechSynthesis.speak(utterance)
+    } catch (_) {}
+  }
+
+  function confirmPuckoutZone(section) {
+    if (!pendingPuckoutLog || !section) return
+    recordPuckout({
+      outcome: pendingPuckoutLog.outcome,
+      ourPlayer: pendingPuckoutLog.ourPlayer,
+      oppPlayer: pendingPuckoutLog.oppPlayer,
+      section
+    })
+    pendingPuckoutLog = null
+    voicePuckoutPrompt = null
+    showToast('Puckout logged.', 'success')
+    speakSidelineReply('Logged.')
+  }
+
+  function cancelPuckoutZonePicker() {
+    pendingPuckoutLog = null
+    voicePuckoutPrompt = null
+  }
+
   function recordStat(playerId, stat, x = null, y = null, end = null) {
     if (!stats[playerId]) stats[playerId] = {}
     stats[playerId][stat] = (stats[playerId][stat] || 0) + 1
@@ -353,17 +394,12 @@
   }
 
   function decrement(playerId, stat) {
-    if (!stats[playerId] || (stats[playerId][stat] || 0) === 0) return
-    stats[playerId][stat]--
-    if (stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
-    if (stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
-    saveDraft()
-    scheduleAutoSync($user?.id)
+    removeStatEvent(playerId, stat)
   }
 
   function formatScore(s) { return `${s.goals}-${String(s.points).padStart(2, '0')}` }
 
-  async function saveDraft() {
+  async function saveDraft({ broadcast = true } = {}) {
     try {
       await saveDraftMatch($state.snapshot({
         date: matchDate,
@@ -392,7 +428,7 @@
     } catch (e) {
       console.warn('Draft save failed:', e)
     }
-    broadcastLive()
+    if (broadcast) broadcastLive()
   }
 
   onDestroy(() => {
@@ -412,6 +448,7 @@
     showFinishConfirm = false
     if (finishing) return
     finishing = true
+    const wasTimerRunning = timerRunning
     // Freeze the timer cleanly. pauseTimer() rolls the current run-segment
     // into timerAccumulatedMs so that, on error, startTimer() can resume from
     // the exact elapsed time without losing the partial second.
@@ -461,7 +498,7 @@
       // Resume from where pauseTimer() left off. timerAccumulatedMs already
       // holds the full elapsed time; startTimer() just sets a new wall-clock
       // anchor so the seconds continue advancing.
-      startTimer()
+      if (wasTimerRunning) startTimer()
     } finally {
       finishing = false
     }
@@ -540,7 +577,12 @@
     timerInterval = setInterval(() => {
       tickClock()
       // Persist draft at ~1Hz, not every UI tick, to avoid IndexedDB churn.
-      if (nowMs - timerPersistAt >= 1000) { timerPersistAt = nowMs; saveDraft() }
+      if (nowMs - timerPersistAt >= 1000) {
+        timerPersistAt = nowMs
+        const shouldBroadcastTimer = isLive && nowMs - lastLiveTimerBroadcastAt >= 15000
+        if (shouldBroadcastTimer) lastLiveTimerBroadcastAt = nowMs
+        saveDraft({ broadcast: shouldBroadcastTimer })
+      }
     }, TIMER_TICK_MS)
   }
 
@@ -693,11 +735,12 @@
   }
 
   // ── QUICK VIEW STATS ──────────────────────────
-  function openStatsView() {
+  function openStatsView(focus = null) {
     // Reset section open state to current settings defaults each time the panel opens
     const qv = $settingsStore.quickViewSections
     openSections = {
-      puckouts: qv?.puckouts ?? true,
+      pitch: focus === 'pitch',
+      puckouts: focus === 'puckouts' ? true : (qv?.puckouts ?? true),
       conceded: qv?.conceded ?? true,
       players: qv?.players ?? false,
       subs: qv?.subs ?? false,
@@ -713,6 +756,7 @@
 
   // ── QUICK VIEW STATS — all use live data ──────
   let openSections = $state({
+    pitch: false,
     puckouts: $settingsStore.quickViewSections?.puckouts ?? true,
     conceded: $settingsStore.quickViewSections?.conceded ?? true,
     players: $settingsStore.quickViewSections?.players ?? false,
@@ -721,6 +765,49 @@
   function toggleSection(k) { openSections[k] = !openSections[k] }
 
   let htPuckoutZoneFilter = $state(null)
+  let htPitchMapFilter = $state('shots')
+
+  let htLocatedEvents = $derived(events.filter(e => e.x != null && e.y != null))
+  let htShotMapEvents = $derived(htLocatedEvents.filter(e => pitchCaptureStats.has(e.stat)))
+  let htPitchMapEvents = $derived(htPitchMapFilter === 'all' ? htLocatedEvents : htShotMapEvents)
+
+  function htEventColor(stat) {
+    if (stat === 'Point' || stat === 'Goal') return '#2d7a2d'
+    if (stat === 'Wide') return '#e53935'
+    if (stat === 'Tackle' || stat === 'Block') return '#1565c0'
+    if (stat === 'Turnover Won') return '#2d7a2d'
+    if (stat === 'Turnover Lost') return '#e53935'
+    if (stat === 'Free Won') return '#f57c00'
+    return '#7B1FA2'
+  }
+
+  function htEventLabel(stat) {
+    if (stat === 'Point') return 'P'
+    if (stat === 'Goal') return 'G'
+    if (stat === 'Wide') return 'W'
+    if (stat === 'Tackle') return 'T'
+    if (stat === 'Block') return 'B'
+    if (stat === 'Turnover Won') return 'TW'
+    if (stat === 'Turnover Lost') return 'TL'
+    if (stat === 'Free Won') return 'F'
+    return String(stat || '?').charAt(0).toUpperCase()
+  }
+
+  function htEventPlayerLabel(event) {
+    const player = players.find(p => p.id === event.playerId)
+    if (!player) return 'Unknown'
+    return player.number ? `#${player.number} ${player.name || ''}`.trim() : (player.name || 'Unknown')
+  }
+
+  function htEventTitle(event) {
+    return `${htEventPlayerLabel(event)} · ${event.stat} · ${event.period || ''} ${formatTime(event.time || 0)}`.trim()
+  }
+
+  function htPitchCoord(value, max) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return max / 2
+    return Math.max(4, Math.min(max - 4, (n / 100) * max))
+  }
 
   let htPuckoutsByPlayer = $derived((() => {
     const map = {}
@@ -831,8 +918,12 @@
       stats,
       events,
       puckouts,
+      oppScores,
+      subs_log,
       players,
-      allStats
+      customStats,
+      allStats,
+      lineup
     }
 
     return {
@@ -859,7 +950,7 @@
   function sidelineWriteUnavailable() {
     if (screen !== 'match') return { ok: false, error: 'No active match.' }
     if (finishing) return { ok: false, error: 'Saving.' }
-    if (pendingLog || showPlayerPicker || showPitchPicker || showPuckoutModal || showOppScoreModal) return { ok: false, error: 'Finish current action.' }
+    if (pendingLog || pendingPuckoutLog || showPlayerPicker || showPitchPicker || showPuckoutModal || showOppScoreModal) return { ok: false, error: 'Finish current action.' }
     return null
   }
 
@@ -962,6 +1053,14 @@
     return sidelineChangePlayerStat({ ...args, stat, operation: 'add' }, action)
   }
 
+  function sidelineEventMatchesSnapshot(event, snapshot) {
+    if (!snapshot) return true
+    return String(event?.playerId) === String(snapshot.playerId) &&
+      event?.stat === snapshot.stat &&
+      (event?.time ?? null) === (snapshot.time ?? null) &&
+      (event?.period ?? null) === (snapshot.period ?? null)
+  }
+
   function sidelineUndoLastEvent(args = {}) {
     const unavailable = sidelineWriteUnavailable()
     if (unavailable) return unavailable
@@ -976,9 +1075,22 @@
       return {
         ok: false,
         needsConfirmation: true,
-        pendingAction: { action: 'undo_last_event', summary },
+        pendingAction: {
+          action: 'undo_last_event',
+          summary,
+          snapshot: {
+            playerId: last.playerId,
+            stat: last.stat,
+            time: last.time ?? null,
+            period: last.period ?? null
+          }
+        },
         message: `Pending ${summary}. Confirm?`
       }
+    }
+
+    if (!sidelineEventMatchesSnapshot(events[events.length - 1], args.snapshot)) {
+      return { ok: false, error: 'Match changed - say undo again.' }
     }
 
     undoLastStat()
@@ -1034,10 +1146,11 @@
     return sidelinePuckoutSectionAliases[raw] || ''
   }
 
-  function sidelinePuckoutSummary(outcome, section, playerNumber = null) {
-    const sectionLabel = formatZoneLabel(section).toLowerCase()
+  function sidelinePuckoutSummary(outcome, section = null, playerNumber = null, oppPlayerNum = null) {
+    const sectionLabel = section ? `, ${formatZoneLabel(section).toLowerCase()}` : ''
     const playerText = playerNumber ? ` for #${playerNumber}` : ''
-    return `puckout ${outcome}, ${sectionLabel}${playerText}`
+    const oppText = oppPlayerNum ? ` to #${oppPlayerNum}` : ''
+    return `puckout ${outcome}${sectionLabel}${playerText}${oppText}`
   }
 
   function sidelineLogPuckout(args = {}) {
@@ -1051,7 +1164,7 @@
     }
 
     const section = normalizeSidelinePuckoutSection(args.section)
-    if (!sidelinePuckoutSections.includes(section)) {
+    if (args.section && !sidelinePuckoutSections.includes(section)) {
       return {
         ok: false,
         error: `Bad section. Use: ${sidelinePuckoutSections.join(', ')}.`
@@ -1067,20 +1180,46 @@
       playerNumber = resolved.number
     }
 
-    const summary = sidelinePuckoutSummary(outcome, section, playerNumber)
+    let oppPlayerNum = null
+    if (args.oppPlayerNum != null && args.oppPlayerNum !== '') {
+      const number = Number(args.oppPlayerNum)
+      if (!Number.isInteger(number) || number <= 0) return { ok: false, error: 'Need opposition number.' }
+      oppPlayerNum = number
+    }
+
+    const summary = sidelinePuckoutSummary(outcome, section, playerNumber, oppPlayerNum)
     if (!args.confirm) {
       return {
         ok: false,
         needsConfirmation: true,
-        pendingAction: { action: 'log_puckout', outcome, section, playerNumber, summary },
+        pendingAction: { action: 'log_puckout', outcome, section: section || null, playerNumber, oppPlayerNum, summary },
         message: `Pending ${summary}. Confirm?`
+      }
+    }
+
+    if (!section) {
+      pendingPuckoutLog = {
+        outcome,
+        ourPlayer: player ? (player.name?.trim() || `#${player.number}`) : null,
+        oppPlayer: oppPlayerNum == null ? null : String(oppPlayerNum),
+        playerNumber
+      }
+      voicePuckoutPrompt = 'Tap puckout zone to finish.'
+      return {
+        ok: true,
+        action: 'log_puckout',
+        needsPuckoutZone: true,
+        message: 'Tap zone.',
+        outcome,
+        ourPlayer: player?.name || null,
+        playerNumber
       }
     }
 
     recordPuckout({
       outcome,
       ourPlayer: player ? (player.name?.trim() || `#${player.number}`) : null,
-      oppPlayer: null,
+      oppPlayer: oppPlayerNum == null ? null : String(oppPlayerNum),
       section
     })
 
@@ -1092,6 +1231,7 @@
       section,
       ourPlayer: player?.name || null,
       playerNumber,
+      oppPlayerNum,
       puckouts: {
         total: puckouts.length,
         won: puckouts.filter(p => p.outcome === 'won').length,
@@ -1153,6 +1293,36 @@
     }
   }
 
+  function sidelineShowHeatmap(args = {}) {
+    if (screen === 'setup') return { ok: false, error: 'No active match.' }
+
+    const type = String(args.type || 'shots').toLowerCase()
+    if (type === 'puckout' || type === 'puckouts') {
+      if (!$settingsStore.trackPuckouts) return { ok: false, error: 'Puckouts off.' }
+      if (!puckouts.some(p => p.section)) return { ok: false, error: 'No puckout zones logged yet.' }
+      openStatsView('puckouts')
+      return { ok: true, action: 'show_heatmap', type: 'puckouts', message: 'Opened puckout heatmap.' }
+    }
+
+    const mapMode = ['all', 'actions', 'events'].includes(type) ? 'all' : 'shots'
+    const availableEvents = mapMode === 'all' ? htLocatedEvents : htShotMapEvents
+    if (!availableEvents.length) {
+      return {
+        ok: false,
+        error: mapMode === 'all' ? 'No pitch locations logged yet.' : 'No shot locations logged yet.'
+      }
+    }
+
+    htPitchMapFilter = mapMode
+    openStatsView('pitch')
+    return {
+      ok: true,
+      action: 'show_heatmap',
+      type: mapMode,
+      message: mapMode === 'all' ? 'Opened pitch map.' : 'Opened shot heatmap.'
+    }
+  }
+
   const sidelineTools = {
     ...buildSidelineToolHandlers(getSidelineMatchContext),
     change_player_stat: (args) => sidelineChangePlayerStat(args),
@@ -1162,6 +1332,7 @@
     undo_last_event: (args) => sidelineUndoLastEvent(args),
     log_puckout: (args) => sidelineLogPuckout(args),
     log_opposition_score: (args) => sidelineLogOppositionScore(args),
+    show_heatmap: (args) => sidelineShowHeatmap(args),
     cancel_pending_action: () => ({ ok: true, action: 'cancel_pending_action', message: 'Cancelled.' })
   }
 </script>
@@ -1251,7 +1422,7 @@
 
   <div class="match-header">
     <div class="match-info">
-      <div class="match-title">DB <span class="vs">vs</span> {opposition}</div>
+      <div class="match-title">{$settingsStore.teamName || 'GAAstat'} <span class="vs">vs</span> {opposition}</div>
       <div class="match-meta">{[competition, venue, matchDate].filter(Boolean).join(' · ')}</div>
     </div>
     <div class="scoreboard">
@@ -1292,7 +1463,7 @@
         <button
           class="period-btn"
           class:active={period === p}
-          onclick={() => { period = p; resetTimer() }}
+          onclick={() => { if (p !== period) { period = p; resetTimer() } }}
         >{p}</button>
       {/each}
     </div>
@@ -1301,7 +1472,7 @@
   <SidelineAI
     getMatchContext={getSidelineMatchContext}
     tools={sidelineTools}
-    pitchPrompt={voicePitchPrompt ? 'Tap pitch location to finish.' : ''}
+    pitchPrompt={voicePitchPrompt ? 'Tap pitch location to finish.' : voicePuckoutPrompt ? 'Tap puckout zone to finish.' : ''}
   />
 
   <div class="mode-row">
@@ -1478,7 +1649,7 @@
   {/if}
 
   {#if showPitchPicker}
-    <div class="modal-backdrop" onclick={() => voicePitchPrompt ? null : confirmLogWithCoords(null, null, null)}>
+    <div class="modal-backdrop" onclick={cancelPitchPicker}>
       <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">
           {#if voicePitchPrompt}
@@ -1534,6 +1705,58 @@
             Skip — log without location
           </button>
         {/if}
+      </div>
+    </div>
+  {/if}
+
+  {#if pendingPuckoutLog}
+    <div class="modal-backdrop" onclick={() => null}>
+      <div class="modal" onclick={(e) => e.stopPropagation()}>
+        <div class="modal-title">
+          {voicePuckoutPrompt || 'Tap puckout zone'}
+        </div>
+        <div class="modal-section-label">
+          {pendingPuckoutLog.outcome === 'won' ? 'Won puckout' : 'Lost puckout'}
+          {#if pendingPuckoutLog.ourPlayer}<span class="zone-hint">{pendingPuckoutLog.ourPlayer}</span>{/if}
+          {#if pendingPuckoutLog.oppPlayer}<span class="zone-hint">Opp #{pendingPuckoutLog.oppPlayer}</span>{/if}
+        </div>
+        <div class="puckout-pitch-wrap">
+          <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
+            <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
+            {#each puckoutRows as row}
+              {#each puckoutCols as col}
+                {@const zkey = col.key + '-' + row.key}
+                <rect
+                  x={col.x} y={row.y} width={col.w} height={row.h}
+                  fill="rgba(255,255,255,0.08)"
+                  stroke="rgba(255,255,255,0.2)"
+                  stroke-width="0.7"
+                  style="cursor:pointer"
+                  onclick={() => confirmPuckoutZone(zkey)}
+                />
+                <text
+                  x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
+                  text-anchor="middle" fill="white"
+                  font-size="6.5"
+                  opacity="0.78"
+                  style="pointer-events:none"
+                >{col.label}</text>
+              {/each}
+            {/each}
+            {#each [62, 120, 180, 238] as dx}
+              <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
+            {/each}
+            <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
+            <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
+            <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+            <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
+            <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()}</text>
+            <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{(opposition || 'Opposition').slice(0,8).toUpperCase()}</text>
+          </svg>
+        </div>
+        <button class="cancel-btn" onclick={cancelPuckoutZonePicker}>
+          Cancel puckout log
+        </button>
       </div>
     </div>
   {/if}
@@ -1853,6 +2076,104 @@
     <div class="ht-score-bar-meta">{[competition, venue, matchDate].filter(Boolean).join(' · ')}</div>
   </div>
 
+  <!-- ── PITCH HEATMAP accordion ── -->
+  {#if htLocatedEvents.length > 0}
+    <div class="accordion-card">
+      <button class="accordion-header" onclick={() => toggleSection('pitch')}>
+        <div class="accordion-title">
+          <span class="accordion-name">Pitch Heatmap</span>
+          <span class="accordion-summary">
+            <span class="badge-pts">{htShotMapEvents.length} shot{htShotMapEvents.length !== 1 ? 's' : ''}</span>
+            {#if htLocatedEvents.length !== htShotMapEvents.length}
+              <span class="badge-pts">{htLocatedEvents.length} located</span>
+            {/if}
+          </span>
+        </div>
+        <span class="accordion-chevron">{#if openSections.pitch}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>{:else}<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>{/if}</span>
+      </button>
+      {#if openSections.pitch}
+        <div class="accordion-body">
+          <div class="pitch-map-controls">
+            <div class="pitch-map-mode-row" aria-label="Pitch map filter">
+              <button
+                class:active={htPitchMapFilter === 'shots'}
+                onclick={() => htPitchMapFilter = 'shots'}
+              >Shots</button>
+              <button
+                class:active={htPitchMapFilter === 'all'}
+                onclick={() => htPitchMapFilter = 'all'}
+              >All</button>
+            </div>
+            <div class="pitch-map-count">{htPitchMapEvents.length} shown</div>
+          </div>
+
+          <div class="pitch-map-legend">
+            <span><span class="pitch-map-dot score"></span>Score</span>
+            <span><span class="pitch-map-dot wide"></span>Wide</span>
+            {#if htPitchMapFilter === 'all'}
+              <span><span class="pitch-map-dot action"></span>Action</span>
+            {/if}
+          </div>
+
+          <div class="live-pitch-map-wrap">
+            <svg class="live-pitch-map" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="300" height="200" fill="#2d7a2d" rx="4"/>
+              {#each [0,1,2,3,4,5,6] as i}
+                <rect x={i*43} y="0" width="21.5" height="200" fill="rgba(0,0,0,0.04)"/>
+              {/each}
+              <rect x="0" y="0" width="150" height="200" fill="rgba(0,0,0,0.07)" rx="4"/>
+              <rect x="4" y="4" width="292" height="192" fill="none" stroke="white" stroke-width="1.5" opacity="0.75"/>
+              <line x1="150" y1="4" x2="150" y2="196" stroke="white" stroke-width="1.5" opacity="0.75"/>
+              <circle cx="150" cy="100" r="30" fill="none" stroke="white" stroke-width="1" opacity="0.55"/>
+              <circle cx="150" cy="100" r="2.5" fill="white" opacity="0.55"/>
+              <rect x="4" y="60" width="40" height="80" fill="none" stroke="white" stroke-width="1" opacity="0.65"/>
+              <rect x="4" y="78" width="18" height="44" fill="none" stroke="white" stroke-width="1" opacity="0.65"/>
+              <rect x="256" y="60" width="40" height="80" fill="none" stroke="white" stroke-width="1" opacity="0.65"/>
+              <rect x="278" y="78" width="18" height="44" fill="none" stroke="white" stroke-width="1" opacity="0.65"/>
+              <line x1="72" y1="4" x2="72" y2="196" stroke="white" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.35"/>
+              <line x1="228" y1="4" x2="228" y2="196" stroke="white" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.35"/>
+              <text x="75" y="18" text-anchor="middle" fill="white" font-size="8" font-weight="bold" opacity="0.85">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()} END</text>
+              <text x="225" y="18" text-anchor="middle" fill="white" font-size="8" font-weight="bold" opacity="0.85">{(opposition || 'Opposition').slice(0,8).toUpperCase()} END</text>
+
+              {#if htPitchMapEvents.length === 0}
+                <text x="150" y="104" text-anchor="middle" fill="white" font-size="10" opacity="0.58">
+                  No {htPitchMapFilter === 'shots' ? 'shots' : 'events'} with locations
+                </text>
+              {/if}
+
+              {#each htPitchMapEvents as event}
+                {@const eventLabel = htEventLabel(event.stat)}
+                {@const cx = htPitchCoord(event.x, 300)}
+                {@const cy = htPitchCoord(event.y, 200)}
+                <g>
+                  <title>{htEventTitle(event)}</title>
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={eventLabel.length > 1 ? 8 : 7}
+                    fill={htEventColor(event.stat)}
+                    stroke="white"
+                    stroke-width="1.3"
+                    opacity="0.9"
+                  />
+                  <text
+                    x={cx}
+                    y={cy + 3}
+                    text-anchor="middle"
+                    fill="white"
+                    font-size={eventLabel.length > 1 ? 5.5 : 7}
+                    font-weight="bold"
+                    pointer-events="none"
+                  >{eventLabel}</text>
+                </g>
+              {/each}
+            </svg>
+          </div>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   <!-- ── PUCKOUTS accordion ── -->
   {#if $settingsStore.trackPuckouts && puckouts.length > 0}
     {@const htWins = puckouts.filter(p => p.outcome === 'won').length}
@@ -2057,9 +2378,9 @@
             <div class="ht-stat-block"><div class="ht-stat-val red">{htGoals*3+htPoints}</div><div class="ht-stat-label">Total pts</div></div>
           </div>
 
-          {#if htConcededByMarker.length > 0}
+          {#if allConcededByMarker.length > 0}
             <div class="ht-sub-label" style="margin-top:12px">By our marker</div>
-            {#each htConcededByMarker as row}
+            {#each allConcededByMarker as row}
               <div class="ht-breakdown-row">
                 <span class="ht-breakdown-name">{row.marker}</span>
                 <span class="ht-breakdown-vals">
@@ -2806,6 +3127,78 @@
     transition: all 0.15s;
   }
   .cancel-match-btn:hover { border-color: #e53935; color: #e53935; }
+
+  /* ── LIVE PITCH MAP ── */
+  .pitch-map-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .pitch-map-mode-row {
+    display: inline-flex;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex: none;
+  }
+  .pitch-map-mode-row button {
+    min-width: 64px;
+    min-height: 36px;
+    padding: 8px 12px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pitch-map-mode-row button + button { border-left: 1px solid var(--input-border); }
+  .pitch-map-mode-row button.active {
+    background: var(--primary);
+    color: var(--primary-text);
+  }
+  .pitch-map-count {
+    color: var(--text-faint);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .pitch-map-legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .pitch-map-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pitch-map-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .pitch-map-dot.score { background: #2d7a2d; }
+  .pitch-map-dot.wide { background: #e53935; }
+  .pitch-map-dot.action { background: #1565c0; }
+  .live-pitch-map-wrap {
+    border-radius: 8px;
+    overflow: hidden;
+    background: #2d7a2d;
+  }
+  .live-pitch-map {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    display: block;
+  }
 
   /* ── PUCKOUT PITCH ZONE PICKER ── */
   .puckout-pitch-wrap { border-radius: 8px; overflow: hidden; margin-bottom: 0.5rem; }

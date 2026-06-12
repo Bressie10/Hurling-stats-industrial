@@ -18,7 +18,7 @@ PWA for GAA coaches to track hurling match stats in real time. Coaches log stats
 | PWA | `sw.js` + `manifest.json` in `static/` |
 | Deployment | Vercel |
 
-**Svelte 5 mode — mixed:** Most components use legacy mode (`let`, `$:`, `on:click`). `History.svelte` has been migrated to runes (`$state`, `$derived`, `$props`). Do not mix rune and legacy syntax within a single file.
+**Svelte 5 mode — mixed:** App surfaces such as `Match.svelte`, `SidelineAI.svelte`, `History.svelte`, `Insights.svelte`, `Settings.svelte`, `Squad.svelte`, `PlayerStats.svelte`, `TeamStats.svelte`, and `Timeline.svelte` use runes (`$state`, `$derived`, `$props`, `$effect`). Some public/older components still use legacy syntax. Preserve each file's existing mode and do not mix rune and legacy syntax within a single file.
 
 **SvelteKit:** All routes set `export const ssr = false` (CSR-only). Static assets in `static/` (not `public/`). Navigation via `goto()` from `$app/navigation`.
 
@@ -54,8 +54,7 @@ src/
         ├── +layout.svelte
         └── history|live|match|player|settings|squad|targets|team|timeline/+page.svelte
 static/
-├── doora-barefield.png  # Club crest — use this path, not /src/assets/
-├── gaastat-icon.svg     # App icon (LpNav logo)
+├── gaastat-icon.svg     # App icon and PWA manifest icon
 ├── gaastat-logo.svg
 ├── manifest.json
 └── sw.js
@@ -75,6 +74,8 @@ npm run preview  # Preview build
 ```
 PUBLIC_SUPABASE_URL=https://syikhsgovqogzkmmhuis.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<anon key>
+OPENAI_API_KEY=<server key>
+SIDELINE_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 ```
 
 ---
@@ -108,6 +109,8 @@ All tables have RLS. `custom_features` keys: `isPro`, `isClub`, `isClubPro` (boo
 - Team: `coach` | `player` (multiple teams via multiple `team_members` rows)
 - `activeTeamId` persisted to `localStorage('active-team-id')`
 
+**Code-based joins:** Team joins go through the `join_team_with_code(p_code text)` security-definer RPC. Club-code lookup goes through `find_club_by_code(p_code text)`. Do not reintroduce direct client inserts into `club_members` / `team_members` for self-join flows.
+
 **Active team flow:** On login, if multiple teams and no `activeTeamId` and `!rememberLastTeam` → show `TeamPicker`. `leaveTeam()` clears localStorage if it was the active team.
 
 ---
@@ -117,10 +120,11 @@ All tables have RLS. `custom_features` keys: `isPro`, `isClub`, `isClubPro` (boo
 All unauthenticated visitors (web + PWA) see `Landing.svelte` with sign-in embedded in hero. `Auth.svelte` exists but is unused.
 
 1. User signs in via `Landing.svelte`
-2. `clearAllData()` wipes local IndexedDB — **never skip this**
-3. `syncFromSupabase()` pulls user's data
-4. `dataReady = true` — app renders
-5. On sign out: `clearAllData()` again
+2. `+layout.svelte` compares the authenticated user with the IndexedDB `last_user_id` sentinel
+3. Same user: `flushOutbox()` drains pending local mutations, then `syncFromSupabase()` merges cloud data
+4. Different user: best-effort sync of the previous user's outbox, then `clearAllData()`, then cloud pull for the new user
+5. `dataReady = true` — app renders even if offline sync/pull fails
+6. On sign out: best-effort `flushOutbox()`, `clearAllData()`, and clear team-specific localStorage keys
 
 ---
 
@@ -147,6 +151,10 @@ stats[playerId][statName] = count
 
 // Opposition score
 { type, oppPlayerNum, marker, time, period }  // type: 'goal'|'point'
+
+// Match review fields synced with matches.data
+coachSummary: string
+workOns: string[]
 ```
 
 ### Puckout zones
@@ -191,6 +199,9 @@ The `.print-only` sections in the template must stay — their SVG elements need
 ### Match screen
 `screen` variable: `'setup'` | `'match'` | `'stats'`. Quick View Stats (Stats button) keeps timer running. Accordions: puckouts, conceded, players, subs.
 
+### Sideline AI voice
+Sideline AI uses short clips sent to `src/routes/api/voice/transcribe`, then deterministic local parsing in `src/lib/sideline-command-parser.js`. The transcribe route uses server-side `OPENAI_API_KEY`, requires the caller's Supabase bearer token, and validates it against Supabase Auth before calling OpenAI. The old OpenAI Realtime routes/client were removed; do not restore them for match logging cost control.
+
 ---
 
 ## Branding
@@ -201,7 +212,7 @@ App name is **GAAstat** everywhere — in fallback strings, meta tags, legal pag
 
 ## Things To Never Break
 
-- `clearAllData()` on login — prevents data bleed between coaches
+- `clearAllData()` only on real account change or sign-out — same-user login must preserve local drafts/outbox
 - `loadMatches()` filtering `isDraft` — prevents draft appearing in history
 - RLS in Supabase — never disable
 - Player identity by name — switching to ID breaks cross-match aggregation
@@ -209,7 +220,7 @@ App name is **GAAstat** everywhere — in fallback strings, meta tags, legal pag
 - `saveDraft()` on every state change — removing any call risks data loss
 - Silent auto-resume draft — no "Resume or Discard?" screen
 - `timerStartedAt` wall-clock — don't revert to counter
-- Logo path `doora-barefield.png` — static-root path only, never `/src/assets/`
+- Logo/icon path `/gaastat-icon.svg` — static-root path only, never `/src/assets/`
 - `export const ssr = false` / `prerender = false` on all routes
 - `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY` in env — never hardcode
 - `stopLive()` in `Match.svelte` — called inside `doFinishMatch()` **after** `saveMatch()` + `clearDraftMatch()` succeed, never before the confirm modal. Moving it back to `finishMatch()` would end the live session even if the user cancels.
@@ -304,7 +315,7 @@ Called from `Settings.svelte → doDeleteAccount()`. It's a PostgreSQL function 
 
 ## PWA Manifest
 
-`static/manifest.json` — `short_name` is `"GAAstat"`, icon is `gaastat-icon.png` (192×512). Do not revert to `doora-barefield.png` or `"DB Stats"`.
+`static/manifest.json` — `name` and `short_name` are `"GAAstat"`, and both icon entries point at `gaastat-icon.svg` with `type: "image/svg+xml"` and `sizes: "any"`. Do not revert to missing PNG icon paths or `"DB Stats"`.
 
 ---
 

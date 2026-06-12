@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { loadMatches, loadSquad } from './db.js'
   import { Chart, registerables } from 'chart.js'
 
@@ -13,47 +13,59 @@
   let matchB = $state(null)
   let chartInstance = null
   let canvas = $state()
+  const DEFAULT_STAT_KEYS = [
+    'Point','Goal','Wide','Tackle','Block',
+    'Turnover Won','Turnover Lost','Free Won'
+  ]
+
+  function normalizeName(name) {
+    return String(name || '').trim().toLowerCase()
+  }
 
   onMount(async () => {
     const [loadedMatches, squad] = await Promise.all([loadMatches(), loadSquad()])
     matches = loadedMatches.sort((a, b) => new Date(b.date) - new Date(a.date))
-    squadNames = new Set((squad || []).map(p => p.name?.trim()).filter(Boolean))
+    squadNames = new Set((squad || []).map(p => normalizeName(p.name)).filter(Boolean))
   })
+
+  onDestroy(() => destroyChart())
 
   let allPlayers = $derived((() => {
     const map = {}
     matches.forEach(m => {
       ;(m.players || []).forEach(p => {
         const name = p.name?.trim()
+        const key = normalizeName(name)
         if (!name) return
-        if (!map[name]) map[name] = { ...p }
+        if (!map[key]) map[key] = { ...p, name }
       })
     })
     return Object.values(map)
-      .filter(p => squadNames.has(p.name?.trim()))
+      .filter(p => squadNames.has(normalizeName(p.name)))
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   })())
 
-  let selectedPlayer = $derived(allPlayers.find(p => p.name === selectedPlayerName) || null)
+  let selectedPlayer = $derived(allPlayers.find(p => normalizeName(p.name) === normalizeName(selectedPlayerName)) || null)
 
   let playerStatKeys = $derived((() => {
-    const keys = new Set([
-      'Point','Goal','Wide','Tackle','Block',
-      'Turnover Won','Turnover Lost','Free Won'
-    ])
+    const keys = new Set(DEFAULT_STAT_KEYS)
     matches.forEach(m => {
       ;(m.customStats || []).forEach(s => keys.add(s))
+      Object.values(m.stats || {}).forEach(row => {
+        Object.keys(row || {}).forEach(stat => keys.add(stat))
+      })
     })
     return [...keys]
   })())
 
   function getPlayerIdInMatch(match, name) {
-    const p = (match.players || []).find(p => p.name?.trim() === name?.trim())
+    const wanted = normalizeName(name)
+    const p = (match.players || []).find(p => normalizeName(p.name) === wanted)
     return p ? p.id : null
   }
 
   let playerMatches = $derived(matches.filter(m =>
-    (m.players || []).some(p => p.name?.trim() === selectedPlayerName?.trim())
+    (m.players || []).some(p => normalizeName(p.name) === normalizeName(selectedPlayerName))
   ))
 
   let aggregateStats = $derived((() => {
@@ -101,11 +113,20 @@
   $effect(() => {
     if (canvas && selectedPlayerName && playerMatches.length > 0 && !compareMode) {
       buildChart()
+    } else {
+      destroyChart()
     }
   })
 
+  function destroyChart() {
+    if (chartInstance) {
+      chartInstance.destroy()
+      chartInstance = null
+    }
+  }
+
   function buildChart() {
-    if (chartInstance) { chartInstance.destroy(); chartInstance = null }
+    destroyChart()
     if (!canvas || playerMatches.length === 0) return
     const labels = [...playerMatches].reverse().map(m => `vs ${m.opposition}`)
     const points = [...playerMatches].reverse().map(m => {

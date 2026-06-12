@@ -1,7 +1,7 @@
 {
-  "name": "Doora Barefield GAA",
+  "name": "GAAstat",
   "short_name": "GAAstat",
-  "description": "Hurling match statistics tracker for Doora Barefield GAA",
+  "description": "Offline-first hurling match statistics tracker for coaches.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8f8f6",
@@ -9,15 +9,15 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "gaastat-icon.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "src": "gaastat-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "gaastat-icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "gaastat-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]

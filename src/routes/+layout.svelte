@@ -4,7 +4,7 @@
   import TeamSetup from '$lib/TeamSetup.svelte'
   import TeamPicker from '$lib/TeamPicker.svelte'
   import { user, authLoading, signOut } from '$lib/auth-store.js'
-  import { syncToSupabase, syncFromSupabase, scheduleAutoSync } from '$lib/sync.js'
+  import { syncToSupabase, syncFromSupabase, flushOutbox } from '$lib/sync.js'
   import { settingsStore } from '$lib/settings-store.js'
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
@@ -134,79 +134,84 @@
     }
 
     const unsubscribe = user.subscribe(async (u) => {
-      if (u && u.id !== lastUserId) {
-        dataReady = false
-        lastUserId = u.id
+      try {
+        if (u && u.id !== lastUserId) {
+          dataReady = false
+          needsTeamSetup = false
+          needsTeamPick = false
+          liveSession = null
+          lastUserId = u.id
 
-        await ensureProfile(u.id)
-        await loadSubscription(u.id)
+          await ensureProfile(u.id)
+          await loadSubscription(u.id)
 
-        // Decide whether this is the same user returning (preserve all local
-        // data) or a genuinely different user signing in on this device
-        // (privacy wipe). Source of truth lives in IDB, not localStorage.
-        const previousUserId = await getLastUserId()
+          // Decide whether this is the same user returning (preserve all local
+          // data) or a genuinely different user signing in on this device
+          // (privacy wipe). Source of truth lives in IDB, not localStorage.
+          const previousUserId = await getLastUserId()
 
-        if (previousUserId === u.id) {
-          // Same user — drain any pending mutations from prior offline use,
-          // then merge cloud → local. Never destructive.
-          scheduleAutoSync(u.id)
-          syncFromSupabase(u.id).catch(e => console.warn('Cloud merge failed:', e))
-          dataReady = true
-          refreshSyncStatus()
-        } else if (previousUserId && previousUserId !== u.id) {
-          // Different user on a shared device. Best-effort push of the prior
-          // user's queued mutations before wiping (they may fail if the new
-          // session's auth header is now in effect — still worth attempting).
-          try { await syncToSupabase(previousUserId) } catch {}
-          await clearAllData()
-          await setLastUserId(u.id)
-          await syncFromSupabase(u.id)
-          dataReady = true
-          refreshSyncStatus()
-        } else {
-          // First sign-in on this device (or post-signOut clean slate). Local
-          // stores are already empty; just record the user and pull cloud.
-          await setLastUserId(u.id)
-          await syncFromSupabase(u.id)
-          dataReady = true
-          refreshSyncStatus()
-        }
+          if (previousUserId === u.id) {
+            // Same user: drain pending mutations first, then merge cloud to local.
+            try { await flushOutbox(u.id) } catch (e) { console.warn('Outbox drain failed:', e) }
+            try { await syncFromSupabase(u.id) } catch (e) { console.warn('Cloud merge failed:', e) }
+            dataReady = true
+            await refreshSyncStatus()
+          } else if (previousUserId && previousUserId !== u.id) {
+            // Different user on a shared device. Best-effort push of the prior
+            // user's queued mutations before wiping.
+            try { await syncToSupabase(previousUserId) } catch (e) { console.warn('Previous user sync failed:', e) }
+            await clearAllData()
+            await setLastUserId(u.id)
+            try { await syncFromSupabase(u.id) } catch (e) { console.warn('Cloud merge failed:', e) }
+            dataReady = true
+            await refreshSyncStatus()
+          } else {
+            // First sign-in on this device (or post-signOut clean slate).
+            await setLastUserId(u.id)
+            try { await syncFromSupabase(u.id) } catch (e) { console.warn('Cloud merge failed:', e) }
+            dataReady = true
+            await refreshSyncStatus()
+          }
 
-        let subVal; subscriptionStore.subscribe(s => subVal = s)()
+          let subVal; subscriptionStore.subscribe(s => subVal = s)()
 
-if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
-          needsTeamSetup = true
-        }
+          if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
+            needsTeamSetup = true
+          }
 
-        if (!needsTeamSetup && subVal.teams.length > 1 && !subVal.activeTeamId) {
-          const rememberLastTeam = $settingsStore.rememberLastTeam
-          if (!rememberLastTeam) {
-            needsTeamPick = true
+          if (!needsTeamSetup && subVal.teams.length > 1 && !subVal.activeTeamId) {
+            const rememberLastTeam = $settingsStore.rememberLastTeam
+            if (!rememberLastTeam) {
+              needsTeamPick = true
+            }
+          }
+
+          if (subVal.activeTeamId) {
+            const { data: sessions } = await supabase
+              .from('live_sessions')
+              .select('*')
+              .eq('team_id', subVal.activeTeamId)
+              .is('ended_at', null)
+              .neq('host_user_id', u.id)
+              .order('started_at', { ascending: false })
+              .limit(1)
+            liveSession = sessions?.[0] ?? null
           }
         }
-
-        if (subVal.activeTeamId) {
-          const { data: sessions } = await supabase
-            .from('live_sessions')
-            .select('*')
-            .eq('team_id', subVal.activeTeamId)
-            .is('ended_at', null)
-            .neq('host_user_id', u.id)
-            .order('started_at', { ascending: false })
-            .limit(1)
-          liveSession = sessions?.[0] ?? null
+        if (!u) {
+          lastUserId = null
+          dataReady = false
+          needsTeamPick = false
+          subscriptionStore.set({
+            plan: 'free', status: 'active', cancelAtPeriodEnd: false,
+            clubId: null, clubName: null, clubRole: null, isOwner: false,
+            teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
+            currentPeriodEnd: null, customFeatures: {}, loading: false
+          })
         }
-      }
-      if (!u) {
-        lastUserId = null
-        dataReady = false
-        needsTeamPick = false
-        subscriptionStore.set({
-          plan: 'free', status: 'active', cancelAtPeriodEnd: false,
-          clubId: null, clubName: null, clubRole: null, isOwner: false,
-          teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
-          currentPeriodEnd: null, customFeatures: {}, loading: false
-        })
+      } catch (e) {
+        console.warn('Auth bootstrap failed:', e)
+        if (u) dataReady = true
       }
     })
     return unsubscribe
@@ -216,11 +221,17 @@ if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
     if (!$user) return
     syncing = true
     syncMsg = ''
-    const ok = await syncToSupabase($user.id)
-    syncMsg = ok ? 'Synced!' : 'Sync failed'
-    syncing = false
-    await refreshSyncStatus()
-    setTimeout(() => syncMsg = '', 3000)
+    try {
+      const ok = await syncToSupabase($user.id)
+      syncMsg = ok ? 'Synced!' : 'Sync failed'
+    } catch (e) {
+      console.warn('Manual sync failed:', e)
+      syncMsg = 'Sync failed'
+    } finally {
+      syncing = false
+      await refreshSyncStatus()
+      setTimeout(() => syncMsg = '', 3000)
+    }
   }
 
   function handleSignOut() {

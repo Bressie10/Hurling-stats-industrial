@@ -53,8 +53,10 @@
       .map(p => {
         const s = stats[p.id] || {}
         const total = Object.values(s).reduce((a, b) => a + b, 0)
-        const pts = (s['Goal'] || 0) * 3 + (s['Point'] || 0)
-        return { name: p.name, total, pts }
+        const goals = s['Goal'] || 0
+        const points = s['Point'] || 0
+        const pts = goals * 3 + points
+        return { name: p.name, total, pts, goals, points }
       })
       .filter(p => p.total > 0)
       .sort((a, b) => b.pts - a.pts || b.total - a.total)
@@ -198,7 +200,7 @@
           {#each topPlayers as p}
             <div class="player-row">
               <span class="player-name">{p.name}</span>
-              <span class="player-pts">{p.pts > 0 ? `${Math.floor(p.pts/3)}-${String(p.pts % 3).padStart(2,'0')}` : ''}</span>
+              <span class="player-pts">{p.pts > 0 ? `${p.goals}-${String(p.points).padStart(2,'0')}` : ''}</span>
               <span class="player-total">{p.total} actions</span>
             </div>
           {/each}
@@ -213,9 +215,9 @@
         <div class="event-list">
           {#each recentEvents as ev}
             <div class="event-row">
-              <span class="event-time">{ev.time ?? '–'}'</span>
+              <span class="event-time">{ev.time != null ? formatTime(ev.time) : '-'}</span>
               <span class="event-stat">{ev.stat}</span>
-              <span class="event-player">{(matchData.players || []).find(p => p.id === ev.playerId)?.name ?? ''}</span>
+              <span class="event-player">{(matchData.players || []).find(p => String(p.id) === String(ev.playerId))?.name ?? ''}</span>
             </div>
           {/each}
         </div>

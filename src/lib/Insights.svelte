@@ -19,23 +19,21 @@
   let coachSummary = $state('')
   let workOnsText = $state('')
   let reviewMatchKey = $state(null)
+  let appliedUrlParam = $state(false)
 
   onMount(async () => {
     targetConfig = readTargetConfig()
     const loaded = await loadMatches()
     matches = loaded.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
     const requested = page.url.searchParams.get('match')
-    selectedMatchId = requested || (matches[0] ? String(matches[0].id) : null)
+    const requestedExists = requested && matches.some(match => String(match.id) === String(requested))
+    selectedMatchId = requestedExists ? requested : (matches[0] ? String(matches[0].id) : null)
+    appliedUrlParam = true
     loading = false
   })
 
   $effect(() => {
-    const requested = page.url.searchParams.get('match')
-    if (requested && requested !== selectedMatchId) selectedMatchId = requested
-  })
-
-  $effect(() => {
-    if (!matches.length) return
+    if (!matches.length || !appliedUrlParam) return
     if (!selectedMatchId || !matches.some(match => String(match.id) === String(selectedMatchId))) {
       selectedMatchId = String(matches[0].id)
     }

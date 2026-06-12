@@ -23,6 +23,11 @@
   let teamError = $state('')
   let editingTeamId = $state(null)
   let editingTeamName = $state('')
+  const DEFAULT_MAX_TEAMS = 4
+  let maxTeams = $derived((() => {
+    const override = Number($subscriptionStore.customFeatures?.maxTeams)
+    return Number.isFinite(override) && override > 0 ? override : DEFAULT_MAX_TEAMS
+  })())
 
   async function loadTeams() {
     if ($subscriptionStore.clubId) {
@@ -32,7 +37,7 @@
 
   async function handleAddTeam() {
     if (!newTeamName.trim()) return
-    if (teams.length >= 20) { teamError = 'Maximum 20 teams'; return }
+    if (teams.length >= maxTeams) { teamError = `Maximum ${maxTeams} teams reached`; return }
     addingTeam = true
     teamError = ''
     try {
@@ -420,7 +425,7 @@
         </div>
       {/each}
 
-      {#if teams.length < 4}
+      {#if teams.length < maxTeams}
         <div class="team-add-row">
           <input class="team-name-input" bind:value={newTeamName} placeholder="New team name" onkeydown={e => e.key === 'Enter' && handleAddTeam()} />
           <button class="team-save-btn" onclick={handleAddTeam} disabled={addingTeam}>
@@ -428,7 +433,7 @@
           </button>
         </div>
       {:else}
-        <p class="team-limit-note">Maximum 4 teams reached</p>
+        <p class="team-limit-note">Maximum {maxTeams} teams reached</p>
       {/if}
       {#if teamError}<p class="team-error">{teamError}</p>{/if}
 

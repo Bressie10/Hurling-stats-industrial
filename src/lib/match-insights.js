@@ -26,6 +26,7 @@ const TARGET_STATS = [
 
 const TREND_STATS = ['Point', 'Goal', 'Wide', 'Tackle', 'Block', 'Turnover Won', 'Turnover Lost', 'Free Won']
 const LOWER_IS_BETTER = new Set(['Wide', 'Turnover Lost', 'Yellow Card', 'Red Card'])
+const DEFAULT_PERIOD_ORDER = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
 
 function num(value) {
   return Number.isFinite(Number(value)) ? Number(value) : 0
@@ -52,6 +53,16 @@ function getPlayerLabel(match, playerId) {
   const player = getPlayer(match, playerId)
   if (!player) return `#${playerId}`
   return player.name?.trim() || `#${player.number || playerId}`
+}
+
+function periodIndex(period) {
+  const index = DEFAULT_PERIOD_ORDER.indexOf(period)
+  return index === -1 ? DEFAULT_PERIOD_ORDER.length + 1 : index
+}
+
+function compareByPeriodTime(a, b) {
+  return periodIndex(a.period) - periodIndex(b.period) ||
+    (a.time ?? 999999) - (b.time ?? 999999)
 }
 
 function scoreOutcome(match) {
@@ -216,7 +227,7 @@ function buildScoringRun(match) {
     label: s.oppPlayerNum ? `#${s.oppPlayerNum}` : 'Opposition'
   }))
 
-  scores.sort((a, b) => a.time - b.time)
+  scores.sort(compareByPeriodTime)
 
   let currentTeam = null
   let currentPoints = 0
