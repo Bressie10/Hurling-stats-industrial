@@ -4,6 +4,14 @@ import {
   getReadyMutations, markMutationDone, markMutationFailed, getOutboxCount,
   getDB
 } from './db.js'
+import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public'
+import {
+  BACKGROUND_SYNC_AUTH_KEY,
+  BACKGROUND_SYNC_TAG,
+  matchToData,
+  squadCloudId,
+  squadLocalIdFromRow
+} from './sync-payloads.js'
 
 // ── Public API ──────────────────────────────────────────────────────────────
 // scheduleAutoSync, syncToSupabase, syncFromSupabase, deleteMatchFromCloud
@@ -18,16 +26,6 @@ let pulling = false
 let listenersInstalled = false
 let activeUserId = null
 
-function squadCloudId(userId, localId) {
-  return `${userId}:${localId}`
-}
-
-function squadLocalIdFromRow(row) {
-  const localId = row?.data?.local_id ?? row?.id
-  if (typeof localId === 'string' && /^\d+$/.test(localId)) return Number(localId)
-  return localId
-}
-
 // Cheap, idempotent. Call this from any mutation site after persisting locally.
 // The local write has already enqueued an outbox entry atomically, so this just
 // nudges the drain worker.
@@ -35,6 +33,7 @@ export function scheduleAutoSync(userId) {
   if (!userId) return
   activeUserId = userId
   installListeners()
+  requestBackgroundOutboxSync(userId).catch(e => console.warn('Background sync registration failed:', e))
   drainOutbox(userId).catch(e => console.warn('Auto-sync drain failed:', e))
 }
 
@@ -44,6 +43,7 @@ export async function syncToSupabase(userId) {
   if (!userId) return false
   activeUserId = userId
   installListeners()
+  await saveBackgroundSyncAuth(userId)
   const drained = await drainOutbox(userId)
   if (!drained) return false
   return pullFromCloud(userId)
@@ -54,6 +54,7 @@ export async function syncFromSupabase(userId) {
   if (!userId) return false
   activeUserId = userId
   installListeners()
+  await saveBackgroundSyncAuth(userId)
   return pullFromCloud(userId)
 }
 
@@ -66,11 +67,47 @@ export function deleteMatchFromCloud(userId, _matchId) {
 // Public flush — used by signOut to make sure pending mutations reach Supabase
 // before clearAllData wipes the outbox. Returns a promise that resolves to true
 // iff the outbox is empty when we finish.
-export function flushOutbox(userId) {
-  if (!userId) return Promise.resolve(false)
+export async function flushOutbox(userId) {
+  if (!userId) return false
   activeUserId = userId
   installListeners()
+  try { await saveBackgroundSyncAuth(userId) } catch (e) { console.warn('Background sync auth save failed:', e) }
   return drainOutbox(userId)
+}
+
+async function saveBackgroundSyncAuth(userId) {
+  if (!userId || typeof window === 'undefined') return false
+  if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) return false
+
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw error
+  const session = data?.session
+  if (!session?.access_token || session.user?.id !== userId) return false
+
+  const db = await getDB()
+  await db.put('device_state', {
+    key: BACKGROUND_SYNC_AUTH_KEY,
+    value: {
+      user_id: userId,
+      access_token: session.access_token,
+      expires_at: session.expires_at || 0,
+      supabase_url: PUBLIC_SUPABASE_URL,
+      supabase_anon_key: PUBLIC_SUPABASE_ANON_KEY,
+      saved_at: Date.now()
+    }
+  })
+  return true
+}
+
+async function requestBackgroundOutboxSync(userId) {
+  if (!userId || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false
+  await saveBackgroundSyncAuth(userId)
+
+  const registration = await navigator.serviceWorker.ready
+  if (!registration || !('sync' in registration)) return false
+
+  await registration.sync.register(BACKGROUND_SYNC_TAG)
+  return true
 }
 
 // ── Drain worker ────────────────────────────────────────────────────────────
@@ -146,7 +183,7 @@ async function applyMutation(userId, m) {
     }))
     const { error } = await supabase
       .from('squad')
-      .upsert(rows)
+      .upsert(rows, { onConflict: 'id,user_id' })
     if (error) throw error
 
     // Reconcile deletions: anything in cloud but not in our roster is gone.
@@ -166,29 +203,6 @@ async function applyMutation(userId, m) {
   }
 
   throw new Error(`Unknown mutation op: ${m.op}`)
-}
-
-function matchToData(m) {
-  return {
-    date: m.date,
-    opposition: m.opposition,
-    venue: m.venue,
-    competition: m.competition ?? null,
-    period: m.period ?? null,
-    score: m.score,
-    stats: m.stats,
-    events: m.events,
-    notes: m.notes,
-    customStats: m.customStats,
-    players: m.players,
-    subs_log: m.subs_log,
-    puckouts: m.puckouts ?? [],
-    oppScores: m.oppScores ?? [],
-    lineup: m.lineup ?? {},
-    coachSummary: m.coachSummary ?? '',
-    workOns: m.workOns ?? [],
-    updated_at: m.updated_at || 0
-  }
 }
 
 async function getPendingDeleteMatchIds(db) {
@@ -313,6 +327,9 @@ function installListeners() {
   window.addEventListener('online', kick)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') kick()
+  })
+  navigator.serviceWorker?.addEventListener?.('message', (event) => {
+    if (event.data?.type === 'GAASTAT_DRAIN_OUTBOX') kick()
   })
   // pagehide fires reliably on iOS Safari (where beforeunload doesn't) when the
   // app is backgrounded or the tab is closed. Sync work may not complete, but
