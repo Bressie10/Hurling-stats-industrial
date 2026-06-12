@@ -56,11 +56,14 @@
 {/if}
 
 <style>
-  .loading {
+  .loading-screen {
     min-height: 60vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 16px;
+    background: var(--bg);
   }
   .loading-logo {
     width: 56px;
@@ -68,8 +71,38 @@
     object-fit: contain;
     animation: pulse 2s ease-in-out infinite;
   }
+  .loading-tagline {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+  .loading-tagline p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .loading-bar-wrap {
+    width: 120px;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-2);
+  }
+  .loading-bar {
+    width: 45%;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary);
+    animation: loading-slide 1.2s ease-in-out infinite;
+  }
   @keyframes pulse {
     0%, 100% { opacity: 0.5; transform: scale(1); }
     50% { opacity: 0.85; transform: scale(1.04); }
+  }
+  @keyframes loading-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(260%); }
   }
 </style>

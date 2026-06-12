@@ -141,11 +141,15 @@ async function checkStoreModeCode() {
     'src/lib/PricingPage.svelte',
     'src/lib/History.svelte',
     'src/lib/Landing.svelte',
-    'src/lib/InstallPage.svelte'
+    'src/lib/InstallPage.svelte',
+    'src/lib/Settings.svelte'
   ]) {
     const text = await readText(file)
     check(text.includes('IS_NATIVE_STORE_BUILD'), `${file} has native store-mode guard`)
   }
+
+  const settings = await readText('src/lib/Settings.svelte')
+  check(settings.includes('if (!IS_NATIVE_STORE_BUILD)') && settings.includes("invoke('cancel-subscription')"), 'Settings keeps Stripe cancellation behind the web-only guard')
 
   const sideline = await readText('src/lib/SidelineAI.svelte')
   check(sideline.includes("apiUrl('/api/voice/transcribe')"), 'Sideline transcription endpoint uses apiUrl')

@@ -2,10 +2,11 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, loadClubTeams, createTeam, deleteTeam, loadSubscription, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
+  import { subscriptionStore, loadClubTeams, createTeam, deleteTeam, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
   import { showToast } from './toast.js'
+  import { IS_NATIVE_STORE_BUILD, STORE_PLATFORM_LABEL } from './config.js'
   import ConfirmModal from './ConfirmModal.svelte'
 
   let deletingAccount = $state(false)
@@ -159,9 +160,11 @@
     showDeleteAccountConfirm = false
     deletingAccount = true
     try {
-      // Cancel Stripe subscription immediately (not at period end) before deleting
-      const { error: cancelErr } = await supabase.functions.invoke('cancel-subscription')
-      if (cancelErr) console.warn('Stripe cancellation failed during account delete:', cancelErr)
+      if (!IS_NATIVE_STORE_BUILD) {
+        // Web-only: native store builds must not expose or trigger Stripe billing flows.
+        const { error: cancelErr } = await supabase.functions.invoke('cancel-subscription')
+        if (cancelErr) console.warn('Stripe cancellation failed during account delete:', cancelErr)
+      }
       await clearAllData()
       await supabase.rpc('delete_own_account')
       await signOut()
@@ -803,7 +806,9 @@
 {#if showDeleteAccountConfirm}
   <ConfirmModal
     title="Delete your account?"
-    message="This will permanently delete all your matches, squad, and data. This cannot be undone."
+    message={IS_NATIVE_STORE_BUILD
+      ? `This will permanently delete your account, matches, squad, and data. Plan management is not available inside this ${STORE_PLATFORM_LABEL} build.`
+      : 'This will permanently delete all your matches, squad, and data. This cannot be undone.'}
     confirmLabel="Delete Account"
     confirmStyle="danger"
     onConfirm={doDeleteAccount}
@@ -1109,87 +1114,6 @@
   .team-limit-note { font-size: 13px; color: var(--text-muted); padding-top: 10px; }
   .team-error { font-size: 13px; color: #e53935; padding-top: 6px; }
 
-  /* ── Subscription ── */
-  .sub-loading { font-size: 13px; color: var(--text-faint); padding: 8px 0; }
-  .sub-active, .sub-free { display: flex; flex-direction: column; gap: 12px; }
-  .sub-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    align-self: flex-start;
-  }
-  .sub-badge.pro { background: rgba(var(--primary-rgb), 0.15); color: var(--primary); }
-  .sub-badge.free { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
-  .sub-detail { font-size: 13px; color: var(--text-muted); }
-  .sub-code-row {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-  }
-  .sub-code-label { font-size: 12px; color: var(--text-muted); }
-  .sub-code {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--primary);
-    letter-spacing: 0.12em;
-    font-family: monospace;
-    margin-left: auto;
-  }
-  .manage-btn {
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--text-muted);
-    font-size: 13px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.15s;
-  }
-  .manage-btn:hover { background: var(--surface-2); color: var(--text); }
-  .manage-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .sub-cancelling { color: #e65100; font-size: 13px; font-weight: 600; }
-  .sub-pastdue { color: #e53935; font-size: 13px; font-weight: 600; }
-  .upgrade-options { display: flex; flex-direction: column; gap: 10px; }
-  .upgrade-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface-2);
-  }
-  .upgrade-option strong { display: block; font-size: 13px; color: var(--text); }
-  .upgrade-option span { font-size: 12px; color: var(--text-muted); }
-  .upgrade-btn {
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: not-allowed;
-    font-family: inherit;
-    white-space: nowrap;
-    opacity: 0.75;
-  }
-  .upgrade-btn.featured {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: rgba(var(--primary-rgb), 0.05);
-  }
-
   /* Danger zone */
   .danger-title { color: #ef5350; }
   .danger-card {
@@ -1220,35 +1144,4 @@
   }
   .delete-account-btn:hover { background: #e53935; color: white; }
   .delete-account-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .cancel-sub-btn {
-    padding: 9px 16px;
-    border-radius: 8px;
-    border: 1.5px solid var(--border);
-    background: none;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-  .cancel-sub-btn:hover { background: var(--surface-2); color: var(--text); }
-  .cancel-sub-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .danger-divider {
-    height: 1px;
-    background: rgba(239, 83, 80, 0.15);
-    margin: 4px 0;
-  }
-
-  .cancel-success {
-    display: inline-block;
-    margin-top: 4px;
-    font-size: 12px;
-    color: #2d7a2d;
-    font-weight: 600;
-  }
 </style>

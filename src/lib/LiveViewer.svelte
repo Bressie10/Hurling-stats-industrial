@@ -4,7 +4,7 @@
 
   const { session, onClose = () => {} } = $props()
 
-  let matchData = $state(session.match_data || null)
+  let matchData = $state(null)
   let channel = $state(null)
   let connected = $state(false)
   let lastUpdate = $state(null)
@@ -13,6 +13,7 @@
   function toggleSection(k) { openSections[k] = !openSections[k] }
 
   onMount(() => {
+    matchData = session.match_data || null
     channel = supabase.channel(`live:${session.id}`)
       .on('broadcast', { event: 'match_update' }, ({ payload }) => {
         matchData = payload

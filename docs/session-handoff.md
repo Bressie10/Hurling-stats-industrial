@@ -10,8 +10,8 @@ Last updated: 2026-06-12
 - Do not push this work to `Voice-Changes`; that branch is no longer the safe target.
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
-- Latest pushed production commit: `55705c6 Fix service worker registration path`.
-- Current stage: web app is in store-readiness hardening before native wrapper generation. Android/iOS wrapper projects have not been generated yet.
+- Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
+- Current stage: web app is in store-readiness hardening before native wrapper generation. The next external dependency is a real support email mailbox. Android/iOS wrapper projects have not been generated yet.
 
 ## URLs
 
@@ -63,6 +63,14 @@ PWABuilder optional warnings are not the release target. The release target is A
   - app routes such as `/app/match` now resolve the worker from the manifest location, so registration targets `/pwabuilder-sw.js`
   - service worker registration and legacy `/sw.js` cleanup failures are caught to avoid unhandled promise rejections
   - `scripts/verify-store-release.mjs` now checks this does not regress
+- Native Settings hardening and cleanup scan were completed:
+  - `src/lib/Settings.svelte` imports the native store-build guard
+  - native store builds do not call the Stripe cancellation function during account deletion
+  - Settings account deletion copy now states that plan management is not available inside the native build
+  - stale unused Settings subscription CSS and an unused subscription import were removed
+  - `scripts/verify-store-release.mjs` now includes `Settings.svelte` in the native store-mode checks
+  - `src/lib/LiveViewer.svelte` no longer captures initial match data in a Svelte state initializer
+  - `src/routes/app/live/+page.svelte` now styles the actual live loading screen selector
 
 ## Important Files
 
@@ -116,18 +124,20 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Production `/pwabuilder-sw.js` returns `200`.
   - Production `/app/match` HTML contains the corrected worker registration.
   - `/app/pwabuilder-sw.js` still returns `404`, which is expected; the app should no longer request that route.
+- Cleanup verification on 2026-06-12:
+  - `npm run store:check` passed with the expected `assetlinks.json` warning.
+  - `npm run smoke:voice` passed.
+  - `git diff --check` passed.
+  - `PUBLIC_SUPABASE_URL=https://example.supabase.co PUBLIC_SUPABASE_ANON_KEY=dummy OPENAI_API_KEY=dummy npm run build` passed.
+  - The build still has pre-existing cleanup warnings: deprecated Svelte `<slot>` usage in layouts, unused CSS in large components such as `Match.svelte` and `Landing.svelte`, a LightningCSS warning for `:global(html:has(.lp))`, and a large `Match.svelte` client chunk.
 
 ## Next Work
 
 Recommended order from here:
 
-1. Fix native store-mode billing controls in `src/lib/Settings.svelte`:
-   - import `IS_NATIVE_STORE_BUILD`
-   - hide Stripe portal, cancel subscription, upgrade buttons, prices, and web billing CTAs in native store mode
-   - replace them with entitlement-only copy such as "Plan management is not available inside this app"
-   - add `Settings.svelte` to `npm run store:check` so this does not regress
-2. Verify queued offline match/squad mutations drain on the deployed preview/production app.
-3. Confirm `contact@gaastatsapp.com` is monitored. If a different support mailbox is final, update `src/lib/LegalPage.svelte`, `src/lib/LpFooter.svelte`, `docs/store-release.md`, `native/shared/release.json`, and store metadata.
+1. Set up a real support mailbox. Recommended final address is `support@gaastat.com`, with `contact@gaastat.com` as an alias if useful. Current code/docs still reference `contact@gaastatsapp.com` until the mailbox is confirmed.
+2. After the final mailbox exists, update `src/lib/LegalPage.svelte`, `src/lib/LpFooter.svelte`, `docs/store-release.md`, `native/shared/release.json`, and store metadata.
+3. Verify queued offline match/squad mutations drain on the deployed preview/production app.
 4. Create a seeded reviewer account with realistic match/squad data and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
 5. Build the Android wrapper as a Trusted Web Activity:
    - package name `com.gaastat.app`
@@ -144,9 +154,14 @@ Recommended order from here:
    - account deletion URL: `https://www.gaastat.com/account/delete`
    - data/privacy answers must mention Supabase account/cloud sync, local device storage, OpenAI voice transcription/answers, and Stripe web billing outside native store builds
 8. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
-9. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
-10. Consider push notifications after sync reliability is proven.
-11. Consider share target later if importing shared notes, files, or match data becomes useful.
+9. Continue code cleanup separately from release-critical work:
+   - migrate Svelte layouts from deprecated `<slot>` to `{@render ...}` when the app shell is otherwise stable
+   - remove verified-dead CSS in `Match.svelte`, `Landing.svelte`, `Upgrade.svelte`, `LpFooter.svelte`, and related screens
+   - investigate the `:global(html:has(.lp))` LightningCSS warning
+   - code-split large app screens, especially `Match.svelte`, after native release blockers are cleared
+10. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
+11. Consider push notifications after sync reliability is proven.
+12. Consider share target later if importing shared notes, files, or match data becomes useful.
 
 Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for GAAstat.
 Do not add placeholder signing files, placeholder `assetlinks.json`, or fake store credentials.
@@ -156,5 +171,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md and docs/store-release.md. Main is the approved integration/deployment target and origin/main is at 55705c6. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Next fix is native store-mode billing controls in src/lib/Settings.svelte; then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md and docs/store-release.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done; next confirm the real support email, update code/docs/store metadata with that mailbox, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
 ```

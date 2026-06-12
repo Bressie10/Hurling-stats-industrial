@@ -20,6 +20,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - The query fallback persists in `localStorage` under `gaastat-store-build` so later navigation remains store-safe.
 - `PUBLIC_API_BASE_URL` is normally blank. If a native/static shell packages local assets later, set `PUBLIC_API_BASE_URL=https://www.gaastat.com` so Sideline AI calls the production voice endpoints.
 - Run `npm run store:check` locally before native wrapper work. Run `npm run store:check:live` before store submission.
+- `npm run store:check` includes the Settings native-store guard so Stripe cancellation remains web-only in native builds.
 
 ## Public URLs Required For Review
 
@@ -28,7 +29,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - Support: `https://www.gaastat.com/support`
 - Account deletion: `https://www.gaastat.com/account/delete`
 
-Before submission, confirm that `contact@gaastatsapp.com` is monitored. If the final support mailbox is different, update `src/lib/LegalPage.svelte`, `src/lib/LpFooter.svelte`, and any store metadata.
+Before submission, set up and monitor a real support mailbox. Recommended final address is `support@gaastat.com`, with `contact@gaastat.com` as an alias if useful. Current code/docs still reference `contact@gaastatsapp.com` until the mailbox is confirmed. After confirmation, update `src/lib/LegalPage.svelte`, `src/lib/LpFooter.svelte`, `native/shared/release.json`, and any store metadata.
 
 ## Android / Google Play
 
@@ -69,5 +70,6 @@ Before submission, confirm that `contact@gaastatsapp.com` is monitored. If the f
 - Confirm locked Pro/Club features show entitlement-only messaging and no purchase buttons.
 - Confirm `/pricing` in store mode does not show prices, upgrade CTAs, Stripe checkout, or external payment links.
 - Confirm Settings account deletion is visible and works.
+- Confirm Settings account deletion in native store mode does not open Stripe, link to Stripe, or show web billing controls.
 - Confirm microphone permission and Sideline AI voice capture on real iOS and Android devices.
 - Confirm legal/support/delete pages are reachable from the footer.
