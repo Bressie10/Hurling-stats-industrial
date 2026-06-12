@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import { loadMatches, deleteMatch as deleteMatchLocal } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user } from './auth-store.js'
@@ -761,7 +762,7 @@
     <!-- Print-only report header (hidden on screen) -->
     <div class="print-header">
       <div class="print-header-top">
-        <img src="/gaastat-logo.svg" alt="GAAstat" class="print-logo">
+        <img src="{base}/gaastat-logo.svg" alt="GAAstat" class="print-logo">
         <div class="print-header-right">
           <div class="print-club">{$settingsStore.teamName || 'GAAstat'} — Match Report</div>
           <div class="print-fixture">vs {selectedMatch.opposition} · {selectedMatch.date}{selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}</div>

@@ -8,6 +8,7 @@
   import { supabase } from './supabase.js'
   import { showToast } from './toast.js'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import ConfirmModal from './ConfirmModal.svelte'
   import SidelineAI from './SidelineAI.svelte'
   import { buildSidelineToolHandlers, getCurrentPeriodAndTime, getScore, normalizeStatName } from './match-tools.js'
@@ -1341,7 +1342,7 @@
 <div class="screen">
 
   <div class="setup-hero">
-    <img src="/gaastat-icon.svg" alt="GAAstat" class="hero-logo">
+    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="hero-logo">
     <div>
       <h2>New Match</h2>
       <p>{$settingsStore.teamName || 'GAAstat'} · Hurling</p>

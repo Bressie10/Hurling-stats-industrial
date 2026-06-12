@@ -2,6 +2,7 @@
   import { user, authLoading } from '$lib/auth-store.js'
   import { goto } from '$app/navigation'
   import { browser } from '$app/environment'
+  import { base } from '$app/paths'
 
   $effect(() => {
     if (browser && !$authLoading && !$user) {
@@ -12,7 +13,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
     <div class="loading-tagline">
       <p class="loading-tagline-top">Coach Smarter.</p>
       <p class="loading-tagline-bottom">Win More.</p>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { signIn, signUp, resetPassword } from './auth-store.js'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
 
@@ -191,7 +192,7 @@
     <div class="hero-auth" id="signin">
       <div class="auth-card-dark">
         <div class="auth-dark-header">
-          <img src="/gaastat-icon.svg" alt="GAAstat" class="auth-dark-logo-mark">
+          <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="auth-dark-logo-mark">
           <div>
             <div class="auth-dark-title">GAAstat</div>
             <div class="auth-dark-sub">Hurling match analytics</div>

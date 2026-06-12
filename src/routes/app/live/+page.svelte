@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import LiveViewer from '$lib/LiveViewer.svelte'
   import { supabase } from '$lib/supabase.js'
   import { subscriptionStore } from '$lib/subscription-store.js'
@@ -43,7 +44,7 @@
   <LiveViewer {session} {onClose} />
 {:else if loading}
   <div class="loading-screen">
-    <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
     <div class="loading-tagline">
       <p class="loading-tagline-top">Coach Smarter.</p>
       <p class="loading-tagline-bottom">Win More.</p>

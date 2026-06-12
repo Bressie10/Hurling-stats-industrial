@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import { supabase } from '$lib/supabase.js'
   import { updatePassword, signOut } from '$lib/auth-store.js'
 
@@ -52,7 +53,7 @@
 <div class="wrap">
   <div class="card">
     <div class="header">
-      <img src="/gaastat-icon.svg" alt="GAAstat" class="logo">
+      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="logo">
       <div>
         <div class="title">Reset password</div>
         <div class="sub">Choose a new password for your GAAstat account</div>

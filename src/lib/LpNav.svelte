@@ -1,4 +1,6 @@
 <script>
+  import { base } from '$app/paths'
+
   export let onNavigate = () => {}
   export let currentPage = 'home'
 
@@ -33,7 +35,7 @@
 
   <!-- Logo -->
   <button class="nav-logo" on:click={() => nav('home')}>
-    <img src="/gaastat-icon.svg" alt="GAAstat" class="nav-logo-mark" />
+    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="nav-logo-mark" />
     <span class="nav-logo-text">GAA <span>Stats</span></span>
   </button>
 

@@ -9,6 +9,7 @@
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import { page } from '$app/state'
   import { onMount } from 'svelte'
   import Toast from '$lib/Toast.svelte'
@@ -251,7 +252,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
     <div class="loading-tagline">
       <p class="loading-tagline-top">Coach Smarter.</p>
       <p class="loading-tagline-bottom">Win More.</p>
@@ -267,7 +268,7 @@
 {:else if isAppRoute}
   {#if !dataReady && !needsTeamSetup}
     <div class="loading-screen">
-      <img src="/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
       <div class="loading-tagline">
         <p class="loading-tagline-top">Coach Smarter.</p>
         <p class="loading-tagline-bottom">Win More.</p>
@@ -303,7 +304,7 @@
       <!-- Top bar: brand + desktop tabs + actions -->
       <nav class="top-nav">
         <div class="brand">
-          <img class="brand-logo" src="/gaastat-icon.svg" alt="GAAstat">
+          <img class="brand-logo" src="{base}/gaastat-icon.svg" alt="GAAstat">
           <span class="brand-name">{$settingsStore.teamName || 'GAAstat'}</span>
         </div>
 

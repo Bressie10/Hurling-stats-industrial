@@ -1,4 +1,5 @@
 <script>
+  import { base } from '$app/paths'
   import { signIn, signUp } from './auth-store.js'
 
   // modes: 'login' | 'choose' | 'personal' | 'club' | 'join'
@@ -63,7 +64,7 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <img src="/gaastat-icon.svg" alt="GAAstat" class="auth-logo" />
+      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="auth-logo" />
       <h1>GAA Stats</h1>
       <p>Hurling match analytics</p>
     </div>

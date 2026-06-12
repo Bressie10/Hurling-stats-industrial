@@ -1,4 +1,5 @@
 <script>
+  import { base } from '$app/paths'
   import { page } from '$app/state'
 
   const messages = {
@@ -16,14 +17,14 @@
 </script>
 
 <div class="error-page">
-  <img src="/gaastat-logo.svg" alt="GAAstat" style="height: 36px;">
+  <img src="{base}/gaastat-logo.svg" alt="GAAstat" style="height: 36px;">
 
   <div class="status">{page.status}</div>
 
   <p class="message">{message}</p>
 
   <div class="actions">
-    <a href="/" class="btn-primary">Go home</a>
+    <a href="{base}/" class="btn-primary">Go home</a>
     {#if is500}
       <button class="btn-secondary" onclick={retry}>Retry</button>
     {/if}
