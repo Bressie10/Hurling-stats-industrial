@@ -10,6 +10,7 @@
   import ConfirmModal from './ConfirmModal.svelte'
   import { analyzeMatch } from './match-insights.js'
   import { showToast } from './toast.js'
+  import { IS_NATIVE_STORE_BUILD } from './config.js'
   import { jsPDF } from 'jspdf'
   import html2canvas from 'html2canvas'
 
@@ -1460,11 +1461,13 @@
           </div>
           <div>
             <strong>{lockedCount} older {lockedCount === 1 ? 'match' : 'matches'} locked</strong>
-            <p>Upgrade to Pro to view your full match history</p>
+            <p>{IS_NATIVE_STORE_BUILD ? 'Full history is available to accounts with existing access.' : 'Upgrade to Pro to view your full match history'}</p>
           </div>
-          <div class="history-paywall-prices">
-            <span>Personal €7.99/mo · Club €19.99/mo</span>
-          </div>
+          {#if !IS_NATIVE_STORE_BUILD}
+            <div class="history-paywall-prices">
+              <span>Personal €7.99/mo · Club €19.99/mo</span>
+            </div>
+          {/if}
         </div>
       {/if}
     {/if}

@@ -2,6 +2,7 @@
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
   import { onMount } from 'svelte'
+  import { IS_NATIVE_STORE_BUILD } from './config.js'
 
   export let onNavigate = () => {}
 
@@ -115,16 +116,25 @@
         </div>
         <p>After signup you'll receive a confirmation email. Click the link, then sign back in.</p>
 
-        <h2>Installing as a PWA</h2>
-        <p>GAAstat is a Progressive Web App — you install it directly from the browser, no App Store required.</p>
-        <div class="docs-steps">
-          <div class="docs-step"><div class="step-num">1</div><div><strong>iOS (Safari):</strong> tap the Share button → "Add to Home Screen"</div></div>
-          <div class="docs-step"><div class="step-num">2</div><div><strong>Android (Chrome):</strong> tap the three-dot menu → "Add to Home screen" or "Install app"</div></div>
-          <div class="docs-step"><div class="step-num">3</div><div>The app installs instantly and opens in full-screen mode with no browser bar</div></div>
-        </div>
+        <h2>{IS_NATIVE_STORE_BUILD ? 'Before match day' : 'Installing as a PWA'}</h2>
+        {#if IS_NATIVE_STORE_BUILD}
+          <p>Open GAAstat while you have signal, sign in, and confirm your squad appears before travelling to a ground with limited coverage.</p>
+          <div class="docs-steps">
+            <div class="docs-step"><div class="step-num">1</div><div><strong>Sign in:</strong> account verification needs a connection.</div></div>
+            <div class="docs-step"><div class="step-num">2</div><div><strong>Open Match:</strong> confirm the match screen and squad are ready.</div></div>
+            <div class="docs-step"><div class="step-num">3</div><div><strong>Sync:</strong> tap Sync after any squad or settings changes.</div></div>
+          </div>
+        {:else}
+          <p>GAAstat is a Progressive Web App that installs directly from the browser.</p>
+          <div class="docs-steps">
+            <div class="docs-step"><div class="step-num">1</div><div><strong>iOS (Safari):</strong> tap the Share button -> "Add to Home Screen"</div></div>
+            <div class="docs-step"><div class="step-num">2</div><div><strong>Android (Chrome):</strong> tap the three-dot menu -> "Add to Home screen" or "Install app"</div></div>
+            <div class="docs-step"><div class="step-num">3</div><div>The app installs instantly and opens in full-screen mode with no browser bar</div></div>
+          </div>
+        {/if}
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span><strong>Tip:</strong> Install the app before heading to a ground. Once installed, it works completely offline — no signal needed.</span>
+          <span><strong>Tip:</strong> {IS_NATIVE_STORE_BUILD ? 'Open the app before heading to a ground. Once loaded, match logging works offline.' : 'Install the app before heading to a ground. Once installed, it works completely offline — no signal needed.'}</span>
         </div>
       </section>
 

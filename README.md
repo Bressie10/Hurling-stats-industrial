@@ -60,6 +60,16 @@ npm run build
 - Do not push new sync/PWA deployment work to `Voice-Changes`.
 - `app-development` currently deploys the static GitHub Pages preview used for PWABuilder checks unless the workflow is changed.
 
+## Store Release Mode
+
+Native App Store / Google Play builds should use store-safe mode so the app is entitlement-only and does not show Stripe checkout or web purchase prompts:
+
+- iOS launch URL: `https://www.gaastat.com/?store_build=ios`
+- Android launch URL: `https://www.gaastat.com/?store_build=android`
+- Build-time alternative: set `PUBLIC_STORE_BUILD=ios` or `PUBLIC_STORE_BUILD=android`.
+
+See `docs/store-release.md` for the native release checklist.
+
 ## GitHub Pages Preview And PWABuilder
 
 The `app-development` branch deploys a static PWA preview to GitHub Pages:

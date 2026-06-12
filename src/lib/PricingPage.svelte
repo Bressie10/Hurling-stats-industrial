@@ -2,10 +2,12 @@
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
   import { onMount } from 'svelte'
+  import { IS_NATIVE_STORE_BUILD, STORE_PLATFORM_LABEL } from './config.js'
 
   export let onNavigate = () => {}
 
   function goSignup(mode) {
+    if (IS_NATIVE_STORE_BUILD && mode !== 'personal') mode = 'personal'
     onNavigate('home')
     setTimeout(() => {
       document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -87,7 +89,7 @@
     }
   ]
 
-  const faqs = [
+  const webFaqs = [
     { q: 'Do coaches pay separately on a Club plan?', a: 'No. On Club and Club Pro plans, the club owner pays one subscription. Coaches join for free using a team code — they create a free account and get access through the club\'s plan.' },
     { q: 'Can I switch plans mid-month?', a: 'Yes. You can upgrade at any time and the new plan takes effect immediately. Downgrading takes effect at the end of your current billing period.' },
     { q: 'What happens to my data if I cancel?', a: 'Your data is always yours. If you cancel, your matches and squad are preserved. You lose access to Pro analytics features until you resubscribe, but you can export everything as JSON from Settings at any time.' },
@@ -96,6 +98,13 @@
     { q: 'What is live match sharing?', a: 'A Club Pro feature. The coach logging the match starts a live session, and anyone with the link can watch the live score, stats, and puckout breakdown update in real time — perfect for selectors not at the ground.' },
     { q: 'Is there a custom/enterprise plan?', a: 'Yes. For county boards, schools, or large organisations needing custom stat types, white-labelling, or API access — contact us at contact@gaastatsapp.com and we\'ll build something around your needs.' },
   ]
+  const storeFaqs = [
+    { q: 'Can I use an existing account?', a: 'Yes. Sign in with the same GAAstat account to access the tools and entitlements already attached to that account.' },
+    { q: 'Can I create a free account?', a: 'Yes. The store build allows free account creation, match logging, squad management, cloud sync, and the features available to your account.' },
+    { q: 'Why are plan changes unavailable here?', a: 'This native store build is designed for signed-in access and free account use. Plan purchases and plan changes are not offered inside this app.' },
+    { q: 'What happens to my data?', a: 'Your data is always yours. Matches and squads are stored locally first, sync when you are online, and can be exported from Settings.' },
+  ]
+  $: faqs = IS_NATIVE_STORE_BUILD ? storeFaqs : webFaqs
 
   let openFaq = null
 
@@ -123,7 +132,9 @@
         Pick your plan.<br><span class="lime">Start free.</span>
       </h1>
       <p class="pp-sub reveal reveal-delay-2">
-        Every plan includes offline-first match logging, squad management, and cloud sync. Upgrade when you need more.
+        {IS_NATIVE_STORE_BUILD
+          ? `This ${STORE_PLATFORM_LABEL} build supports signed-in access and free account use. Plan purchases and plan changes are not available inside this app.`
+          : 'Every plan includes offline-first match logging, squad management, and cloud sync. Upgrade when you need more.'}
       </p>
     </div>
 
@@ -133,9 +144,11 @@
         <div class="pp-card" class:pp-card-featured={plan.highlight}>
           {#if plan.badge}<div class="pp-badge">{plan.badge}</div>{/if}
           <div class="pp-plan-name">{plan.name}</div>
-          <div class="pp-price">
-            {plan.price}<span class="pp-period">{plan.period}</span>
-          </div>
+          {#if !IS_NATIVE_STORE_BUILD}
+            <div class="pp-price">
+              {plan.price}<span class="pp-period">{plan.period}</span>
+            </div>
+          {/if}
           <div class="pp-tagline">{plan.tagline}</div>
           <ul class="pp-features">
             {#each plan.features as f}
@@ -145,16 +158,20 @@
               </li>
             {/each}
           </ul>
-          <button class="pp-cta" class:pp-cta-featured={plan.highlight} on:click={plan.action}>
-            {plan.cta}
-          </button>
+          {#if plan.name === 'Free' || !IS_NATIVE_STORE_BUILD}
+            <button class="pp-cta" class:pp-cta-featured={plan.highlight} on:click={plan.action}>
+              {IS_NATIVE_STORE_BUILD ? 'Create Free Account' : plan.cta}
+            </button>
+          {:else}
+            <div class="pp-store-note">Available to accounts with existing access.</div>
+          {/if}
         </div>
       {/each}
       <!-- Enterprise card -->
       <div class="pp-card pp-card-enterprise">
         <div class="pp-enterprise-badge">Enterprise</div>
         <div class="pp-plan-name">Custom</div>
-        <div class="pp-price-custom">Let's talk</div>
+        {#if !IS_NATIVE_STORE_BUILD}<div class="pp-price-custom">Let's talk</div>{/if}
         <div class="pp-tagline">For county boards &amp; large organisations</div>
         <ul class="pp-features">
           <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Everything in Club Pro</li>
@@ -164,7 +181,11 @@
           <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>API access</li>
           <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated onboarding &amp; SLA</li>
         </ul>
-        <a href="mailto:contact@gaastatsapp.com" class="pp-cta pp-cta-enterprise">Contact Us</a>
+        {#if !IS_NATIVE_STORE_BUILD}
+          <a href="mailto:contact@gaastatsapp.com" class="pp-cta pp-cta-enterprise">Contact Us</a>
+        {:else}
+          <div class="pp-store-note">Enterprise purchasing is not available inside this app.</div>
+        {/if}
       </div>
     </div>
 
@@ -228,7 +249,11 @@
     <!-- CTA -->
     <div class="pp-cta-section reveal">
       <h2 class="pp-cta-title">Ready to get started?</h2>
-      <p class="pp-cta-sub">Free forever. Upgrade when you need it. No credit card required to start.</p>
+      <p class="pp-cta-sub">
+        {IS_NATIVE_STORE_BUILD
+          ? 'Create a free account or sign in with an account that already has access.'
+          : 'Free forever. Upgrade when you need it. No credit card required to start.'}
+      </p>
       <button class="pp-cta-btn" on:click={() => goSignup('personal')}>Get Started Free →</button>
     </div>
 
@@ -305,6 +330,14 @@
   .pp-cta-featured:hover { background: #CBFF4A; }
   .pp-cta-enterprise { border-color: rgba(255,184,0,0.3); color: var(--lp-amber); }
   .pp-cta-enterprise:hover { background: rgba(255,184,0,0.08); }
+  .pp-store-note {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--lp-border);
+    font-size: 12px;
+    color: var(--lp-text3);
+    line-height: 1.5;
+  }
 
   /* Comparison table */
   .pp-table-wrap { margin-bottom: 80px; }

@@ -5,6 +5,7 @@
   import { base } from '$app/paths'
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
+  import { IS_NATIVE_STORE_BUILD } from './config.js'
 
   export let onNavigate = () => {}
 
@@ -396,7 +397,7 @@
       <span class="strip-item"><span class="strip-dot"></span> Cloud Sync</span>
       <span class="strip-item"><span class="strip-dot"></span> PDF Match Reports</span>
       <span class="strip-item"><span class="strip-dot"></span> Squad Management</span>
-      <span class="strip-item"><span class="strip-dot"></span> Stripe Payments</span>
+      <span class="strip-item"><span class="strip-dot"></span> Secure Accounts</span>
       <span class="strip-item"><span class="strip-dot"></span> Live Match Logging</span>
       <span class="strip-item"><span class="strip-dot"></span> Puckout Zone Tracking</span>
       <span class="strip-item"><span class="strip-dot"></span> Player Analytics</span>
@@ -404,7 +405,7 @@
       <span class="strip-item"><span class="strip-dot"></span> Cloud Sync</span>
       <span class="strip-item"><span class="strip-dot"></span> PDF Match Reports</span>
       <span class="strip-item"><span class="strip-dot"></span> Squad Management</span>
-      <span class="strip-item"><span class="strip-dot"></span> Stripe Payments</span>
+      <span class="strip-item"><span class="strip-dot"></span> Secure Accounts</span>
     </div>
   </div>
 
@@ -420,8 +421,10 @@
         <div class="how-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         </div>
-        <h3>Install the PWA</h3>
-        <p>Add to your home screen from any browser — no App Store needed. Works on iPhone and Android. Fully offline from day one.</p>
+        <h3>{IS_NATIVE_STORE_BUILD ? 'Open the app' : 'Install the PWA'}</h3>
+        <p>{IS_NATIVE_STORE_BUILD
+          ? 'Sign in before heading to the ground. Once loaded, GAAstat keeps the match-day tools ready for low-signal conditions.'
+          : 'Add to your home screen from any browser. Works on iPhone and Android. Fully offline from day one.'}</p>
       </div>
       <div class="how-connector"></div>
       <div class="how-step reveal reveal-delay-2">
@@ -963,7 +966,9 @@
         </a>
       </div>
       <div class="cta-note reveal reveal-delay-3">
-        Installs to your home screen · No app store required · Works on iOS and Android
+        {IS_NATIVE_STORE_BUILD
+          ? 'Works offline after setup · Built for iOS and Android match days'
+          : 'Installs to your home screen · Works on iOS and Android'}
       </div>
     </div>
   </section>

@@ -38,6 +38,10 @@ Use this URL for PWABuilder checks.
   - supported browsers register one-shot Background Sync with `gaastat-sync-outbox`
   - the service worker can ask visible clients to drain or directly drain with a short-lived Supabase access token
   - unsupported browsers keep the existing app-start, online, foreground, and manual Sync fallback paths
+- Store release preparation was started:
+  - native store mode hides web checkout and web purchase prompts
+  - public privacy, terms, support, and account deletion routes were added
+  - `docs/store-release.md` tracks the App Store / Google Play release checklist
 
 ## Important Files
 
@@ -47,6 +51,9 @@ Use this URL for PWABuilder checks.
 - `src/service-worker.js`
 - `src/lib/sync.js`
 - `src/lib/sync-payloads.js`
+- `src/lib/config.js`
+- `src/lib/LegalPage.svelte`
+- `docs/store-release.md`
 - `static/manifest.json`
 - `static/pwabuilder-sw.js`
 - `scripts/generate-pwa-screenshots.mjs`
@@ -64,11 +71,12 @@ Use this URL for PWABuilder checks.
 
 Recommended long-term order:
 
-1. Integrate/deploy the Background Sync work through `main`, not `Voice-Changes`.
-2. Verify queued offline match/squad mutations drain on the deployed preview/production app.
-3. Add Periodic Background Sync for refreshing lightweight match/team data where supported.
-4. Consider push notifications after the sync flow is reliable.
-5. Consider share target later if importing shared notes, files, or match data becomes useful.
+1. Verify queued offline match/squad mutations drain on the deployed preview/production app.
+2. Build native wrappers using `docs/store-release.md`; do not add placeholder signing or assetlinks files.
+3. Create seeded store reviewer account and complete App Store / Play Console privacy forms.
+4. Add Periodic Background Sync for refreshing lightweight match/team data where supported.
+5. Consider push notifications after the sync flow is reliable.
+6. Consider share target later if importing shared notes, files, or match data becomes useful.
 
 Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for GAAstat.
 

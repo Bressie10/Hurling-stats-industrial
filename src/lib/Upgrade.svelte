@@ -3,10 +3,15 @@
 
   import { supabase } from './supabase.js'
   import { showToast } from './toast.js'
+  import { IS_NATIVE_STORE_BUILD, STORE_PLATFORM_LABEL } from './config.js'
 
   let loading = null  // 'personal' | 'club' | 'club_pro' | null
 
   async function checkout(plan) {
+    if (IS_NATIVE_STORE_BUILD) {
+      showToast('Plan management is unavailable in this app build.', 'info')
+      return
+    }
     loading = plan
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
@@ -26,8 +31,12 @@
   <div class="paywall-icon">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
   </div>
-  <h3>Upgrade to unlock {feature}</h3>
-  <p>Free accounts get match logging, squad management, and your last 3 matches. Upgrade to unlock full analytics.</p>
+  <h3>{IS_NATIVE_STORE_BUILD ? `${feature} requires existing access` : `Upgrade to unlock ${feature}`}</h3>
+  {#if IS_NATIVE_STORE_BUILD}
+    <p>This {STORE_PLATFORM_LABEL} build is for signed-in access. Plan purchases and plan changes are not available inside this app.</p>
+  {:else}
+    <p>Free accounts get match logging, squad management, and your last 3 matches. Upgrade to unlock full analytics.</p>
+  {/if}
 
   <div class="plans">
     <div class="plan">
@@ -41,9 +50,11 @@
         <li>Stat targets</li>
         <li>1 coach</li>
       </ul>
-      <button class="plan-btn personal" on:click={() => checkout('personal')} disabled={loading !== null}>
-        {loading === 'personal' ? 'Redirecting…' : 'Get Personal Pro'}
-      </button>
+      {#if !IS_NATIVE_STORE_BUILD}
+        <button class="plan-btn personal" on:click={() => checkout('personal')} disabled={loading !== null}>
+          {loading === 'personal' ? 'Redirecting…' : 'Get Personal Pro'}
+        </button>
+      {/if}
     </div>
 
     <div class="plan featured">
@@ -56,9 +67,11 @@
         <li>6-digit team join codes</li>
         <li>Full analytics for all teams</li>
       </ul>
-      <button class="plan-btn club" on:click={() => checkout('club')} disabled={loading !== null}>
-        {loading === 'club' ? 'Redirecting…' : 'Get Club'}
-      </button>
+      {#if !IS_NATIVE_STORE_BUILD}
+        <button class="plan-btn club" on:click={() => checkout('club')} disabled={loading !== null}>
+          {loading === 'club' ? 'Redirecting…' : 'Get Club'}
+        </button>
+      {/if}
     </div>
 
     <div class="plan">
@@ -69,11 +82,16 @@
         <li>Live match sharing</li>
         <li>Coaches watch in real time</li>
       </ul>
-      <button class="plan-btn club" on:click={() => checkout('club_pro')} disabled={loading !== null}>
-        {loading === 'club_pro' ? 'Redirecting…' : 'Get Club Pro'}
-      </button>
+      {#if !IS_NATIVE_STORE_BUILD}
+        <button class="plan-btn club" on:click={() => checkout('club_pro')} disabled={loading !== null}>
+          {loading === 'club_pro' ? 'Redirecting…' : 'Get Club Pro'}
+        </button>
+      {/if}
     </div>
   </div>
+  {#if IS_NATIVE_STORE_BUILD}
+    <p class="store-build-note">Sign in with an account that already has access, or continue with the free tools available to your account.</p>
+  {/if}
 </div>
 
 <style>
@@ -226,6 +244,13 @@
   .coming-soon-note {
     font-size: 12px;
     color: var(--text-faint);
+    margin: 0;
+  }
+  .store-build-note {
+    max-width: 440px;
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.5;
     margin: 0;
   }
 </style>

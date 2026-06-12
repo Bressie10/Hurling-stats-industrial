@@ -1,4 +1,6 @@
 <script>
+  import { IS_NATIVE_STORE_BUILD } from './config.js'
+
   export let onNavigate = () => {}
 
   function nav(page) {
@@ -33,7 +35,9 @@
       <ul>
         <li><button on:click={() => nav('home')}>Features Overview</button></li>
         <li><button on:click={() => nav('docs')}>User Guide</button></li>
-        <li><button on:click={() => nav('install')}>How to Install</button></li>
+        {#if !IS_NATIVE_STORE_BUILD}
+          <li><button on:click={() => nav('install')}>How to Install</button></li>
+        {/if}
       </ul>
     </div>
 
@@ -53,6 +57,10 @@
     <div class="footer-copy">© {year} GAAstat. Built for GAA coaches.</div>
     <div class="footer-legal">
       <a href="mailto:contact@gaastatsapp.com">Contact</a>
+      <button on:click={() => nav('support')}>Support</button>
+      <button on:click={() => nav('privacy')}>Privacy</button>
+      <button on:click={() => nav('terms')}>Terms</button>
+      <button on:click={() => nav('account/delete')}>Delete account</button>
     </div>
   </div>
 </footer>

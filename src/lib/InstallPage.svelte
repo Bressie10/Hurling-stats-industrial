@@ -1,6 +1,7 @@
 <script>
   import LpNav from './LpNav.svelte'
   import LpFooter from './LpFooter.svelte'
+  import { IS_NATIVE_STORE_BUILD } from './config.js'
 
   export let onNavigate = () => {}
 
@@ -8,10 +9,10 @@
   function toggleIssue(i) { openIssue = openIssue === i ? null : i }
 
   const issues = [
-    {
+    ...(IS_NATIVE_STORE_BUILD ? [] : [{
       q: `I don't see "Add to Home Screen" on iOS`,
       a: `You must use Safari — not Chrome, Firefox, or any other browser. Chrome on iOS cannot install PWAs. Open the app URL in Safari, then tap the Share button at the bottom of the screen.`
-    },
+    }]),
     {
       q: `The app says it needs internet, but I'm at the pitch`,
       a: `The app needs one successful load with internet to cache itself. Sign in and open the app fully before you leave for the ground — once cached, it works with zero signal. The cache survives phone restarts and switching to airplane mode.`
@@ -22,24 +23,28 @@
     },
     {
       q: `The app looks out of date or isn't showing the latest version`,
-      a: `On iOS: delete the app from your home screen and reinstall from Safari. On Android and desktop: close all browser tabs with the app open, wait 30 seconds, then reopen — the service worker will fetch the new version automatically.`
+      a: IS_NATIVE_STORE_BUILD
+        ? `Check for an update in the store, then fully close and reopen GAAstat. If the issue continues, contact support with your device type and account email.`
+        : `On iOS: delete the app from your home screen and reinstall from Safari. On Android and desktop: close all browser tabs with the app open, wait 30 seconds, then reopen — the service worker will fetch the new version automatically.`
     },
     {
       q: `I get logged out every time I open the app`,
-      a: `This usually happens if you installed the app from a different browser than the one you signed in with, or if your browser is set to clear storage on close. On iOS, always install and open via Safari. Check that Safari's settings don't have "Clear History and Website Data" set to run automatically.`
+      a: IS_NATIVE_STORE_BUILD
+        ? `Sign in while you have signal and avoid clearing app data. If the session still does not persist, contact support with your device type and account email.`
+        : `This usually happens if you installed the app from a different browser than the one you signed in with, or if your browser is set to clear storage on close. On iOS, always install and open via Safari. Check that Safari's settings don't have "Clear History and Website Data" set to run automatically.`
     },
     {
       q: `Two coaches on the same team can't see each other's stats`,
       a: `This is by design — each coach has their own private account and data. To share live data during a match, use the Live Match feature (Club Pro plan). After a match, stats are tied to the coach who logged them; team-wide dashboards are on the roadmap.`
     },
-    {
+    ...(IS_NATIVE_STORE_BUILD ? [] : [{
       q: `The install prompt doesn't appear on Android`,
       a: `Chrome on Android shows the install prompt automatically after you visit the app a couple of times. If it hasn't appeared, tap the three-dot menu (⋮) in Chrome and look for "Add to Home screen" or "Install app". Make sure you're on Chrome and not a third-party browser.`
-    },
-    {
+    }]),
+    ...(IS_NATIVE_STORE_BUILD ? [] : [{
       q: `The app installed but opens in the browser, not as a standalone app`,
       a: `On iOS this means it was added to the home screen from a non-Safari browser. Delete the icon, open the app URL in Safari, and reinstall from there. On Android, make sure you used the "Install app" prompt rather than just bookmarking the URL.`
-    }
+    }])
   ]
 </script>
 
@@ -50,9 +55,11 @@
   <main class="install-main">
 
     <div class="install-hero">
-      <div class="install-tag">Installation</div>
-      <h1>Install the App</h1>
-      <p class="install-lead">GAAstat is a Progressive Web App — no App Store needed. Install it directly from your browser and it works fully offline at any GAA ground.</p>
+      <div class="install-tag">{IS_NATIVE_STORE_BUILD ? 'Match-day readiness' : 'Installation'}</div>
+      <h1>{IS_NATIVE_STORE_BUILD ? 'Get Ready Offline' : 'Install the App'}</h1>
+      <p class="install-lead">{IS_NATIVE_STORE_BUILD
+        ? 'Open GAAstat before heading to the ground, sign in while you have signal, and confirm your match-day data is ready.'
+        : 'GAAstat is a Progressive Web App. Install it directly from your browser and it works fully offline at any GAA ground.'}</p>
     </div>
 
     <!-- Internet callout -->
@@ -66,6 +73,44 @@
       </div>
     </div>
 
+    {#if IS_NATIVE_STORE_BUILD}
+      <div class="platforms">
+        <div class="platform-card platform-card-wide">
+          <div class="platform-header">
+            <div class="platform-icon platform-icon-lime">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="platform-title-wrap">
+              <div class="platform-title">Before the match</div>
+              <div class="platform-sub">Do this while you still have signal</div>
+            </div>
+          </div>
+          <ol class="steps steps-horiz">
+            <li>
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <div class="step-title">Sign in</div>
+                <div class="step-desc">Your account session must be active before you go offline.</div>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <div class="step-title">Open Match</div>
+                <div class="step-desc">Confirm the match screen and squad list are available.</div>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <div class="step-title">Sync</div>
+                <div class="step-desc">Tap Sync after squad or settings changes so cloud backup is current.</div>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    {:else}
     <!-- Platform steps -->
     <div class="platforms">
 
@@ -192,6 +237,7 @@
       </div>
 
     </div>
+    {/if}
 
     <!-- Common issues -->
     <div class="issues-section">
