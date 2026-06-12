@@ -22,9 +22,13 @@ PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 OPENAI_API_KEY=your_openai_server_key
 SIDELINE_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 SIDELINE_ANSWER_MODEL=gpt-4o-mini
+PUBLIC_STORE_BUILD=web
+PUBLIC_API_BASE_URL=
 ```
 
 Do not expose an OpenAI key as a public env var. Voice transcription and smart answers use `OPENAI_API_KEY` server-side only and require the user's Supabase session token.
+
+`PUBLIC_API_BASE_URL` is normally blank for the web app. Set it to `https://www.gaastat.com` only for a packaged native/static shell that still needs to call the production `/api/voice/*` endpoints.
 
 ## Development
 
@@ -67,6 +71,8 @@ Native App Store / Google Play builds should use store-safe mode so the app is e
 - iOS launch URL: `https://www.gaastat.com/?store_build=ios`
 - Android launch URL: `https://www.gaastat.com/?store_build=android`
 - Build-time alternative: set `PUBLIC_STORE_BUILD=ios` or `PUBLIC_STORE_BUILD=android`.
+- Native wrapper templates live in `native/`.
+- Run `npm run store:check` before wrapper work and `npm run store:check:live` before submission.
 
 See `docs/store-release.md` for the native release checklist.
 

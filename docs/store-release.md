@@ -8,6 +8,8 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 
 - Canonical production URL: `https://www.gaastat.com/`
 - Deployment branch: `main`. Do not push release or PWA deployment work to `Voice-Changes`.
+- Native wrapper configuration lives in `native/`.
+- Use `native/shared/release.json` as the single source for app IDs, launch URLs, review URLs, and platform choices.
 - First native store release should be consumption-only:
   - users can sign in, create free accounts, log matches, sync, and use features their account already has
   - native store builds must not show Stripe checkout, upgrade buttons, external payment calls to action, or Stripe portal management
@@ -16,6 +18,8 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
   - `PUBLIC_STORE_BUILD=android`
   - launch query fallback: `https://www.gaastat.com/?store_build=ios` or `https://www.gaastat.com/?store_build=android`
 - The query fallback persists in `localStorage` under `gaastat-store-build` so later navigation remains store-safe.
+- `PUBLIC_API_BASE_URL` is normally blank. If a native/static shell packages local assets later, set `PUBLIC_API_BASE_URL=https://www.gaastat.com` so Sideline AI calls the production voice endpoints.
+- Run `npm run store:check` locally before native wrapper work. Run `npm run store:check:live` before store submission.
 
 ## Public URLs Required For Review
 
@@ -31,6 +35,7 @@ Before submission, confirm that `contact@gaastatsapp.com` is monitored. If the f
 - Package name: `com.gaastat.app`
 - Recommended package type: Trusted Web Activity
 - Launch URL: `https://www.gaastat.com/?store_build=android`
+- Release reference: `native/android/twa-manifest.template.json`
 - Required before Play testing:
   - Google Play developer account
   - app signing key or Play App Signing certificate fingerprint
@@ -45,6 +50,7 @@ Before submission, confirm that `contact@gaastatsapp.com` is monitored. If the f
 - Bundle ID: `com.gaastat.app`
 - Recommended shell: Capacitor iOS wrapper
 - Initial URL: `https://www.gaastat.com/?store_build=ios`
+- Release reference: `native/ios/capacitor.config.template.json`
 - Required before TestFlight:
   - Apple Developer account
   - Bundle ID and signing team

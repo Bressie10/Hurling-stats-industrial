@@ -1,0 +1,17 @@
+{
+  "packageId": "com.gaastat.app",
+  "host": "www.gaastat.com",
+  "name": "GAAstat",
+  "launcherName": "GAAstat",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#6B1B2B",
+  "backgroundColor": "#f8f8f6",
+  "startUrl": "/?store_build=android",
+  "scope": "/",
+  "iconUrl": "https://www.gaastat.com/icons/icon-512.png",
+  "maskableIconUrl": "https://www.gaastat.com/icons/icon-512.png",
+  "webManifestUrl": "https://www.gaastat.com/manifest.json",
+  "fallbackType": "customtabs",
+  "enableNotifications": false
+}

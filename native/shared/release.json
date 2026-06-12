@@ -1,0 +1,30 @@
+{
+  "appName": "GAAstat",
+  "appId": "com.gaastat.app",
+  "productionUrl": "https://www.gaastat.com/",
+  "supportEmail": "contact@gaastatsapp.com",
+  "storeMode": {
+    "queryParam": "store_build",
+    "localStorageKey": "gaastat-store-build",
+    "allowedValues": ["ios", "android"]
+  },
+  "publicUrls": {
+    "privacy": "https://www.gaastat.com/privacy",
+    "terms": "https://www.gaastat.com/terms",
+    "support": "https://www.gaastat.com/support",
+    "accountDeletion": "https://www.gaastat.com/account/delete"
+  },
+  "ios": {
+    "bundleId": "com.gaastat.app",
+    "wrapper": "Capacitor",
+    "launchUrl": "https://www.gaastat.com/?store_build=ios",
+    "microphoneUsageDescription": "GAAstat uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions."
+  },
+  "android": {
+    "packageName": "com.gaastat.app",
+    "wrapper": "Trusted Web Activity",
+    "launchUrl": "https://www.gaastat.com/?store_build=android",
+    "assetLinksUrl": "https://www.gaastat.com/.well-known/assetlinks.json",
+    "assetLinksStatus": "Do not publish until the final Play signing SHA-256 fingerprint is known."
+  }
+}

@@ -3,9 +3,10 @@
   import { buildCommandSuggestions, buildTranscriptionPrompt, parseSidelineCommand } from './sideline-command-parser.js'
   import { buildSidelineAnswerSnapshot } from './match-tools.js'
   import { supabase } from './supabase.js'
+  import { apiUrl } from './api.js'
 
-  const TRANSCRIBE_URL = '/api/voice/transcribe'
-  const ANSWER_URL = '/api/voice/answer'
+  const TRANSCRIBE_URL = apiUrl('/api/voice/transcribe')
+  const ANSWER_URL = apiUrl('/api/voice/answer')
   const MIN_CLIP_MS = 650
   const MIN_AUDIO_BYTES = 900
   const MAX_CLIP_MS = 5500

@@ -8,7 +8,9 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"smoke:voice": "node scripts/sideline-parser-smoke.mjs"
+		"smoke:voice": "node scripts/sideline-parser-smoke.mjs",
+		"store:check": "node scripts/verify-store-release.mjs",
+		"store:check:live": "node scripts/verify-store-release.mjs --live"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",

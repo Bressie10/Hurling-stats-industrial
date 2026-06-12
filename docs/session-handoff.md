@@ -51,6 +51,12 @@ PWABuilder optional warnings are not the release target. The release target is A
   - public privacy, terms, support, and account deletion routes were added
   - `docs/store-release.md` tracks the App Store / Google Play release checklist
   - `README.md` and this handoff document record that `main` is the deployment branch and `Voice-Changes` must not be used
+- Native release scaffolding was added:
+  - `native/shared/release.json` records app IDs, platform launch URLs, public review URLs, and support email
+  - `native/android/twa-manifest.template.json` is the Android TWA release reference
+  - `native/ios/capacitor.config.template.json` is the iOS Capacitor release reference
+  - `scripts/verify-store-release.mjs` powers `npm run store:check` and `npm run store:check:live`
+  - `src/lib/api.js` adds `PUBLIC_API_BASE_URL` support for native/static shells that need production voice endpoints
 
 ## Important Files
 
@@ -61,6 +67,7 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `src/lib/sync.js`
 - `src/lib/sync-payloads.js`
 - `src/lib/config.js`
+- `src/lib/api.js`
 - `src/lib/Upgrade.svelte`
 - `src/lib/PricingPage.svelte`
 - `src/lib/History.svelte`
@@ -70,6 +77,10 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `src/routes/support/+page.svelte`
 - `src/routes/account/delete/+page.svelte`
 - `docs/store-release.md`
+- `native/shared/release.json`
+- `native/android/twa-manifest.template.json`
+- `native/ios/capacitor.config.template.json`
+- `scripts/verify-store-release.mjs`
 - `static/manifest.json`
 - `static/pwabuilder-sw.js`
 - `scripts/generate-pwa-screenshots.mjs`
