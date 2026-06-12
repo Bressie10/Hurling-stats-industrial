@@ -13,6 +13,9 @@ const config = {
 		adapter: adapter(),
 		paths: {
 			base: githubPagesBase
+		},
+		serviceWorker: {
+			register: false
 		}
 	}
 };
