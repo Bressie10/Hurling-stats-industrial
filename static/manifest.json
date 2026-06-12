@@ -3,13 +3,20 @@
   "name": "GAAstat",
   "short_name": "GAAstat",
   "description": "Offline-first hurling match statistics tracker for coaches.",
+  "lang": "en-IE",
+  "dir": "ltr",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#f8f8f6",
   "theme_color": "#6B1B2B",
   "orientation": "portrait-primary",
   "categories": ["sports", "productivity"],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -40,6 +47,63 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/desktop-match.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Match logging dashboard"
+    },
+    {
+      "src": "screenshots/mobile-match.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile match logging"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log Match",
+      "short_name": "Match",
+      "description": "Start logging a hurling match.",
+      "url": "./app/match",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Squad",
+      "short_name": "Squad",
+      "description": "Open squad and player setup.",
+      "url": "./app/squad",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "short_name": "History",
+      "description": "Review saved match reports.",
+      "url": "./app/history",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
