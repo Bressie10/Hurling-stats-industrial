@@ -107,6 +107,7 @@ async function checkNativeConfig() {
   const release = await readJson('native/shared/release.json')
   const twa = await readJson('native/android/twa-manifest.template.json')
   const capacitor = await readJson('native/ios/capacitor.config.template.json')
+  const pkg = await readJson('package.json')
   if (!release || !twa || !capacitor) return
 
   check(release.appId === 'com.gaastat.app', 'shared release appId is com.gaastat.app')
@@ -119,6 +120,9 @@ async function checkNativeConfig() {
   check(capacitor.appId === release.ios?.bundleId, 'iOS Capacitor bundle matches shared release config')
   check(capacitor.server?.url === release.ios?.launchUrl, 'iOS Capacitor server URL uses store mode')
   check(capacitor.webDir === '.svelte-kit/output/client', 'iOS Capacitor webDir points at SvelteKit client output')
+  check(pkg?.scripts?.['store:seed-reviewer'] === 'node scripts/seed-reviewer-account.mjs', 'reviewer seed script is registered')
+  check(existsSync(rel('scripts/seed-reviewer-account.mjs')), 'reviewer seed script exists')
+  check(existsSync(rel('docs/reviewer-testing.md')), 'reviewer testing guide exists')
 
   const publicUrls = release.publicUrls || {}
   for (const [name, url] of Object.entries(publicUrls)) {

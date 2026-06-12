@@ -11,7 +11,7 @@ Last updated: 2026-06-12
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: web app is in store-readiness hardening before native wrapper generation. Support email is configured as `support@gaastat.com`; external delivery still needs a final test after DNS/routing propagation. Android/iOS wrapper projects have not been generated yet.
+- Current stage: web app is in store-readiness hardening before native wrapper generation. Support email is configured and externally tested as `support@gaastat.com`. Android/iOS wrapper projects have not been generated yet.
 
 ## URLs
 
@@ -76,6 +76,11 @@ PWABuilder optional warnings are not the release target. The release target is A
   - user-facing contact links now use `support@gaastat.com`
   - `native/shared/release.json` now uses `support@gaastat.com`
   - the old misspelled domain was removed from user-facing docs
+- Reviewer-account release tooling was added:
+  - `scripts/seed-reviewer-account.mjs` creates/confirms a Supabase Auth reviewer user, seeds profile/subscription records, and seeds cloud squad/match rows
+  - `npm run store:seed-reviewer` runs the script
+  - `docs/reviewer-testing.md` documents the reviewer credentials process and real-device store-mode checks
+  - `npm run store:check` verifies the reviewer seed script and guide exist
 
 ## Important Files
 
@@ -97,6 +102,7 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `src/routes/support/+page.svelte`
 - `src/routes/account/delete/+page.svelte`
 - `docs/store-release.md`
+- `docs/reviewer-testing.md`
 - `native/shared/release.json`
 - `native/android/twa-manifest.template.json`
 - `native/ios/capacitor.config.template.json`
@@ -142,31 +148,32 @@ Recommended order from here:
 
 1. Test `support@gaastat.com` from an external email account and confirm delivery to the monitored destination inbox.
 2. Add `support@gaastat.com` to App Store Connect and Google Play store metadata when those records are created.
-3. Verify queued offline match/squad mutations drain on the deployed preview/production app.
-4. Create a seeded reviewer account with realistic match/squad data and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
-5. Build the Android wrapper as a Trusted Web Activity:
+3. Run `npm run store:seed-reviewer -- --dry-run`, then run the real seed with `SUPABASE_SERVICE_ROLE_KEY` and `REVIEWER_PASSWORD` set locally.
+4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
+5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
+6. Build the Android wrapper as a Trusted Web Activity:
    - package name `com.gaastat.app`
    - launch URL `https://www.gaastat.com/?store_build=android`
    - generate the real App Bundle (`.aab`)
    - add `/.well-known/assetlinks.json` only after the final signing SHA-256 fingerprint is known
-6. Build the iOS wrapper, likely with Capacitor:
+7. Build the iOS wrapper, likely with Capacitor:
    - bundle ID `com.gaastat.app`
    - initial URL `https://www.gaastat.com/?store_build=ios`
    - configure Apple signing, icons, launch screen, and microphone usage description
-7. Complete App Store Connect and Play Console forms:
+8. Complete App Store Connect and Play Console forms:
    - privacy policy URL: `https://www.gaastat.com/privacy`
    - support URL: `https://www.gaastat.com/support`
    - account deletion URL: `https://www.gaastat.com/account/delete`
    - data/privacy answers must mention Supabase account/cloud sync, local device storage, OpenAI voice transcription/answers, and Stripe web billing outside native store builds
-8. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
-9. Continue code cleanup separately from release-critical work:
+9. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
+10. Continue code cleanup separately from release-critical work:
    - migrate Svelte layouts from deprecated `<slot>` to `{@render ...}` when the app shell is otherwise stable
    - remove verified-dead CSS in `Match.svelte`, `Landing.svelte`, `Upgrade.svelte`, `LpFooter.svelte`, and related screens
    - investigate the `:global(html:has(.lp))` LightningCSS warning
    - code-split large app screens, especially `Match.svelte`, after native release blockers are cleared
-10. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
-11. Consider push notifications after sync reliability is proven.
-12. Consider share target later if importing shared notes, files, or match data becomes useful.
+11. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
+12. Consider push notifications after sync reliability is proven.
+13. Consider share target later if importing shared notes, files, or match data becomes useful.
 
 Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for GAAstat.
 Do not add placeholder signing files, placeholder `assetlinks.json`, or fake store credentials.
@@ -176,5 +183,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md and docs/store-release.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Next confirm external email delivery, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed tooling exists; next run the dry run, run the real reviewer seed with local Supabase service-role credentials, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
 ```

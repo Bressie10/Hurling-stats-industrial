@@ -10,7 +10,8 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"smoke:voice": "node scripts/sideline-parser-smoke.mjs",
 		"store:check": "node scripts/verify-store-release.mjs",
-		"store:check:live": "node scripts/verify-store-release.mjs --live"
+		"store:check:live": "node scripts/verify-store-release.mjs --live",
+		"store:seed-reviewer": "node scripts/seed-reviewer-account.mjs"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",
