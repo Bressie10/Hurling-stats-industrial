@@ -21,11 +21,8 @@
 		<script>
 			if ('serviceWorker' in navigator) {
 				window.addEventListener('load', () => {
-					const serviceWorkerUrl = new URL('%sveltekit.assets%/service-worker.js', window.location.href)
-					const serviceWorkerScope = new URL('%sveltekit.assets%/', window.location.href)
-
-					navigator.serviceWorker.register(serviceWorkerUrl.href, {
-						scope: serviceWorkerScope.pathname
+					navigator.serviceWorker.register('./service-worker.js', {
+						scope: './'
 					})
 
 					// Unregister the legacy /sw.js worker so existing installs migrate
