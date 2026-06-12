@@ -53,3 +53,15 @@ npm run build
 - Supabase Edge Functions handle Stripe checkout, portal, cancellation, and webhooks.
 - Sideline AI command transcription is proxied through `src/routes/api/voice/transcribe` and open-ended match questions through `src/routes/api/voice/answer` so browser clients never receive the server API key.
 - Sideline AI uses short authenticated transcription clips plus deterministic confirmed write parsing. Read-only questions can use the live match context for smart answers and coaching recommendations; the older OpenAI Realtime routes have been removed to keep match-day cost predictable.
+
+## GitHub Pages Preview And PWABuilder
+
+The `app-development` branch deploys a static PWA preview to GitHub Pages:
+
+```txt
+https://bressie10.github.io/Hurling-stats-industrial/
+```
+
+Use that URL in <https://www.pwabuilder.com/> after the GitHub Pages workflow finishes. GitHub Pages only hosts static files, so it is suitable for PWABuilder manifest/service-worker checks and install packaging. Server routes such as `/api/voice/transcribe` and `/api/voice/answer` do not run on GitHub Pages; use Vercel or another server-capable host for full Sideline AI voice functionality.
+
+For the Pages build, set repository variable/secret `PUBLIC_SUPABASE_ANON_KEY` if you want the hosted preview to connect to the real Supabase project. The workflow falls back to a dummy value so PWABuilder can still inspect the PWA shell.

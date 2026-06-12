@@ -1,12 +1,13 @@
 // SvelteKit service worker — `build`, `files`, and `version` are injected at
 // build time, so hashed asset URLs are always current and the cache name
 // auto-bumps on every deploy.
-import { build, files, version } from '$service-worker'
+import { base, build, files, version } from '$service-worker'
 
 const CACHE = `gaa-${version}`
+const SHELL = `${base || ''}/`
 
 // '/' is the SPA shell (all routes are CSR-only) — cached for offline navigation.
-const PRECACHE = ['/', ...build, ...files]
+const PRECACHE = [SHELL, ...build, ...files]
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -40,7 +41,7 @@ self.addEventListener('fetch', (e) => {
   // Network-first for navigations so deploys are picked up immediately;
   // cached shell keeps the app working offline at GAA grounds.
   if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/')))
+    e.respondWith(fetch(e.request).catch(() => caches.match(SHELL)))
     return
   }
 
