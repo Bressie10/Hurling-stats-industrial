@@ -83,6 +83,14 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run store:verify-reviewer` runs the verification without printing the password
   - `docs/reviewer-testing.md` documents the reviewer credentials process and real-device store-mode checks
   - `npm run store:check` verifies the reviewer seed/verify scripts and guide exist
+- Quality hardening was started after the reviewer login was verified:
+  - Vitest and `fake-indexeddb` were added for regression tests
+  - `src/lib/db.test.js` covers match/squad outbox writes, retry backoff, completed mutation removal, and full local wipe behavior
+  - `src/lib/sync.test.js` covers cloud restore, stale-cloud protection, pending-delete skip, numeric ID preservation, and outbox drain before pull
+  - ESLint and Prettier config were added with a conservative baseline that avoids app-wide formatting churn
+  - `npm run test`, `npm run lint`, `npm run format`, and `npm run format:check` are available
+  - root Svelte layouts now use `{@render children()}` instead of deprecated `<slot>`
+  - stale tracked `codex-fix-prompt.md` was removed from the release tree
 
 ## Important Files
 
@@ -111,6 +119,10 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `scripts/verify-store-release.mjs`
 - `scripts/seed-reviewer-account.mjs`
 - `scripts/verify-reviewer-account.mjs`
+- `src/lib/db.test.js`
+- `src/lib/sync.test.js`
+- `eslint.config.js`
+- `prettier.config.js`
 - `static/manifest.json`
 - `static/pwabuilder-sw.js`
 - `scripts/generate-pwa-screenshots.mjs`
@@ -149,6 +161,11 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Real seed completed for `reviewer@gaastat.com`.
   - Direct Supabase auth with the password in local `.env` passed for user `b01a21a4-e1a4-4992-9f72-82ed47cefb67`.
   - If browser login fails after this, first suspect wrong email, copied password whitespace, a stale saved password, or a cached session. Use a private window at `https://www.gaastat.com/?store_build=ios` and confirm the email is `reviewer@gaastat.com` with no extra `s`.
+- Quality-hardening verification on 2026-06-13:
+  - `npm run test` passed: 11 sync/outbox regression tests.
+  - `npm run lint` passed with warnings only; existing unused variables remain as cleanup items.
+  - `npm run format:check` passed for the new formatting baseline.
+  - `npm run store:check` passed with the expected `assetlinks.json` warning.
 
 ## Next Work
 
@@ -175,8 +192,8 @@ Recommended order from here:
    - data/privacy answers must mention Supabase account/cloud sync, local device storage, OpenAI voice transcription/answers, and Stripe web billing outside native store builds
 9. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
 10. Continue code cleanup separately from release-critical work:
-   - migrate Svelte layouts from deprecated `<slot>` to `{@render ...}` when the app shell is otherwise stable
    - remove verified-dead CSS in `Match.svelte`, `Landing.svelte`, `Upgrade.svelte`, `LpFooter.svelte`, and related screens
+   - reduce current ESLint warnings, especially unused variables in large components
    - investigate the `:global(html:has(.lp))` LightningCSS warning
    - code-split large app screens, especially `Match.svelte`, after native release blockers are cleared
 11. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
@@ -191,5 +208,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed and verification tooling exists; run `npm run store:verify-reviewer`, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, and root Svelte layout slots were migrated. Run `npm run test`, `npm run lint`, `npm run format:check`, `npm run store:verify-reviewer`, and `npm run store:check`, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
 ```

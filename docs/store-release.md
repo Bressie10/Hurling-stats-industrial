@@ -21,6 +21,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - The query fallback persists in `localStorage` under `gaastat-store-build` so later navigation remains store-safe.
 - `PUBLIC_API_BASE_URL` is normally blank. If a native/static shell packages local assets later, set `PUBLIC_API_BASE_URL=https://www.gaastat.com` so Sideline AI calls the production voice endpoints.
 - Run `npm run store:check` locally before native wrapper work. Run `npm run store:check:live` before store submission.
+- Run `npm run test`, `npm run lint`, and `npm run format:check` before release-critical pushes.
 - `npm run store:check` includes the Settings native-store guard so Stripe cancellation remains web-only in native builds.
 - Use `npm run store:seed-reviewer` to create or update the seeded store reviewer account once a Supabase service-role key is available locally.
 - Use `npm run store:verify-reviewer` after seeding or changing the reviewer password; it signs in through the public Supabase auth/RLS path and checks the seeded squad/match rows without printing the password.
@@ -68,6 +69,7 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 
 - Seed and sign in with the reviewer account documented in `docs/reviewer-testing.md`.
 - Run `npm run store:verify-reviewer` before manual browser or device checks.
+- Run the automated sync/outbox regression tests with `npm run test`.
 - Create a free account from the native build.
 - Log a match online, close/reopen, and confirm the match remains.
 - Log a match while offline, reconnect, tap Sync, and confirm cloud restore on another session.

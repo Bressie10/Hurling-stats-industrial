@@ -4,6 +4,8 @@
   import { browser } from '$app/environment'
   import { base } from '$app/paths'
 
+  let { children } = $props()
+
   $effect(() => {
     if (browser && !$authLoading && !$user) {
       goto('/')
@@ -23,7 +25,7 @@
     </div>
   </div>
 {:else if $user}
-  <slot />
+  {@render children()}
 {/if}
 
 <style>

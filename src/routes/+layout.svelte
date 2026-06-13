@@ -15,6 +15,8 @@
   import Toast from '$lib/Toast.svelte'
   import ConfirmModal from '$lib/ConfirmModal.svelte'
 
+  let { children } = $props()
+
   function hexToRgbString(hex) {
     const r = parseInt(hex.slice(1,3), 16)
     const g = parseInt(hex.slice(3,5), 16)
@@ -263,7 +265,7 @@
   </div>
 
 {:else if !$user}
-  <slot />
+  {@render children()}
 
 {:else if isAppRoute}
   {#if !dataReady && !needsTeamSetup}
@@ -377,7 +379,7 @@
       </nav>
 
       <main>
-        <slot />
+        {@render children()}
       </main>
     </div>
 
@@ -459,7 +461,7 @@
   {/if}
 
 {:else}
-  <slot />
+  {@render children()}
 {/if}
 
 <Toast />
