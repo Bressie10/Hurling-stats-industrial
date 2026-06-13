@@ -8,6 +8,7 @@
   import { settingsStore } from '$lib/settings-store.js'
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
+  import { canUseClub, canUseFeature, FEATURES } from '$lib/entitlements.js'
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { page } from '$app/state'
@@ -80,6 +81,7 @@
 
   const isAppRoute = $derived(page.url.pathname.startsWith('/app/'))
   const moreActive = $derived(['/app/insights', '/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(page.url.pathname))
+  const hasClubAccess = $derived(canUseClub($subscriptionStore))
   const syncStatusLabel = $derived(syncFailed > 0 ? `${syncFailed} failed` : syncPending > 0 ? `${syncPending} pending` : '')
   $effect(() => { if (!$authLoading && $user && page.url.pathname === '/') goto('/app/match') })
 
@@ -178,18 +180,18 @@
 
           let subVal; subscriptionStore.subscribe(s => subVal = s)()
 
-          if (subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
+          if (canUseClub(subVal) && subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
             needsTeamSetup = true
           }
 
-          if (!needsTeamSetup && subVal.teams.length > 1 && !subVal.activeTeamId) {
+          if (canUseClub(subVal) && !needsTeamSetup && subVal.teams.length > 1 && !subVal.activeTeamId) {
             const rememberLastTeam = $settingsStore.rememberLastTeam
             if (!rememberLastTeam) {
               needsTeamPick = true
             }
           }
 
-          if (subVal.activeTeamId) {
+          if (subVal.activeTeamId && canUseFeature(subVal, FEATURES.liveSharing)) {
             const { data: sessions } = await supabase
               .from('live_sessions')
               .select('*')
@@ -280,10 +282,10 @@
       </div>
     </div>
 
-  {:else if needsTeamSetup}
+  {:else if needsTeamSetup && hasClubAccess}
     <TeamSetup onDone={() => { needsTeamSetup = false }} />
 
-  {:else if needsTeamPick}
+  {:else if needsTeamPick && hasClubAccess}
     <TeamPicker onPicked={() => { needsTeamPick = false }} />
 
   {:else}
@@ -351,7 +353,7 @@
         </div>
 
         <div class="nav-actions">
-          {#if $subscriptionStore.teams.length > 1 || ($subscriptionStore.isOwner && $subscriptionStore.teams.length > 0)}
+          {#if hasClubAccess && ($subscriptionStore.teams.length > 1 || ($subscriptionStore.isOwner && $subscriptionStore.teams.length > 0))}
             <button class="switch-team-btn" onclick={() => needsTeamPick = true} title="Switch team">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               {$subscriptionStore.activeTeamName ?? 'Pick team'}

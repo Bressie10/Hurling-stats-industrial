@@ -1,4 +1,5 @@
 <script>
+  import EntitlementGate from '$lib/EntitlementGate.svelte'
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
@@ -6,6 +7,7 @@
   import { supabase } from '$lib/supabase.js'
   import { subscriptionStore } from '$lib/subscription-store.js'
   import { user } from '$lib/auth-store.js'
+  import { FEATURES } from '$lib/entitlements.js'
 
   let session = null
   let loading = true
@@ -40,20 +42,22 @@
   }
 </script>
 
-{#if session}
-  <LiveViewer {session} {onClose} />
-{:else if loading}
-  <div class="loading-screen">
-    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
-    <div class="loading-tagline">
-      <p class="loading-tagline-top">Coach Smarter.</p>
-      <p class="loading-tagline-bottom">Win More.</p>
+<EntitlementGate feature={FEATURES.liveSharing} label="Live match sharing">
+  {#if session}
+    <LiveViewer {session} {onClose} />
+  {:else if loading}
+    <div class="loading-screen">
+      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+      <div class="loading-tagline">
+        <p class="loading-tagline-top">Coach Smarter.</p>
+        <p class="loading-tagline-bottom">Win More.</p>
+      </div>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar"></div>
+      </div>
     </div>
-    <div class="loading-bar-wrap">
-      <div class="loading-bar"></div>
-    </div>
-  </div>
-{/if}
+  {/if}
+</EntitlementGate>
 
 <style>
   .loading-screen {

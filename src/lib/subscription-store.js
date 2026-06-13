@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store'
 import { supabase } from './supabase.js'
+import { canUseClub, canUseClubPro, canUsePro } from './entitlements.js'
 
 const ACTIVE_TEAM_KEY = 'active-team-id'
 
@@ -20,29 +21,9 @@ export const subscriptionStore = writable({
   loading: true
 })
 
-const isActiveStatus = s => s.status === 'active' || s.status === 'trialing'
-const hasFeature = (s, key) => s.customFeatures?.[key] === true
-
-export const isPro = derived(subscriptionStore, s =>
-  isActiveStatus(s) && (
-    ['personal', 'club', 'club_pro'].includes(s.plan) ||
-    hasFeature(s, 'isPro') ||
-    hasFeature(s, 'isClub') ||
-    hasFeature(s, 'isClubPro')
-  )
-)
-
-export const isClub = derived(subscriptionStore, s =>
-  isActiveStatus(s) && (
-    ['club', 'club_pro'].includes(s.plan) ||
-    hasFeature(s, 'isClub') ||
-    hasFeature(s, 'isClubPro')
-  )
-)
-
-export const isClubPro = derived(subscriptionStore, s =>
-  isActiveStatus(s) && (s.plan === 'club_pro' || hasFeature(s, 'isClubPro'))
-)
+export const isPro = derived(subscriptionStore, canUsePro)
+export const isClub = derived(subscriptionStore, canUseClub)
+export const isClubPro = derived(subscriptionStore, canUseClubPro)
 
 function parseSignupIntent(value) {
   if (!value) return { type: 'personal' }

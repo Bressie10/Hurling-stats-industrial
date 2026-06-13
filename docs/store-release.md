@@ -12,8 +12,10 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - Use `native/shared/release.json` as the single source for app IDs, launch URLs, review URLs, and platform choices.
 - Use `npm run native:config:check` and `npm run native:doctor` before generating or signing native projects.
 - Reviewer account setup and test steps live in `docs/reviewer-testing.md`.
-- First native store release should be consumption-only:
-  - users can sign in, create free accounts, log matches, sync, and use features their account already has
+- Payment strategy for launch is Stripe-first on the web, with native apps acting as free companion clients:
+  - paid signup and plan management stay on `https://www.gaastat.com/`
+  - native users can sign in, create free accounts, log matches, sync, and use features their account already has
+  - free accounts keep 2 saved matches; Personal Pro and higher unlock unlimited history and analytics
   - native store builds must not show Stripe checkout, upgrade buttons, external payment calls to action, or Stripe portal management
 - Store-safe runtime mode is controlled by:
   - `PUBLIC_STORE_BUILD=ios`
@@ -81,9 +83,11 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 - Run `npm run store:verify-reviewer` before manual browser or device checks.
 - Run the automated sync/outbox regression tests with `npm run test`.
 - Create a free account from the native build.
+- Confirm the free account can use Match, Squad, Settings, cloud sync, and up to 2 saved matches.
+- Confirm Player Stats, Team Stats, Timeline, Insights, Targets, and older History are locked for Free accounts.
 - Log a match online, close/reopen, and confirm the match remains.
 - Log a match while offline, reconnect, tap Sync, and confirm cloud restore on another session.
-- Confirm locked Pro/Club features show entitlement-only messaging and no purchase buttons.
+- Confirm locked Pro/Club/Club Pro features show entitlement-only messaging and no purchase buttons.
 - Confirm `/pricing` in store mode does not show prices, upgrade CTAs, Stripe checkout, or external payment links.
 - Confirm Settings account deletion is visible and works.
 - Confirm Settings account deletion in native store mode does not open Stripe, link to Stripe, or show web billing controls.

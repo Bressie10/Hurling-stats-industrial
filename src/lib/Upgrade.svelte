@@ -4,6 +4,7 @@
   import { supabase } from './supabase.js'
   import { showToast } from './toast.js'
   import { IS_NATIVE_STORE_BUILD, STORE_PLATFORM_LABEL } from './config.js'
+  import { FREE_MATCH_LIMIT } from './entitlements.js'
 
   let loading = null  // 'personal' | 'club' | 'club_pro' | null
 
@@ -35,19 +36,22 @@
   {#if IS_NATIVE_STORE_BUILD}
     <p>This {STORE_PLATFORM_LABEL} build is for signed-in access. Plan purchases and plan changes are not available inside this app.</p>
   {:else}
-    <p>Free accounts get match logging, squad management, and your last 3 matches. Upgrade to unlock full analytics.</p>
+    <p>Free accounts get match logging, squad management, cloud sync, and {FREE_MATCH_LIMIT} saved matches. Upgrade to unlock full analytics.</p>
   {/if}
 
   <div class="plans">
     <div class="plan">
       <div class="plan-name">Personal Pro</div>
-      <div class="plan-price">€7.99<span>/month</span></div>
+      {#if !IS_NATIVE_STORE_BUILD}
+        <div class="plan-price">€7.99<span>/month</span></div>
+      {/if}
       <ul class="plan-features">
-        <li>Full match history</li>
+        <li>Unlimited match history</li>
         <li>Player stats &amp; trends</li>
         <li>Team stats &amp; pitch map</li>
         <li>Match timeline</li>
         <li>Stat targets</li>
+        <li>PDF match reports</li>
         <li>1 coach</li>
       </ul>
       {#if !IS_NATIVE_STORE_BUILD}
@@ -60,7 +64,9 @@
     <div class="plan featured">
       <div class="plan-badge">Most popular</div>
       <div class="plan-name">Club</div>
-      <div class="plan-price">€15<span>/month</span></div>
+      {#if !IS_NATIVE_STORE_BUILD}
+        <div class="plan-price">€15<span>/month</span></div>
+      {/if}
       <ul class="plan-features">
         <li>Up to 4 teams</li>
         <li>Unlimited coaches</li>
@@ -76,7 +82,9 @@
 
     <div class="plan">
       <div class="plan-name">Club Pro</div>
-      <div class="plan-price">€25<span>/month</span></div>
+      {#if !IS_NATIVE_STORE_BUILD}
+        <div class="plan-price">€25<span>/month</span></div>
+      {/if}
       <ul class="plan-features">
         <li>Everything in Club</li>
         <li>Live match sharing</li>

@@ -2,7 +2,7 @@
   import { getDB, loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, loadClubTeams, createTeam, deleteTeam, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
+  import { subscriptionStore, isClub, loadClubTeams, createTeam, deleteTeam, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
   import { showToast } from './toast.js'
@@ -294,7 +294,7 @@
   </div>
 
   <!-- ── MY CLUB (member view) ── -->
-  {#if !$subscriptionStore.isOwner && $subscriptionStore.clubId}
+  {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId}
   <div class="section-block">
     <div class="section-title">My Club</div>
     <div class="card">
@@ -368,7 +368,7 @@
   {/if}
 
   <!-- ── CLUB SETUP (Club/Club Pro with no club yet) ── -->
-  {#if !$subscriptionStore.isOwner && !$subscriptionStore.clubId}
+  {#if $isClub && !$subscriptionStore.isOwner && !$subscriptionStore.clubId}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">
@@ -390,7 +390,7 @@
   {/if}
 
   <!-- ── CLAIM OWNERSHIP (Club/Club Pro with clubId but no owner row) ── -->
-  {#if !$subscriptionStore.isOwner && $subscriptionStore.clubId && !$subscriptionStore.clubRole}
+  {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId && !$subscriptionStore.clubRole}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">
@@ -404,7 +404,7 @@
   {/if}
 
   <!-- ── CLUB TEAMS ── -->
-  {#if $subscriptionStore.isOwner}
+  {#if $isClub && $subscriptionStore.isOwner}
   <div class="section-block">
     <div class="section-title">Club Teams</div>
     <div class="card">

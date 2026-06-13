@@ -11,7 +11,7 @@ Last updated: 2026-06-13
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. Support email is configured and externally tested as `support@gaastat.com`. Android wrapper generation is still blocked on JDK/Android SDK setup.
+- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. Support email is configured and externally tested as `support@gaastat.com`. Stripe-first paywall hardening is underway for launch. Android wrapper generation is still blocked on JDK/Android SDK setup.
 
 ## URLs
 
@@ -108,6 +108,13 @@ PWABuilder optional warnings are not the release target. The release target is A
   - unsigned simulator build succeeds; Apple signing/team setup is the next iOS blocker
   - Xcode recommended settings were applied after the project opened successfully
   - manual launch in the iPhone 17 simulator works
+- Stripe-first subscription/paywall planning is now the launch direction:
+  - web Stripe remains the paid signup and plan-management channel
+  - native iOS/Android builds remain free companion clients with no Stripe checkout, prices, external payment CTAs, or web billing links
+  - the launch free tier is capped at 2 saved matches
+  - Personal Pro unlocks unlimited history, analytics routes, Stat Targets, and PDF reports
+  - Club unlocks team/club management and join codes
+  - Club Pro unlocks live match sharing/viewer mode
 
 ## Important Files
 
@@ -200,11 +207,15 @@ PWABuilder optional warnings are not the release target. The release target is A
 
 Recommended order from here:
 
-1. Test `support@gaastat.com` from an external email account and confirm delivery to the monitored destination inbox.
+1. Finish and verify the Stripe-first paywall implementation:
+   - Free can use Match, Squad, Settings, cloud sync, and 2 saved matches
+   - Free sees locked states for Player Stats, Team Stats, Timeline, Insights, Targets, older History, Club controls, and Live sharing
+   - Personal/Club/Club Pro unlock the expected tiers
+   - native store mode still shows no prices, Stripe checkout, upgrade CTAs, or external payment links
 2. Add `support@gaastat.com` to App Store Connect and Google Play store metadata when those records are created.
 3. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
 4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
-5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
+5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, 2-match cap, sync restore, account deletion, and Sideline AI microphone permission on real devices.
 6. Open the generated iOS project and configure Apple signing:
    - run `npm run native:ios:open`
    - select the `App` target
@@ -244,5 +255,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is iOS native wrapper signing/TestFlight setup. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools. Next iOS step is real-device signing/TestFlight: keep bundle ID `com.gaastat.app`, resolve Developer Mode/device preparation if running on a phone, then archive/upload to TestFlight from Xcode.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS native wrapper signing/TestFlight setup is next after paywall verification. Native Settings billing hardening is done and code/docs use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools.
 ```

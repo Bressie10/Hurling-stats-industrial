@@ -62,7 +62,7 @@ async function isPng(file) {
       bytes[5] === 0x0a &&
       bytes[6] === 0x1a &&
       bytes[7] === 0x0a
-  } catch (_) {
+  } catch {
     return false
   }
 }
@@ -150,6 +150,12 @@ async function checkStoreModeCode() {
   check(config.includes('gaastat-store-build'), 'config persists store build mode')
   check(config.includes('PUBLIC_STORE_BUILD'), 'config supports PUBLIC_STORE_BUILD')
 
+  const entitlements = await readText('src/lib/entitlements.js')
+  check(entitlements.includes('FREE_MATCH_LIMIT = 2'), 'free tier is capped at 2 saved matches')
+  check(entitlements.includes('proAnalytics'), 'central entitlement policy defines Pro analytics')
+  check(entitlements.includes('clubManagement'), 'central entitlement policy defines Club management')
+  check(entitlements.includes('liveSharing'), 'central entitlement policy defines Club Pro live sharing')
+
   const appHtml = await readText('src/app.html')
   check(!appHtml.includes("register('./pwabuilder-sw.js'"), 'service worker registration is not relative to the current route')
   check(appHtml.includes("new URL('pwabuilder-sw.js'"), 'service worker registration derives the root/base worker URL')
@@ -169,6 +175,21 @@ async function checkStoreModeCode() {
 
   const settings = await readText('src/lib/Settings.svelte')
   check(settings.includes('if (!IS_NATIVE_STORE_BUILD)') && settings.includes("invoke('cancel-subscription')"), 'Settings keeps Stripe cancellation behind the web-only guard')
+
+  const history = await readText('src/lib/History.svelte')
+  check(history.includes('FREE_MATCH_LIMIT') && !history.includes('FREE_MATCH_LIMIT = 3'), 'History uses the central free match limit')
+
+  for (const file of [
+    'src/routes/app/player/+page.svelte',
+    'src/routes/app/team/+page.svelte',
+    'src/routes/app/timeline/+page.svelte',
+    'src/routes/app/insights/+page.svelte',
+    'src/routes/app/targets/+page.svelte',
+    'src/routes/app/live/+page.svelte'
+  ]) {
+    const text = await readText(file)
+    check(text.includes('EntitlementGate'), `${file} is entitlement gated`)
+  }
 
   const sideline = await readText('src/lib/SidelineAI.svelte')
   check(sideline.includes("apiUrl('/api/voice/transcribe')"), 'Sideline transcription endpoint uses apiUrl')

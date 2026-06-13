@@ -66,6 +66,7 @@ https://www.gaastat.com/?store_build=android
 Check:
 
 - History shows the three seeded matches.
+- A separate fresh Free account shows only the 2-match free history allowance and locked Pro analytics routes.
 - Squad shows the 25 seeded players.
 - Player Stats has selectable players and charts.
 - Team Stats shows score, shooting, tackle, turnover, puckout, and pitch-map data.
@@ -84,5 +85,5 @@ Reviewer account:
 Email: reviewer@gaastat.com
 Password: [enter the current password]
 
-This native build is store-safe. It supports signed-in access, free account use, match logging, cloud sync, and existing account entitlements. Plan purchases and plan management are not offered inside the app.
+This native build is store-safe. It supports signed-in access, free account use, match logging, cloud sync, and existing account entitlements. Free accounts include 2 saved matches. Plan purchases and plan management are not offered inside the app.
 ```

@@ -6,17 +6,16 @@
   import { settingsStore } from './settings-store.js'
   import { user } from './auth-store.js'
   import { scheduleAutoSync } from './sync.js'
-  import Upgrade from './Upgrade.svelte'
   import ConfirmModal from './ConfirmModal.svelte'
   import { analyzeMatch } from './match-insights.js'
   import { showToast } from './toast.js'
   import { IS_NATIVE_STORE_BUILD } from './config.js'
+  import { FREE_MATCH_LIMIT } from './entitlements.js'
   import { jsPDF } from 'jspdf'
   import html2canvas from 'html2canvas'
 
   const { proAccess = false } = $props()
 
-  const FREE_MATCH_LIMIT = 3
   const DEFAULT_PERIOD_ORDER = ['Warm-up', '1st Half', '2nd Half', 'Extra Time']
 
   let matches = $state([])
@@ -33,8 +32,10 @@
     matches.sort((a, b) => new Date(b.date) - new Date(a.date))
   })
 
-  let visibleMatches = $derived(proAccess ? filtered : filtered.slice(0, FREE_MATCH_LIMIT))
-  let lockedCount = $derived(proAccess ? 0 : Math.max(0, filtered.length - FREE_MATCH_LIMIT))
+  let freeAccessibleMatches = $derived(matches.slice(0, FREE_MATCH_LIMIT))
+  let accessibleMatches = $derived(proAccess ? matches : freeAccessibleMatches)
+  let visibleMatches = $derived(filtered)
+  let summaryMatches = $derived(proAccess ? matches : freeAccessibleMatches)
 
   function deleteMatch(id, e, { closeSelected = false } = {}) {
     e?.stopPropagation?.()
@@ -68,7 +69,7 @@
     scheduleAutoSync($user?.id)
   }
 
-  let filtered = $derived(matches.filter(m => {
+  function matchesFilters(m) {
     const matchesSearch = !search ||
       m.opposition?.toLowerCase().includes(search.toLowerCase()) ||
       m.venue?.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,13 +82,17 @@
     if (filterResult === 'L') return ht < at
     if (filterResult === 'D') return ht === at
     return true
-  }))
+  }
+
+  let filtered = $derived(accessibleMatches.filter(matchesFilters))
+  let allFiltered = $derived(matches.filter(matchesFilters))
+  let lockedCount = $derived(proAccess ? 0 : Math.max(0, allFiltered.length - filtered.length))
 
   let seasonStats = $derived((() => {
-    if (matches.length === 0) return null
+    if (summaryMatches.length === 0) return null
     let wins = 0, losses = 0, draws = 0
     let totalFor = 0, totalAgainst = 0
-    matches.forEach(m => {
+    summaryMatches.forEach(m => {
       const ht = (m.score?.home?.goals * 3 + m.score?.home?.points) || 0
       const at = (m.score?.away?.goals * 3 + m.score?.away?.points) || 0
       totalFor += ht
@@ -97,10 +102,10 @@
       else draws++
     })
     return {
-      played: matches.length,
+      played: summaryMatches.length,
       wins, losses, draws,
-      avgFor: (totalFor / matches.length).toFixed(1),
-      avgAgainst: (totalAgainst / matches.length).toFixed(1)
+      avgFor: (totalFor / summaryMatches.length).toFixed(1),
+      avgAgainst: (totalAgainst / summaryMatches.length).toFixed(1)
     }
   })())
 
@@ -778,14 +783,20 @@
           <button class="review-btn" onclick={() => goto(`/app/insights?match=${selectedMatch.id}`)}>
             Review
           </button>
-          <button class="print-btn" onclick={generatePDF} disabled={pdfGenerating}>
-            {#if pdfGenerating}
-              Generating…
-            {:else}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-              Print / Save PDF
-            {/if}
-          </button>
+          {#if proAccess}
+            <button class="print-btn" onclick={generatePDF} disabled={pdfGenerating}>
+              {#if pdfGenerating}
+                Generating…
+              {:else}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print / Save PDF
+              {/if}
+            </button>
+          {:else}
+            <button class="print-btn locked" disabled title="PDF reports require Pro access">
+              PDF requires Pro
+            </button>
+          {/if}
         </div>
       </div>
       <div class="detail-title">vs {selectedMatch.opposition}</div>
@@ -1399,7 +1410,7 @@
       </div>
     </div>
 
-    {#if filtered.length === 0}
+    {#if filtered.length === 0 && lockedCount === 0}
       <div class="empty-state">
         <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg></div>
         <div class="empty-title">No matches found</div>
@@ -1465,7 +1476,7 @@
           </div>
           {#if !IS_NATIVE_STORE_BUILD}
             <div class="history-paywall-prices">
-              <span>Personal €7.99/mo · Club €19.99/mo</span>
+              <span>Personal €7.99/mo · Club €15/mo</span>
             </div>
           {/if}
         </div>
@@ -1610,6 +1621,13 @@
   }
   .review-btn { background: var(--primary); color: var(--primary-text); }
   .print-btn:hover { background: var(--primary); color: var(--primary-text); }
+  .print-btn.locked,
+  .print-btn.locked:hover {
+    border-color: var(--border);
+    color: var(--text-muted);
+    background: var(--surface-2);
+    cursor: not-allowed;
+  }
   .detail-title { font-size: 20px; font-weight: 700; color: var(--text); }
   .detail-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 

@@ -329,7 +329,7 @@
       <section id="match-history" class="docs-section">
         <div class="docs-tag">Core Feature</div>
         <h1>Match History</h1>
-        <p class="docs-lead">Every saved match in one place. Free plan stores the last 3 — Pro keeps everything.</p>
+        <p class="docs-lead">Every saved match in one place. Free plan keeps 2 saved matches — Pro keeps everything.</p>
 
         <h2>Browsing matches</h2>
         <p>Matches are listed newest first. Use the search bar to find by opposition name, or filter by competition, venue, or result. Each card shows the final score and key stats.</p>

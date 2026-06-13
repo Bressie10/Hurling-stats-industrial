@@ -3,6 +3,7 @@
   import LpFooter from './LpFooter.svelte'
   import { onMount } from 'svelte'
   import { IS_NATIVE_STORE_BUILD, STORE_PLATFORM_LABEL } from './config.js'
+  import { FREE_MATCH_LIMIT, PLAN_COPY } from './entitlements.js'
 
   export let onNavigate = () => {}
 
@@ -16,25 +17,25 @@
 
   const plans = [
     {
-      name: 'Free', price: '€0', period: '/month', tagline: 'Get started today',
+      name: PLAN_COPY.free.name, price: PLAN_COPY.free.price, period: PLAN_COPY.free.period, tagline: PLAN_COPY.free.tagline,
       highlight: false, badge: null,
-      features: ['1 coach · 1 team', 'Full match logging', 'Puckout & opp. tracking', 'Squad management', '3 matches in history', '100% offline', 'Cloud sync & backup'],
+      features: ['1 coach · 1 team', 'Match logging trial', 'Puckout & opp. tracking', 'Squad management', `${FREE_MATCH_LIMIT} saved matches`, 'Offline mode', 'Cloud sync & backup'],
       cta: 'Get Started Free', action: () => goSignup('personal')
     },
     {
-      name: 'Personal Pro', price: '€7.99', period: '/month', tagline: 'Full analytics for one coach',
+      name: PLAN_COPY.personal.name, price: PLAN_COPY.personal.price, period: PLAN_COPY.personal.period, tagline: PLAN_COPY.personal.tagline,
       highlight: true, badge: 'Most Popular',
       features: ['1 coach · 1 team', 'Full match logging', 'Puckout & opp. tracking', 'Squad management', 'Unlimited match history', 'Player Stats & charts', 'Team Stats & pitch map', 'Match Timeline', 'Stat Targets', 'PDF match reports', '100% offline', 'Cloud sync & backup'],
       cta: 'Start Personal Pro', action: () => goSignup('personal')
     },
     {
-      name: 'Club', price: '€15', period: '/month', tagline: 'Multiple teams, one club',
+      name: PLAN_COPY.club.name, price: PLAN_COPY.club.price, period: PLAN_COPY.club.period, tagline: PLAN_COPY.club.tagline,
       highlight: false, badge: null,
       features: ['Unlimited coaches', 'Up to 4 teams', 'Team join codes', 'Club management dashboard', 'Everything in Personal Pro'],
       cta: 'Set Up My Club', action: () => goSignup('club')
     },
     {
-      name: 'Club Pro', price: '€25', period: '/month', tagline: 'Everything, for serious clubs',
+      name: PLAN_COPY.club_pro.name, price: PLAN_COPY.club_pro.price, period: PLAN_COPY.club_pro.period, tagline: PLAN_COPY.club_pro.tagline,
       highlight: false, badge: null,
       features: ['Live match sharing', 'Live viewer mode', 'Priority support', 'Early access to features', 'Everything in Club'],
       cta: 'Set Up Club Pro', action: () => goSignup('club')
@@ -59,7 +60,7 @@
     {
       label: 'Analytics & History',
       rows: [
-        { label: 'Match history', vals: ['3 matches', 'Unlimited', 'Unlimited', 'Unlimited'] },
+        { label: 'Match history', vals: [`${FREE_MATCH_LIMIT} saved matches`, 'Unlimited', 'Unlimited', 'Unlimited'] },
         { label: 'Player Stats & trend charts', vals: [false, true, true, true] },
         { label: 'Team Stats & pitch map', vals: [false, true, true, true] },
         { label: 'Match Timeline', vals: [false, true, true, true] },
@@ -94,7 +95,7 @@
     { q: 'Can I switch plans mid-month?', a: 'Yes. You can upgrade at any time and the new plan takes effect immediately. Downgrading takes effect at the end of your current billing period.' },
     { q: 'What happens to my data if I cancel?', a: 'Your data is always yours. If you cancel, your matches and squad are preserved. You lose access to Pro analytics features until you resubscribe, but you can export everything as JSON from Settings at any time.' },
     { q: 'Is there an annual pricing option?', a: 'Not yet, but it\'s on the roadmap. Monthly billing gives you maximum flexibility for now.' },
-    { q: 'Can I try Pro features before paying?', a: 'Yes — sign up free and you\'ll have full access to match logging, squad management, and puckout tracking immediately. Upgrade to Pro when you want analytics and unlimited history.' },
+    { q: 'Can I try it before paying?', a: `Yes — sign up free to log real matches, manage a squad, sync, and keep ${FREE_MATCH_LIMIT} saved matches. Upgrade when you want analytics, reports, and unlimited history.` },
     { q: 'What is live match sharing?', a: 'A Club Pro feature. The coach logging the match starts a live session, and anyone with the link can watch the live score, stats, and puckout breakdown update in real time — perfect for selectors not at the ground.' },
     { q: 'Is there a custom/enterprise plan?', a: 'Yes. For county boards, schools, or large organisations needing custom stat types, white-labelling, or API access — contact us at support@gaastat.com and we\'ll build something around your needs.' },
   ]
@@ -134,7 +135,7 @@
       <p class="pp-sub reveal reveal-delay-2">
         {IS_NATIVE_STORE_BUILD
           ? `This ${STORE_PLATFORM_LABEL} build supports signed-in access and free account use. Plan purchases and plan changes are not available inside this app.`
-          : 'Every plan includes offline-first match logging, squad management, and cloud sync. Upgrade when you need more.'}
+          : `Start with ${FREE_MATCH_LIMIT} saved matches, offline logging, squad management, and cloud sync. Upgrade for analytics, reports, and unlimited history.`}
       </p>
     </div>
 
@@ -252,7 +253,7 @@
       <p class="pp-cta-sub">
         {IS_NATIVE_STORE_BUILD
           ? 'Create a free account or sign in with an account that already has access.'
-          : 'Free forever. Upgrade when you need it. No credit card required to start.'}
+          : `Start with ${FREE_MATCH_LIMIT} saved matches. Upgrade when you need analytics and unlimited history.`}
       </p>
       <button class="pp-cta-btn" on:click={() => goSignup('personal')}>Get Started Free →</button>
     </div>
