@@ -11,7 +11,7 @@ Last updated: 2026-06-13
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: web app is in store-readiness hardening before native wrapper generation. Support email is configured and externally tested as `support@gaastat.com`. Android/iOS wrapper projects have not been generated yet.
+- Current stage: iOS native wrapper has been generated, synced, branded, and verified with a simulator build. Support email is configured and externally tested as `support@gaastat.com`. Android wrapper generation is still blocked on JDK/Android SDK setup.
 
 ## URLs
 
@@ -99,6 +99,13 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run native:ios:add`, `npm run native:ios:sync`, and `npm run native:ios:open` are available once full Xcode is installed/selected
   - `npm run native:android:init`, `npm run native:android:update`, and `npm run native:android:build` are available once JDK/Android SDK setup is complete
   - root `.gitignore` now blocks native signing keys and Android/iOS build artifacts
+- iOS wrapper generation was completed locally:
+  - Full Xcode 26.5 is installed and selected at `/Applications/Xcode.app/Contents/Developer`
+  - `npm run native:ios:add` generated the Capacitor project under `ios/`
+  - `npm run native:ios:sync` copied a fresh `PUBLIC_STORE_BUILD=ios` production web build into the iOS wrapper
+  - iOS bundle ID is `com.gaastat.app`
+  - the default Capacitor app icon and splash image were replaced with branded GAAstat assets
+  - unsigned simulator build succeeds; Apple signing/team setup is the next iOS blocker
 
 ## Important Files
 
@@ -179,8 +186,12 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run store:check` passed with the expected `assetlinks.json` warning.
 - Native tooling verification on 2026-06-13:
   - `npm run native:config:check` passed.
-  - `npm run native:doctor` correctly reports local-machine blockers: no JDK, no Android SDK command-line tools, and active Xcode path is Command Line Tools rather than full Xcode.
-  - Native projects have not been generated yet; Android TWA generation requires JDK/Android SDK, and iOS Capacitor generation requires full Xcode.
+  - Full Xcode is now selected and detected correctly: Xcode 26.5, build 17F42.
+  - `npm run native:ios:add` passed and generated `ios/`.
+  - `npm run native:ios:sync` passed after a production store-mode web build.
+  - `xcodebuild -list -project ios/App/App.xcodeproj` resolved Capacitor Swift Package Manager dependencies and found the `App` scheme.
+  - Unsigned simulator build passed with `CODE_SIGNING_ALLOWED=NO`.
+  - `npm run native:doctor` now reports only Android local-machine blockers: no JDK and no Android SDK command-line tools. Android TWA generation still requires JDK/Android SDK.
 
 ## Next Work
 
@@ -191,22 +202,22 @@ Recommended order from here:
 3. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
 4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
 5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
-6. Install local native build prerequisites, then rerun `npm run native:doctor`:
+6. Open the generated iOS project and configure Apple signing:
+   - run `npm run native:ios:open`
+   - select the `App` target
+   - set the Apple Developer Team
+   - keep bundle ID as `com.gaastat.app`
+   - create/register the App Store Connect app record for the same bundle ID
+   - archive/upload a TestFlight build after signing is valid
+7. Install Android prerequisites, then rerun `npm run native:doctor`:
    - JDK 17 or Bubblewrap-managed JDK for Android
    - Android Studio / Android SDK command-line tools for Android
-   - full Xcode selected with `xcode-select` for iOS
-7. Build the Android wrapper as a Trusted Web Activity:
+8. Build the Android wrapper as a Trusted Web Activity:
    - package name `com.gaastat.app`
    - launch URL `https://www.gaastat.com/?store_build=android`
    - generate with `npm run native:android:init`
    - generate the real App Bundle (`.aab`)
    - add `/.well-known/assetlinks.json` only after the final signing SHA-256 fingerprint is known
-8. Build the iOS wrapper with Capacitor:
-   - bundle ID `com.gaastat.app`
-   - initial URL `https://www.gaastat.com/?store_build=ios`
-   - generate with `npm run native:ios:add`
-   - sync with `npm run native:ios:sync`
-   - configure Apple signing, icons, launch screen, and microphone usage description
 9. Complete App Store Connect and Play Console forms:
    - privacy policy URL: `https://www.gaastat.com/privacy`
    - support URL: `https://www.gaastat.com/support`
@@ -230,5 +241,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is native wrapper tooling before project generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Run `npm run native:config:check` and `npm run native:doctor`; current local blockers are no JDK, no Android SDK command-line tools, and no full Xcode selected. After those are installed, generate Android TWA with `npm run native:android:init` and iOS Capacitor with `npm run native:ios:add` using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is iOS native wrapper signing/TestFlight setup. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, and an unsigned simulator build passed. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools. Next iOS step is `npm run native:ios:open`, configure Apple signing for bundle ID `com.gaastat.app`, then archive/upload to TestFlight.
 ```

@@ -10,7 +10,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - Deployment branch: `main`. Do not push release or PWA deployment work to `Voice-Changes`.
 - Native wrapper configuration lives in `native/`.
 - Use `native/shared/release.json` as the single source for app IDs, launch URLs, review URLs, and platform choices.
-- Use `npm run native:config:check` and `npm run native:doctor` before generating native projects.
+- Use `npm run native:config:check` and `npm run native:doctor` before generating or signing native projects.
 - Reviewer account setup and test steps live in `docs/reviewer-testing.md`.
 - First native store release should be consumption-only:
   - users can sign in, create free accounts, log matches, sync, and use features their account already has
@@ -59,12 +59,17 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 - Recommended shell: Capacitor iOS wrapper
 - Initial URL: `https://www.gaastat.com/?store_build=ios`
 - Release reference: `native/ios/capacitor.config.template.json`
+- Current status:
+  - Full Xcode 26.5 is installed and selected.
+  - Capacitor iOS project has been generated under `ios/`.
+  - `npm run native:ios:sync` has copied the store-mode production web build into the wrapper.
+  - GAAstat app icon and launch splash have replaced the Capacitor defaults.
+  - `NSMicrophoneUsageDescription` is present for Sideline AI voice capture.
+  - Unsigned simulator build succeeds.
 - Required before TestFlight:
-  - full Xcode selected with `xcode-select` (Command Line Tools alone is not enough)
   - Apple Developer account
   - Bundle ID and signing team
-  - app icons and launch screen generated in Xcode
-  - microphone usage description for Sideline AI voice capture
+  - signed archive uploaded from Xcode
   - privacy policy URL in App Store Connect
   - App Privacy answers matching account data, match/squad data, audio transcription, cloud sync, and support diagnostics
   - reviewer account with seeded data
