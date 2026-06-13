@@ -11,7 +11,7 @@ Last updated: 2026-06-13
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: iOS native wrapper has been generated, synced, branded, and verified with a simulator build. Support email is configured and externally tested as `support@gaastat.com`. Android wrapper generation is still blocked on JDK/Android SDK setup.
+- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. Support email is configured and externally tested as `support@gaastat.com`. Android wrapper generation is still blocked on JDK/Android SDK setup.
 
 ## URLs
 
@@ -106,6 +106,8 @@ PWABuilder optional warnings are not the release target. The release target is A
   - iOS bundle ID is `com.gaastat.app`
   - the default Capacitor app icon and splash image were replaced with branded GAAstat assets
   - unsigned simulator build succeeds; Apple signing/team setup is the next iOS blocker
+  - Xcode recommended settings were applied after the project opened successfully
+  - manual launch in the iPhone 17 simulator works
 
 ## Important Files
 
@@ -191,6 +193,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run native:ios:sync` passed after a production store-mode web build.
   - `xcodebuild -list -project ios/App/App.xcodeproj` resolved Capacitor Swift Package Manager dependencies and found the `App` scheme.
   - Unsigned simulator build passed with `CODE_SIGNING_ALLOWED=NO`.
+  - Manual Xcode run in the iPhone 17 simulator passed.
   - `npm run native:doctor` now reports only Android local-machine blockers: no JDK and no Android SDK command-line tools. Android TWA generation still requires JDK/Android SDK.
 
 ## Next Work
@@ -241,5 +244,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is iOS native wrapper signing/TestFlight setup. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, and an unsigned simulator build passed. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools. Next iOS step is `npm run native:ios:open`, configure Apple signing for bundle ID `com.gaastat.app`, then archive/upload to TestFlight.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is iOS native wrapper signing/TestFlight setup. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools. Next iOS step is real-device signing/TestFlight: keep bundle ID `com.gaastat.app`, resolve Developer Mode/device preparation if running on a phone, then archive/upload to TestFlight from Xcode.
 ```

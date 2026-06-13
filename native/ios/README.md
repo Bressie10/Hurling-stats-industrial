@@ -18,6 +18,7 @@ Completed locally:
 - GAAstat icon and splash assets replaced the default Capacitor assets.
 - `NSMicrophoneUsageDescription` is present in `ios/App/App/Info.plist`.
 - Unsigned simulator build succeeds.
+- Manual launch in the iPhone 17 simulator succeeds.
 
 Next build order:
 

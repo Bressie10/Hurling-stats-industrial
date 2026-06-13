@@ -66,6 +66,7 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
   - GAAstat app icon and launch splash have replaced the Capacitor defaults.
   - `NSMicrophoneUsageDescription` is present for Sideline AI voice capture.
   - Unsigned simulator build succeeds.
+  - Manual launch in the iPhone 17 simulator succeeds.
 - Required before TestFlight:
   - Apple Developer account
   - Bundle ID and signing team
