@@ -1,6 +1,8 @@
-import Stripe from 'https://esm.sh/stripe@14?target=deno&no-check'
+import Stripe from 'https://esm.sh/stripe@22.2.1?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+
+const STRIPE_API_VERSION = '2026-02-25.clover'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -8,7 +10,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+      apiVersion: STRIPE_API_VERSION,
+    })
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

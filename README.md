@@ -22,6 +22,10 @@ PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 OPENAI_API_KEY=your_openai_server_key
 SIDELINE_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 SIDELINE_ANSWER_MODEL=gpt-4o-mini
+STRIPE_SECRET_KEY=your_stripe_test_or_live_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_signing_secret
+STRIPE_PORTAL_CONFIGURATION_ID=your_stripe_customer_portal_configuration_id
+APP_URL=https://www.gaastat.com
 PUBLIC_STORE_BUILD=web
 PUBLIC_API_BASE_URL=
 ```

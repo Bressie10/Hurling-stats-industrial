@@ -1,16 +1,18 @@
-import Stripe from 'https://esm.sh/stripe@14?target=deno&no-check'
+import Stripe from 'https://esm.sh/stripe@22.2.1?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
+const STRIPE_API_VERSION = '2026-02-25.clover'
+
 const PLAN_BY_PRICE: Record<string, string> = {
-  'price_1TIcATKy0wspuui8EOMD4nyC': 'personal',
-  'price_1TIcB2Ky0wspuui8U61XrY6R': 'club',
-  'price_1TIcBVKy0wspuui8i7tpzcrl': 'club_pro',
+  price_1Thz9rEJeWwTp7TFSriSk63s: 'personal',
+  price_1Thz9sEJeWwTp7TFiRJgny3y: 'club',
+  price_1Thz9tEJeWwTp7TFhZ8VLZGg: 'club_pro',
 }
 
 const SEAT_LIMITS: Record<string, number> = {
   personal: 1,
-  club:     999,
+  club: 999,
   club_pro: 999,
 }
 
@@ -19,7 +21,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+  const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+    apiVersion: STRIPE_API_VERSION,
+  })
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

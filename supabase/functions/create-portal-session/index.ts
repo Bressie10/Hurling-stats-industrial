@@ -1,6 +1,8 @@
-import Stripe from 'https://esm.sh/stripe@14?target=deno&no-check'
+import Stripe from 'https://esm.sh/stripe@22.2.1?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+
+const STRIPE_API_VERSION = '2026-02-25.clover'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -8,7 +10,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!)
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+      apiVersion: STRIPE_API_VERSION,
+    })
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -35,11 +39,15 @@ Deno.serve(async (req) => {
 
     const { return_url } = await req.json().catch(() => ({ return_url: null }))
     const appUrl = req.headers.get('origin') ?? Deno.env.get('APP_URL') ?? 'https://gaastat.ie'
+    const portalConfiguration = Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID')
 
-    const session = await stripe.billingPortal.sessions.create({
+    const sessionParams: Stripe.BillingPortal.SessionCreateParams = {
       customer: sub.stripe_customer_id,
       return_url: return_url ?? appUrl,
-    })
+    }
+    if (portalConfiguration) sessionParams.configuration = portalConfiguration
+
+    const session = await stripe.billingPortal.sessions.create(sessionParams)
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
