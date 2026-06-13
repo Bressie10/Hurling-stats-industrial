@@ -121,7 +121,9 @@ async function checkNativeConfig() {
   check(capacitor.server?.url === release.ios?.launchUrl, 'iOS Capacitor server URL uses store mode')
   check(capacitor.webDir === '.svelte-kit/output/client', 'iOS Capacitor webDir points at SvelteKit client output')
   check(pkg?.scripts?.['store:seed-reviewer'] === 'node scripts/seed-reviewer-account.mjs', 'reviewer seed script is registered')
+  check(pkg?.scripts?.['store:verify-reviewer'] === 'node scripts/verify-reviewer-account.mjs', 'reviewer verification script is registered')
   check(existsSync(rel('scripts/seed-reviewer-account.mjs')), 'reviewer seed script exists')
+  check(existsSync(rel('scripts/verify-reviewer-account.mjs')), 'reviewer verification script exists')
   check(existsSync(rel('docs/reviewer-testing.md')), 'reviewer testing guide exists')
 
   const publicUrls = release.publicUrls || {}

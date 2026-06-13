@@ -6,6 +6,10 @@ import { flushOutbox } from './sync.js'
 export const user = writable(null)
 export const authLoading = writable(true)
 
+function normalizeEmail(email) {
+  return String(email || '').trim()
+}
+
 supabase.auth.getSession().then(({ data }) => {
   user.set(data.session?.user ?? null)
   authLoading.set(false)
@@ -20,20 +24,20 @@ supabase.auth.onAuthStateChange((event, session) => {
 })
 
 export async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const { data, error } = await supabase.auth.signUp({ email: normalizeEmail(email), password })
   if (error) throw error
   return data
 }
 
 export async function signIn(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password })
   if (error) throw error
   return data
 }
 
 export async function resetPassword(email) {
   const redirectTo = `${window.location.origin}/auth/reset`
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), { redirectTo })
   if (error) throw error
 }
 

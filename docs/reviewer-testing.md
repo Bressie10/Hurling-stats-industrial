@@ -1,6 +1,6 @@
 # Reviewer Account And Store-Mode Testing
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 Use this before Apple App Store or Google Play submission. The goal is to give reviewers a real account with enough data to verify the app immediately, without exposing web purchase flows inside native builds.
 
@@ -32,6 +32,18 @@ npm run store:seed-reviewer
 The script reads `PUBLIC_SUPABASE_URL` from `.env`, `.env.local`, or the shell environment. It creates or updates the Supabase Auth user, confirms the email, sets the password, creates the profile/subscription row, and seeds cloud `squad` and `matches` rows.
 
 By default, it replaces the reviewer's cloud squad rows and upserts three deterministic seeded matches. Use `--preserve-existing` if you do not want it to delete existing squad rows for that reviewer account.
+
+## Verify Command
+
+After the real seed, verify the account through the same public Supabase auth and RLS path used by the app:
+
+```sh
+npm run store:verify-reviewer
+```
+
+This signs in with `REVIEWER_EMAIL` and `REVIEWER_PASSWORD`, confirms the subscription row is active, and confirms at least 25 squad rows and 3 match rows are visible to the reviewer user. It does not print the password.
+
+If the command passes but the browser says "Invalid login credentials", check that the login email is exactly `reviewer@gaastat.com` and that the pasted password has no leading or trailing spaces. A private/incognito window is the fastest way to avoid a stale saved password.
 
 ## Seeded Data
 

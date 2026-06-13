@@ -1,6 +1,6 @@
 # Store Release Checklist
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 This checklist is for Apple App Store and Google Play release work. PWABuilder optional manifest warnings are not the release target.
 
@@ -23,6 +23,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - Run `npm run store:check` locally before native wrapper work. Run `npm run store:check:live` before store submission.
 - `npm run store:check` includes the Settings native-store guard so Stripe cancellation remains web-only in native builds.
 - Use `npm run store:seed-reviewer` to create or update the seeded store reviewer account once a Supabase service-role key is available locally.
+- Use `npm run store:verify-reviewer` after seeding or changing the reviewer password; it signs in through the public Supabase auth/RLS path and checks the seeded squad/match rows without printing the password.
 
 ## Public URLs Required For Review
 
@@ -66,6 +67,7 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 ## Native Review Test Scenarios
 
 - Seed and sign in with the reviewer account documented in `docs/reviewer-testing.md`.
+- Run `npm run store:verify-reviewer` before manual browser or device checks.
 - Create a free account from the native build.
 - Log a match online, close/reopen, and confirm the match remains.
 - Log a match while offline, reconnect, tap Sync, and confirm cloud restore on another session.

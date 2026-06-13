@@ -1,6 +1,6 @@
 # Session Handoff
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Project State
 
@@ -79,8 +79,10 @@ PWABuilder optional warnings are not the release target. The release target is A
 - Reviewer-account release tooling was added:
   - `scripts/seed-reviewer-account.mjs` creates/confirms a Supabase Auth reviewer user, seeds profile/subscription records, and seeds cloud squad/match rows
   - `npm run store:seed-reviewer` runs the script
+  - `scripts/verify-reviewer-account.mjs` verifies reviewer sign-in through the public Supabase anon/RLS path and checks seeded squad/match rows
+  - `npm run store:verify-reviewer` runs the verification without printing the password
   - `docs/reviewer-testing.md` documents the reviewer credentials process and real-device store-mode checks
-  - `npm run store:check` verifies the reviewer seed script and guide exist
+  - `npm run store:check` verifies the reviewer seed/verify scripts and guide exist
 
 ## Important Files
 
@@ -107,6 +109,8 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `native/android/twa-manifest.template.json`
 - `native/ios/capacitor.config.template.json`
 - `scripts/verify-store-release.mjs`
+- `scripts/seed-reviewer-account.mjs`
+- `scripts/verify-reviewer-account.mjs`
 - `static/manifest.json`
 - `static/pwabuilder-sw.js`
 - `scripts/generate-pwa-screenshots.mjs`
@@ -141,6 +145,10 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `git diff --check` passed.
   - `PUBLIC_SUPABASE_URL=https://example.supabase.co PUBLIC_SUPABASE_ANON_KEY=dummy OPENAI_API_KEY=dummy npm run build` passed.
   - The build still has pre-existing cleanup warnings: deprecated Svelte `<slot>` usage in layouts, unused CSS in large components such as `Match.svelte` and `Landing.svelte`, a LightningCSS warning for `:global(html:has(.lp))`, and a large `Match.svelte` client chunk.
+- Reviewer-account verification on 2026-06-13:
+  - Real seed completed for `reviewer@gaastat.com`.
+  - Direct Supabase auth with the password in local `.env` passed for user `b01a21a4-e1a4-4992-9f72-82ed47cefb67`.
+  - If browser login fails after this, first suspect wrong email, copied password whitespace, a stale saved password, or a cached session. Use a private window at `https://www.gaastat.com/?store_build=ios` and confirm the email is `reviewer@gaastat.com` with no extra `s`.
 
 ## Next Work
 
@@ -148,7 +156,7 @@ Recommended order from here:
 
 1. Test `support@gaastat.com` from an external email account and confirm delivery to the monitored destination inbox.
 2. Add `support@gaastat.com` to App Store Connect and Google Play store metadata when those records are created.
-3. Run `npm run store:seed-reviewer -- --dry-run`, then run the real seed with `SUPABASE_SERVICE_ROLE_KEY` and `REVIEWER_PASSWORD` set locally.
+3. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
 4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
 5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
 6. Build the Android wrapper as a Trusted Web Activity:
@@ -183,5 +191,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed tooling exists; next run the dry run, run the real reviewer seed with local Supabase service-role credentials, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed and verification tooling exists; run `npm run store:verify-reviewer`, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
 ```
