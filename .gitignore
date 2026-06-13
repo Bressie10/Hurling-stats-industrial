@@ -22,3 +22,18 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Native signing and build outputs
+*.jks
+*.keystore
+*.p8
+*.mobileprovision
+*.cer
+*.aab
+*.apk
+ios/App/App/public/
+ios/Pods/
+ios/DerivedData/
+native/android/**/build/
+native/android/**/*.aab
+native/android/**/*.apk

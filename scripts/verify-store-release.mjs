@@ -107,6 +107,7 @@ async function checkNativeConfig() {
   const release = await readJson('native/shared/release.json')
   const twa = await readJson('native/android/twa-manifest.template.json')
   const capacitor = await readJson('native/ios/capacitor.config.template.json')
+  const activeCapacitor = await readJson('capacitor.config.json')
   const pkg = await readJson('package.json')
   if (!release || !twa || !capacitor) return
 
@@ -120,13 +121,21 @@ async function checkNativeConfig() {
   check(capacitor.appId === release.ios?.bundleId, 'iOS Capacitor bundle matches shared release config')
   check(capacitor.server?.url === release.ios?.launchUrl, 'iOS Capacitor server URL uses store mode')
   check(capacitor.webDir === '.svelte-kit/output/client', 'iOS Capacitor webDir points at SvelteKit client output')
+  check(activeCapacitor?.appId === release.ios?.bundleId, 'active Capacitor config bundle matches shared release config')
+  check(activeCapacitor?.server?.url === release.ios?.launchUrl, 'active Capacitor config uses store-mode launch URL')
+  check(activeCapacitor?.webDir === '.svelte-kit/output/client', 'active Capacitor config webDir points at SvelteKit client output')
   check(pkg?.scripts?.['store:seed-reviewer'] === 'node scripts/seed-reviewer-account.mjs', 'reviewer seed script is registered')
   check(pkg?.scripts?.['store:verify-reviewer'] === 'node scripts/verify-reviewer-account.mjs', 'reviewer verification script is registered')
   check(pkg?.scripts?.test === 'vitest run', 'unit test script is registered')
   check(pkg?.scripts?.lint === 'eslint .', 'lint script is registered')
   check(pkg?.scripts?.['format:check']?.startsWith('prettier --check'), 'format check script is registered')
+  check(pkg?.scripts?.['native:config'] === 'node scripts/sync-native-config.mjs', 'native config script is registered')
+  check(pkg?.scripts?.['native:config:check'] === 'node scripts/sync-native-config.mjs --check', 'native config check script is registered')
+  check(pkg?.scripts?.['native:doctor'] === 'node scripts/native-store-doctor.mjs', 'native doctor script is registered')
   check(existsSync(rel('scripts/seed-reviewer-account.mjs')), 'reviewer seed script exists')
   check(existsSync(rel('scripts/verify-reviewer-account.mjs')), 'reviewer verification script exists')
+  check(existsSync(rel('scripts/sync-native-config.mjs')), 'native config sync script exists')
+  check(existsSync(rel('scripts/native-store-doctor.mjs')), 'native doctor script exists')
   check(existsSync(rel('docs/reviewer-testing.md')), 'reviewer testing guide exists')
 
   const publicUrls = release.publicUrls || {}

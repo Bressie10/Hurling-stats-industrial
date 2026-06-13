@@ -10,6 +10,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - Deployment branch: `main`. Do not push release or PWA deployment work to `Voice-Changes`.
 - Native wrapper configuration lives in `native/`.
 - Use `native/shared/release.json` as the single source for app IDs, launch URLs, review URLs, and platform choices.
+- Use `npm run native:config:check` and `npm run native:doctor` before generating native projects.
 - Reviewer account setup and test steps live in `docs/reviewer-testing.md`.
 - First native store release should be consumption-only:
   - users can sign in, create free accounts, log matches, sync, and use features their account already has
@@ -42,6 +43,8 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 - Launch URL: `https://www.gaastat.com/?store_build=android`
 - Release reference: `native/android/twa-manifest.template.json`
 - Required before Play testing:
+  - local JDK 17 or Bubblewrap-managed JDK
+  - Android Studio / Android SDK command-line tools
   - Google Play developer account
   - app signing key or Play App Signing certificate fingerprint
   - `/.well-known/assetlinks.json` generated with the final package name and SHA-256 fingerprint
@@ -57,6 +60,7 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 - Initial URL: `https://www.gaastat.com/?store_build=ios`
 - Release reference: `native/ios/capacitor.config.template.json`
 - Required before TestFlight:
+  - full Xcode selected with `xcode-select` (Command Line Tools alone is not enough)
   - Apple Developer account
   - Bundle ID and signing team
   - app icons and launch screen generated in Xcode

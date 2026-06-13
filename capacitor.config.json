@@ -1,0 +1,12 @@
+{
+  "appId": "com.gaastat.app",
+  "appName": "GAAstat",
+  "webDir": ".svelte-kit/output/client",
+  "server": {
+    "url": "https://www.gaastat.com/?store_build=ios",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

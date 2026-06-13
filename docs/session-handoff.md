@@ -91,6 +91,14 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run test`, `npm run lint`, `npm run format`, and `npm run format:check` are available
   - root Svelte layouts now use `{@render children()}` instead of deprecated `<slot>`
   - stale tracked `codex-fix-prompt.md` was removed from the release tree
+- Native wrapper tooling was started:
+  - Capacitor 8 and Bubblewrap CLI were added as local dev tooling
+  - `capacitor.config.json` is the active iOS Capacitor config generated from `native/shared/release.json`
+  - `npm run native:config` and `npm run native:config:check` keep native config in sync
+  - `npm run native:doctor` checks local JDK, Android SDK, Xcode, and generated native project status
+  - `npm run native:ios:add`, `npm run native:ios:sync`, and `npm run native:ios:open` are available once full Xcode is installed/selected
+  - `npm run native:android:init`, `npm run native:android:update`, and `npm run native:android:build` are available once JDK/Android SDK setup is complete
+  - root `.gitignore` now blocks native signing keys and Android/iOS build artifacts
 
 ## Important Files
 
@@ -123,6 +131,9 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `src/lib/sync.test.js`
 - `eslint.config.js`
 - `prettier.config.js`
+- `capacitor.config.json`
+- `scripts/sync-native-config.mjs`
+- `scripts/native-store-doctor.mjs`
 - `static/manifest.json`
 - `static/pwabuilder-sw.js`
 - `scripts/generate-pwa-screenshots.mjs`
@@ -166,6 +177,10 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run lint` passed with warnings only; existing unused variables remain as cleanup items.
   - `npm run format:check` passed for the new formatting baseline.
   - `npm run store:check` passed with the expected `assetlinks.json` warning.
+- Native tooling verification on 2026-06-13:
+  - `npm run native:config:check` passed.
+  - `npm run native:doctor` correctly reports local-machine blockers: no JDK, no Android SDK command-line tools, and active Xcode path is Command Line Tools rather than full Xcode.
+  - Native projects have not been generated yet; Android TWA generation requires JDK/Android SDK, and iOS Capacitor generation requires full Xcode.
 
 ## Next Work
 
@@ -176,29 +191,36 @@ Recommended order from here:
 3. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
 4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
 5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, sync restore, account deletion, and Sideline AI microphone permission on real devices.
-6. Build the Android wrapper as a Trusted Web Activity:
+6. Install local native build prerequisites, then rerun `npm run native:doctor`:
+   - JDK 17 or Bubblewrap-managed JDK for Android
+   - Android Studio / Android SDK command-line tools for Android
+   - full Xcode selected with `xcode-select` for iOS
+7. Build the Android wrapper as a Trusted Web Activity:
    - package name `com.gaastat.app`
    - launch URL `https://www.gaastat.com/?store_build=android`
+   - generate with `npm run native:android:init`
    - generate the real App Bundle (`.aab`)
    - add `/.well-known/assetlinks.json` only after the final signing SHA-256 fingerprint is known
-7. Build the iOS wrapper, likely with Capacitor:
+8. Build the iOS wrapper with Capacitor:
    - bundle ID `com.gaastat.app`
    - initial URL `https://www.gaastat.com/?store_build=ios`
+   - generate with `npm run native:ios:add`
+   - sync with `npm run native:ios:sync`
    - configure Apple signing, icons, launch screen, and microphone usage description
-8. Complete App Store Connect and Play Console forms:
+9. Complete App Store Connect and Play Console forms:
    - privacy policy URL: `https://www.gaastat.com/privacy`
    - support URL: `https://www.gaastat.com/support`
    - account deletion URL: `https://www.gaastat.com/account/delete`
    - data/privacy answers must mention Supabase account/cloud sync, local device storage, OpenAI voice transcription/answers, and Stripe web billing outside native store builds
-9. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
-10. Continue code cleanup separately from release-critical work:
+10. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
+11. Continue code cleanup separately from release-critical work:
    - remove verified-dead CSS in `Match.svelte`, `Landing.svelte`, `Upgrade.svelte`, `LpFooter.svelte`, and related screens
    - reduce current ESLint warnings, especially unused variables in large components
    - investigate the `:global(html:has(.lp))` LightningCSS warning
    - code-split large app screens, especially `Match.svelte`, after native release blockers are cleared
-11. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
-12. Consider push notifications after sync reliability is proven.
-13. Consider share target later if importing shared notes, files, or match data becomes useful.
+12. Add Periodic Background Sync for lightweight match/team refresh only after the current sync flow is verified.
+13. Consider push notifications after sync reliability is proven.
+14. Consider share target later if importing shared notes, files, or match data becomes useful.
 
 Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for GAAstat.
 Do not add placeholder signing files, placeholder `assetlinks.json`, or fake store credentials.
@@ -208,5 +230,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is store-readiness hardening before native wrapper generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, and root Svelte layout slots were migrated. Run `npm run test`, `npm run lint`, `npm run format:check`, `npm run store:verify-reviewer`, and `npm run store:check`, verify deployed sync/reviewer flows on devices, then continue Android TWA and iOS Capacitor work using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current stage is native wrapper tooling before project generation. Native Settings billing hardening is done and code/docs now use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Run `npm run native:config:check` and `npm run native:doctor`; current local blockers are no JDK, no Android SDK command-line tools, and no full Xcode selected. After those are installed, generate Android TWA with `npm run native:android:init` and iOS Capacitor with `npm run native:ios:add` using https://www.gaastat.com/?store_build=android and https://www.gaastat.com/?store_build=ios as launch URLs.
 ```

@@ -32,5 +32,15 @@ The first native release is consumption-only/free-account:
 - `native/shared/release.json`: single source for store IDs, URLs, and review links
 - `native/android/twa-manifest.template.json`: Android TWA release reference
 - `native/ios/capacitor.config.template.json`: iOS Capacitor release reference
+- `capacitor.config.json`: active iOS Capacitor config generated from `native/shared/release.json`
+
+## Commands
+
+```sh
+npm run native:config:check
+npm run native:doctor
+```
+
+`native:doctor` reports local machine blockers for native generation. Android requires a JDK and Android SDK tools. iOS requires full Xcode, not only Command Line Tools.
 
 Run `npm run store:check` before native wrapper work and before store submission.
