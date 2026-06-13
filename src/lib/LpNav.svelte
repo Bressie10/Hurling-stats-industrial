@@ -36,8 +36,8 @@
 
   <!-- Logo -->
   <button class="nav-logo" on:click={() => nav('home')}>
-    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="nav-logo-mark" />
-    <span class="nav-logo-text">GAA <span>Stats</span></span>
+    <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="nav-logo-mark" />
+    <span class="nav-logo-text">Pitch<span>Note</span></span>
   </button>
 
   <!-- Desktop links -->
@@ -87,7 +87,7 @@
             </div>
             <div class="dd-text">
               <div class="dd-title">Squad & Pitch View</div>
-              <div class="dd-desc">Manage your squad with a visual GAA formation</div>
+              <div class="dd-desc">Manage your squad with a visual hurling formation</div>
             </div>
           </button>
           <button class="dd-item" on:click={() => anchor('offline')}>

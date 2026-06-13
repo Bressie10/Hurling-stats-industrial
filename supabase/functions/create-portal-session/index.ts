@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     }
 
     const { return_url } = await req.json().catch(() => ({ return_url: null }))
-    const appUrl = req.headers.get('origin') ?? Deno.env.get('APP_URL') ?? 'https://gaastat.ie'
+    const appUrl = req.headers.get('origin') ?? Deno.env.get('APP_URL') ?? 'https://www.pitchnote.ie'
     const portalConfiguration = Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID')
 
     const sessionParams: Stripe.BillingPortal.SessionCreateParams = {

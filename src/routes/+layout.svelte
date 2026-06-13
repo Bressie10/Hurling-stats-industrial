@@ -41,7 +41,7 @@
 
   $effect(() => {
     if (typeof document !== 'undefined') {
-      const name = $settingsStore.teamName || 'GAAstat'
+      const name = $settingsStore.teamName || 'PitchNote'
       document.title = name
       document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', name)
 
@@ -256,7 +256,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+    <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo">
     <div class="loading-tagline">
       <p class="loading-tagline-top">Coach Smarter.</p>
       <p class="loading-tagline-bottom">Win More.</p>
@@ -272,7 +272,7 @@
 {:else if isAppRoute}
   {#if !dataReady && !needsTeamSetup}
     <div class="loading-screen">
-      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+      <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo">
       <div class="loading-tagline">
         <p class="loading-tagline-top">Coach Smarter.</p>
         <p class="loading-tagline-bottom">Win More.</p>
@@ -308,8 +308,8 @@
       <!-- Top bar: brand + desktop tabs + actions -->
       <nav class="top-nav">
         <div class="brand">
-          <img class="brand-logo" src="{base}/gaastat-icon.svg" alt="GAAstat">
-          <span class="brand-name">{$settingsStore.teamName || 'GAAstat'}</span>
+          <img class="brand-logo" src="{base}/pitchnote-icon.svg" alt="PitchNote">
+          <span class="brand-name">{$settingsStore.teamName || 'PitchNote'}</span>
         </div>
 
         <!-- Desktop-only tab row -->

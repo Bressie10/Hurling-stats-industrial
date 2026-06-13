@@ -53,7 +53,7 @@
   }
 
   function shareWhatsApp(team) {
-    const text = `Join ${$subscriptionStore.clubName} — ${team.name} on GAA Stats!\n\nYour team code: ${team.code}\n\nDownload the app, tap "Join my team" and enter this code.`
+    const text = `Join ${$subscriptionStore.clubName} — ${team.name} on PitchNote!\n\nYour team code: ${team.code}\n\nDownload the app, tap "Join my team" and enter this code.`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 

@@ -11,8 +11,8 @@ This directory holds native release configuration and templates. It is not a sep
 
 ## Platform Launch URLs
 
-- iOS: `https://www.gaastat.com/?store_build=ios`
-- Android: `https://www.gaastat.com/?store_build=android`
+- iOS: `https://www.pitchnote.ie/?store_build=ios`
+- Android: `https://www.pitchnote.ie/?store_build=android`
 
 The web app persists this mode in local storage so navigation remains store-safe after launch.
 

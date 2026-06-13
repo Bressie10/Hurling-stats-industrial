@@ -1,4 +1,4 @@
-# GAAstat
+# PitchNote
 
 Offline-first hurling match stats app for coaches and analysts. It logs match events on the sideline, stores data locally in IndexedDB, syncs to Supabase when online, and includes reports, player/team analytics, live sharing, and Sideline AI voice capture.
 
@@ -25,14 +25,14 @@ SIDELINE_ANSWER_MODEL=gpt-4o-mini
 STRIPE_SECRET_KEY=your_stripe_test_or_live_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_signing_secret
 STRIPE_PORTAL_CONFIGURATION_ID=your_stripe_customer_portal_configuration_id
-APP_URL=https://www.gaastat.com
+APP_URL=https://www.pitchnote.ie
 PUBLIC_STORE_BUILD=web
 PUBLIC_API_BASE_URL=
 ```
 
 Do not expose an OpenAI key as a public env var. Voice transcription and smart answers use `OPENAI_API_KEY` server-side only and require the user's Supabase session token.
 
-`PUBLIC_API_BASE_URL` is normally blank for the web app. Set it to `https://www.gaastat.com` only for a packaged native/static shell that still needs to call the production `/api/voice/*` endpoints.
+`PUBLIC_API_BASE_URL` is normally blank for the web app. Set it to `https://www.pitchnote.ie` only for a packaged native/static shell that still needs to call the production `/api/voice/*` endpoints.
 
 ## Development
 
@@ -72,8 +72,8 @@ npm run build
 
 Native App Store / Google Play builds should use store-safe mode so the app is entitlement-only and does not show Stripe checkout or web purchase prompts:
 
-- iOS launch URL: `https://www.gaastat.com/?store_build=ios`
-- Android launch URL: `https://www.gaastat.com/?store_build=android`
+- iOS launch URL: `https://www.pitchnote.ie/?store_build=ios`
+- Android launch URL: `https://www.pitchnote.ie/?store_build=android`
 - Build-time alternative: set `PUBLIC_STORE_BUILD=ios` or `PUBLIC_STORE_BUILD=android`.
 - Native wrapper templates live in `native/`.
 - Run `npm run store:check` before wrapper work and `npm run store:check:live` before submission.

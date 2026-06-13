@@ -18,7 +18,7 @@
     <div class="footer-brand">
       <div class="footer-logo">
         <div class="footer-logo-mark">G</div>
-        <span class="footer-logo-text">GAA <span>Stats</span></span>
+        <span class="footer-logo-text">Pitch<span>Note</span></span>
       </div>
       <p class="footer-tagline">
         Real-time hurling match analytics for coaches. Built on the sideline, for the sideline.
@@ -54,9 +54,9 @@
   </div>
 
   <div class="footer-bottom">
-    <div class="footer-copy">© {year} GAAstat. Built for GAA coaches.</div>
+    <div class="footer-copy">© {year} PitchNote. Built for hurling coaches.</div>
     <div class="footer-legal">
-      <a href="mailto:support@gaastat.com">Contact</a>
+      <a href="mailto:support@pitchnote.ie">Contact</a>
       <button on:click={() => nav('support')}>Support</button>
       <button on:click={() => nav('privacy')}>Privacy</button>
       <button on:click={() => nav('terms')}>Terms</button>

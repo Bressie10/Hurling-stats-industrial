@@ -1,5 +1,5 @@
 -- ============================================================
--- GAA Stats — RLS Policies
+-- PitchNote - RLS Policies
 -- Run this in: Supabase Dashboard → SQL Editor
 -- ============================================================
 

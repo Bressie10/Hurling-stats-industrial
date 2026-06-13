@@ -6,23 +6,23 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 
 ## Current Release Strategy
 
-- Canonical production URL: `https://www.gaastat.com/`
+- Canonical production URL: `https://www.pitchnote.ie/`
 - Deployment branch: `main`. Do not push release or PWA deployment work to `Voice-Changes`.
 - Native wrapper configuration lives in `native/`.
 - Use `native/shared/release.json` as the single source for app IDs, launch URLs, review URLs, and platform choices.
 - Use `npm run native:config:check` and `npm run native:doctor` before generating or signing native projects.
 - Reviewer account setup and test steps live in `docs/reviewer-testing.md`.
 - Payment strategy for launch is Stripe-first on the web, with native apps acting as free companion clients:
-  - paid signup and plan management stay on `https://www.gaastat.com/`
+  - paid signup and plan management stay on `https://www.pitchnote.ie/`
   - native users can sign in, create free accounts, log matches, sync, and use features their account already has
   - free accounts keep 2 saved matches; Personal Pro and higher unlock unlimited history and analytics
   - native store builds must not show Stripe checkout, upgrade buttons, external payment calls to action, or Stripe portal management
 - Store-safe runtime mode is controlled by:
   - `PUBLIC_STORE_BUILD=ios`
   - `PUBLIC_STORE_BUILD=android`
-  - launch query fallback: `https://www.gaastat.com/?store_build=ios` or `https://www.gaastat.com/?store_build=android`
-- The query fallback persists in `localStorage` under `gaastat-store-build` so later navigation remains store-safe.
-- `PUBLIC_API_BASE_URL` is normally blank. If a native/static shell packages local assets later, set `PUBLIC_API_BASE_URL=https://www.gaastat.com` so Sideline AI calls the production voice endpoints.
+  - launch query fallback: `https://www.pitchnote.ie/?store_build=ios` or `https://www.pitchnote.ie/?store_build=android`
+- The query fallback persists in `localStorage` under `pitchnote-store-build` so later navigation remains store-safe.
+- `PUBLIC_API_BASE_URL` is normally blank. If a native/static shell packages local assets later, set `PUBLIC_API_BASE_URL=https://www.pitchnote.ie` so Sideline AI calls the production voice endpoints.
 - Run `npm run store:check` locally before native wrapper work. Run `npm run store:check:live` before store submission.
 - Run `npm run test`, `npm run lint`, and `npm run format:check` before release-critical pushes.
 - `npm run store:check` includes the Settings native-store guard so Stripe cancellation remains web-only in native builds.
@@ -31,18 +31,18 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 
 ## Public URLs Required For Review
 
-- Privacy policy: `https://www.gaastat.com/privacy`
-- Terms: `https://www.gaastat.com/terms`
-- Support: `https://www.gaastat.com/support`
-- Account deletion: `https://www.gaastat.com/account/delete`
+- Privacy policy: `https://www.pitchnote.ie/privacy`
+- Terms: `https://www.pitchnote.ie/terms`
+- Support: `https://www.pitchnote.ie/support`
+- Account deletion: `https://www.pitchnote.ie/account/delete`
 
-Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been configured for the domain, external delivery has been tested, and code/docs now use this address. `contact@gaastat.com` can remain an optional alias if useful.
+Support mailbox: `support@pitchnote.ie`. Configure Cloudflare Email Routing for `pitchnote.ie` and verify external delivery before entering store metadata. `contact@pitchnote.ie` can remain an optional alias if useful.
 
 ## Android / Google Play
 
-- Package name: `com.gaastat.app`
+- Package name: `ie.pitchnote.app`
 - Recommended package type: Trusted Web Activity
-- Launch URL: `https://www.gaastat.com/?store_build=android`
+- Launch URL: `https://www.pitchnote.ie/?store_build=android`
 - Release reference: `native/android/twa-manifest.template.json`
 - Required before Play testing:
   - local JDK 17 or Bubblewrap-managed JDK
@@ -57,15 +57,15 @@ Support mailbox: `support@gaastat.com`. Cloudflare Email Routing has been config
 
 ## iOS / App Store
 
-- Bundle ID: `com.gaastat.app`
+- Bundle ID: `ie.pitchnote.app`
 - Recommended shell: Capacitor iOS wrapper
-- Initial URL: `https://www.gaastat.com/?store_build=ios`
+- Initial URL: `https://www.pitchnote.ie/?store_build=ios`
 - Release reference: `native/ios/capacitor.config.template.json`
 - Current status:
   - Full Xcode 26.5 is installed and selected.
   - Capacitor iOS project has been generated under `ios/`.
   - `npm run native:ios:sync` has copied the store-mode production web build into the wrapper.
-  - GAAstat app icon and launch splash have replaced the Capacitor defaults.
+  - PitchNote app icon and launch splash have replaced the Capacitor defaults.
   - `NSMicrophoneUsageDescription` is present for Sideline AI voice capture.
   - Unsigned simulator build succeeds.
   - Manual launch in the iPhone 17 simulator succeeds.

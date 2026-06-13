@@ -7,10 +7,10 @@ from pptx.util import Inches
 
 OUT_DIR = Path("pitch")
 SLIDE_DIR = OUT_DIR / "rendered_slides"
-PPTX_PATH = OUT_DIR / "GAAstat_90_second_pitch.pptx"
-VOICE_PPTX_PATH = OUT_DIR / "GAAstat_voice_first_90_second_pitch.pptx"
-SCRIPT_PATH = OUT_DIR / "GAAstat_voice_first_90_second_pitch_script.md"
-AUDIT_PATH = OUT_DIR / "GAAstat_current_app_audit.md"
+PPTX_PATH = OUT_DIR / "PitchNote_90_second_pitch.pptx"
+VOICE_PPTX_PATH = OUT_DIR / "PitchNote_voice_first_90_second_pitch.pptx"
+SCRIPT_PATH = OUT_DIR / "PitchNote_voice_first_90_second_pitch_script.md"
+AUDIT_PATH = OUT_DIR / "PitchNote_current_app_audit.md"
 
 W, H = 1920, 1080
 
@@ -96,10 +96,10 @@ def base_slide():
 
 
 def logo(draw, x=92, y=76):
-    draw.ellipse((x, y, x + 66, y + 66), fill=COL["lime"])
-    draw_text(draw, "G", (x + 19, y + 10), 36, COL["bg"], bold=True)
-    draw_text(draw, "GAA", (x + 90, y + 12), 34, COL["lime"], black=True)
-    draw_text(draw, "stat", (x + 178, y + 12), 34, COL["white"], bold=True)
+    rounded(draw, (x, y, x + 66, y + 66), COL["lime"], r=15)
+    draw_text(draw, "PN", (x + 12, y + 15), 26, COL["bg"], black=True)
+    draw_text(draw, "Pitch", (x + 90, y + 12), 34, COL["lime"], black=True)
+    draw_text(draw, "Note", (x + 190, y + 12), 34, COL["white"], bold=True)
 
 
 def header(draw, label):
@@ -188,7 +188,7 @@ def slide_1():
     logo(draw)
     draw_text(draw, "VOICE-FIRST HURLING ANALYTICS", (108, 214), 20, COL["orange"], bold=True)
     draw_text(draw, "Sideline AI for\nhurling coaches", (104, 278), 72, COL["white"], black=True, line_gap=14)
-    draw_text(draw, "Speak the stat. Confirm it. GAAstat logs it into live match analytics.", (110, 486), 33, COL["muted"], bold=True, max_w=760)
+    draw_text(draw, "Speak the stat. Confirm it. PitchNote logs it into live match analytics.", (110, 486), 33, COL["muted"], bold=True, max_w=760)
     pill(draw, "90 second pitch", (110, 630, 330, 682), COL["lime"])
     pill(draw, "Online AI + offline manual fallback", (356, 630, 760, 682), COL["orange"])
     draw_text(draw, "Current app truth: manual match logging is offline-first; Sideline AI needs a live OpenAI Realtime connection.", (110, 960), 22, COL["muted"], bold=True, max_w=920)
@@ -296,10 +296,10 @@ def slide_6():
     return img
 
 
-SCRIPT_MD = """# GAAstat voice-first 90-second pitch script
+SCRIPT_MD = """# PitchNote voice-first 90-second pitch script
 
 ## Slide 1 - Title (0:00-0:12)
-GAAstat is a voice-first hurling analytics app for match day. The main feature is Sideline AI: a coach speaks the stat, confirms it, and the app logs it straight into the live match record.
+PitchNote is a voice-first hurling analytics app for match day. The main feature is Sideline AI: a coach speaks the stat, confirms it, and the app logs it straight into the live match record.
 
 ## Slide 2 - Problem (0:12-0:27)
 The problem is simple. Hurling is too fast for paper notes and too physical for deep phone menus. Scores, wides, puckouts, turnovers and substitutions can happen inside one passage of play, and coaches still need accountability after the final whistle.
@@ -318,13 +318,13 @@ The ask is to pilot it with real coaches this season, measure whether voice capt
 """
 
 
-AUDIT_MD = """# GAAstat current app audit for pitch claims
+AUDIT_MD = """# PitchNote current app audit for pitch claims
 
 ## Main pitch direction
 
 Lead with Sideline AI, not generic offline stats:
 
-GAAstat is a voice-first hurling match analytics app. Coaches can speak match events into Sideline AI, confirm each write, and have those events land in structured live match data. Manual logging remains the offline fallback.
+PitchNote is a voice-first hurling match analytics app. Coaches can speak match events into Sideline AI, confirm each write, and have those events land in structured live match data. Manual logging remains the offline fallback.
 
 ## Current implemented app areas
 

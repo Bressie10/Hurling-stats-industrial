@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 
-const DEFAULT_EMAIL = 'reviewer@gaastat.com'
+const DEFAULT_EMAIL = 'reviewer@pitchnote.ie'
 const DEFAULT_PLAN = 'personal'
 const DEFAULT_STATS = [
   'Point', 'Goal', 'Wide', 'Tackle', 'Block',
@@ -467,4 +467,4 @@ console.log('\nReviewer seed complete')
 console.log(`user id: ${user.id}`)
 console.log(`seeded squad rows: ${seeded.squadRows.length}`)
 console.log(`seeded match rows: ${seeded.matches.length}`)
-console.log('\nNext: sign in at https://www.gaastat.com/?store_build=ios and confirm History, Player Stats, Team Stats, Timeline, Insights, Squad, and Settings load.')
+console.log('\nNext: sign in at https://www.pitchnote.ie/?store_build=ios and confirm History, Player Stats, Team Stats, Timeline, Insights, Squad, and Settings load.')

@@ -1342,10 +1342,10 @@
 <div class="screen">
 
   <div class="setup-hero">
-    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="hero-logo">
+    <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="hero-logo">
     <div>
       <h2>New Match</h2>
-      <p>{$settingsStore.teamName || 'GAAstat'} · Hurling</p>
+      <p>{$settingsStore.teamName || 'PitchNote'} · Hurling</p>
     </div>
   </div>
 
@@ -1423,7 +1423,7 @@
 
   <div class="match-header">
     <div class="match-info">
-      <div class="match-title">{$settingsStore.teamName || 'GAAstat'} <span class="vs">vs</span> {opposition}</div>
+      <div class="match-title">{$settingsStore.teamName || 'PitchNote'} <span class="vs">vs</span> {opposition}</div>
       <div class="match-meta">{[competition, venue, matchDate].filter(Boolean).join(' · ')}</div>
     </div>
     <div class="scoreboard">

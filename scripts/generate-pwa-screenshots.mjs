@@ -35,7 +35,7 @@ function desktopSvg() {
     <rect x="0" y="0" width="1280" height="86" fill="${colors.maroon}"/>
     <circle cx="54" cy="43" r="25" fill="#ffffff" opacity="0.96"/>
     <path d="M57 19 38 48h16l-5 19 22-31H55z" fill="${colors.maroon}"/>
-    ${text(92, 52, 'GAAstat', 30, 800, '#ffffff')}
+    ${text(92, 52, 'PitchNote', 30, 800, '#ffffff')}
     ${text(1060, 52, 'Match Day', 22, 700, '#ffffff')}
 
     ${card(40, 118, 355, 214)}
@@ -77,7 +77,7 @@ function mobileSvg() {
     <rect x="0" y="0" width="390" height="88" fill="${colors.maroon}"/>
     <circle cx="42" cy="44" r="22" fill="#ffffff" opacity="0.96"/>
     <path d="M45 25 32 49h12l-4 15 17-25H44z" fill="${colors.maroon}"/>
-    ${text(76, 52, 'GAAstat', 25, 850, '#ffffff')}
+    ${text(76, 52, 'PitchNote', 25, 850, '#ffffff')}
     ${text(22, 130, 'New Match', 24, 850)}
 
     ${card(22, 154, 346, 122)}

@@ -11,13 +11,13 @@ Last updated: 2026-06-13
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. Support email is configured and externally tested as `support@gaastat.com`. Stripe-first paywall hardening is underway for launch. Android wrapper generation is still blocked on JDK/Android SDK setup.
+- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. The app is being rebranded to PitchNote at `pitchnote.ie`; support email needs to be configured as `support@pitchnote.ie`. Stripe-first paywall hardening is underway for launch. Android wrapper generation is still blocked on JDK/Android SDK setup.
 
 ## URLs
 
-- Production app: `https://www.gaastat.com/`
-- iOS wrapper launch URL: `https://www.gaastat.com/?store_build=ios`
-- Android wrapper launch URL: `https://www.gaastat.com/?store_build=android`
+- Production app: `https://www.pitchnote.ie/`
+- iOS wrapper launch URL: `https://www.pitchnote.ie/?store_build=ios`
+- Android wrapper launch URL: `https://www.pitchnote.ie/?store_build=android`
 - GitHub Pages preview for PWABuilder checks:
 
 `https://bressie10.github.io/Hurling-stats-industrial/`
@@ -41,12 +41,12 @@ PWABuilder optional warnings are not the release target. The release target is A
 - The app registers the service worker explicitly from `src/app.html`.
 - Progressive Background Sync was added for the existing IndexedDB outbox:
   - local mutations still drain immediately in the foreground
-  - supported browsers register one-shot Background Sync with `gaastat-sync-outbox`
+  - supported browsers register one-shot Background Sync with `pitchnote-sync-outbox`
   - the service worker can ask visible clients to drain or directly drain with a short-lived Supabase access token
   - unsupported browsers keep the existing app-start, online, foreground, and manual Sync fallback paths
 - Store release readiness mode was implemented and pushed to `main`:
   - `src/lib/config.js` supports `PUBLIC_STORE_BUILD=ios`, `PUBLIC_STORE_BUILD=android`, and the `store_build` launch query param
-  - native store mode persists in `localStorage` under `gaastat-store-build`
+  - native store mode persists in `localStorage` under `pitchnote-store-build`
   - `Upgrade.svelte`, `PricingPage.svelte`, and `History.svelte` hide prices, Stripe checkout, upgrade buttons, and web purchase CTAs in native store mode
   - marketing/docs/install/footer navigation avoids PWA-install and "no app store" copy inside native store mode
   - public privacy, terms, support, and account deletion routes were added
@@ -72,9 +72,9 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `src/lib/LiveViewer.svelte` no longer captures initial match data in a Svelte state initializer
   - `src/routes/app/live/+page.svelte` now styles the actual live loading screen selector
 - Support email setup was completed in code/docs:
-  - Cloudflare Email Routing MX/SPF records are visible for `gaastat.com`
-  - user-facing contact links now use `support@gaastat.com`
-  - `native/shared/release.json` now uses `support@gaastat.com`
+  - user-facing contact links now use `support@pitchnote.ie`
+  - `native/shared/release.json` now uses `support@pitchnote.ie`
+  - Cloudflare Email Routing must be configured and externally tested for `pitchnote.ie`
   - the old misspelled domain was removed from user-facing docs
 - Reviewer-account release tooling was added:
   - `scripts/seed-reviewer-account.mjs` creates/confirms a Supabase Auth reviewer user, seeds profile/subscription records, and seeds cloud squad/match rows
@@ -103,8 +103,8 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Full Xcode 26.5 is installed and selected at `/Applications/Xcode.app/Contents/Developer`
   - `npm run native:ios:add` generated the Capacitor project under `ios/`
   - `npm run native:ios:sync` copied a fresh `PUBLIC_STORE_BUILD=ios` production web build into the iOS wrapper
-  - iOS bundle ID is `com.gaastat.app`
-  - the default Capacitor app icon and splash image were replaced with branded GAAstat assets
+  - iOS bundle ID is `ie.pitchnote.app`
+  - the default Capacitor app icon and splash image were replaced with branded PitchNote assets
   - unsigned simulator build succeeds; Apple signing/team setup is the next iOS blocker
   - Xcode recommended settings were applied after the project opened successfully
   - manual launch in the iPhone 17 simulator works
@@ -159,7 +159,7 @@ PWABuilder optional warnings are not the release target. The release target is A
 - `npm run build` passes with `GITHUB_PAGES=true`.
 - `npm run smoke:voice` passed.
 - After Background Sync work, `npm run smoke:voice` passed and `GITHUB_PAGES=true PUBLIC_SUPABASE_URL=https://example.supabase.co PUBLIC_SUPABASE_ANON_KEY=dummy OPENAI_API_KEY=dummy npm run build` passed.
-- The generated GitHub Pages worker contains the `gaastat-sync-outbox` handler and is still imported by `pwabuilder-sw.js`.
+- The generated GitHub Pages worker contains the `pitchnote-sync-outbox` handler and is still imported by `pwabuilder-sw.js`.
 - GitHub Pages preview is live.
 - Manifest, logos, screenshots, `service-worker.js`, and `pwabuilder-sw.js` returned `200` on the live preview.
 - Store-release verification on 2026-06-12:
@@ -171,7 +171,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Production URLs returned `200`: `/privacy`, `/terms`, `/support`, `/account/delete`.
 - Native scaffold verification on 2026-06-12:
   - `npm run store:check` passed with one expected warning: `assetlinks.json` is absent until the real Play signing SHA-256 is known.
-  - `npm run store:check:live` passed against `https://www.gaastat.com/`.
+  - `npm run store:check:live` passed against `https://www.pitchnote.ie/`.
   - `npm run smoke:voice` passed.
   - Vercel-style `npm run build` passed.
 - Service worker verification on 2026-06-12:
@@ -185,9 +185,9 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `PUBLIC_SUPABASE_URL=https://example.supabase.co PUBLIC_SUPABASE_ANON_KEY=dummy OPENAI_API_KEY=dummy npm run build` passed.
   - The build still has pre-existing cleanup warnings: deprecated Svelte `<slot>` usage in layouts, unused CSS in large components such as `Match.svelte` and `Landing.svelte`, a LightningCSS warning for `:global(html:has(.lp))`, and a large `Match.svelte` client chunk.
 - Reviewer-account verification on 2026-06-13:
-  - Real seed completed for `reviewer@gaastat.com`.
+  - Real seed completed for `reviewer@pitchnote.ie`.
   - Direct Supabase auth with the password in local `.env` passed for user `b01a21a4-e1a4-4992-9f72-82ed47cefb67`.
-  - If browser login fails after this, first suspect wrong email, copied password whitespace, a stale saved password, or a cached session. Use a private window at `https://www.gaastat.com/?store_build=ios` and confirm the email is `reviewer@gaastat.com` with no extra `s`.
+  - If browser login fails after this, first suspect wrong email, copied password whitespace, a stale saved password, or a cached session. Use a private window at `https://www.pitchnote.ie/?store_build=ios` and confirm the email is `reviewer@pitchnote.ie` with no extra `s`.
 - Quality-hardening verification on 2026-06-13:
   - `npm run test` passed: 11 sync/outbox regression tests.
   - `npm run lint` passed with warnings only; existing unused variables remain as cleanup items.
@@ -212,7 +212,7 @@ Recommended order from here:
    - Free sees locked states for Player Stats, Team Stats, Timeline, Insights, Targets, older History, Club controls, and Live sharing
    - Personal/Club/Club Pro unlock the expected tiers
    - native store mode still shows no prices, Stripe checkout, upgrade CTAs, or external payment links
-2. Add `support@gaastat.com` to App Store Connect and Google Play store metadata when those records are created.
+2. Add `support@pitchnote.ie` to App Store Connect and Google Play store metadata when those records are created.
 3. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
 4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
 5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, 2-match cap, sync restore, account deletion, and Sideline AI microphone permission on real devices.
@@ -220,22 +220,22 @@ Recommended order from here:
    - run `npm run native:ios:open`
    - select the `App` target
    - set the Apple Developer Team
-   - keep bundle ID as `com.gaastat.app`
+   - keep bundle ID as `ie.pitchnote.app`
    - create/register the App Store Connect app record for the same bundle ID
    - archive/upload a TestFlight build after signing is valid
 7. Install Android prerequisites, then rerun `npm run native:doctor`:
    - JDK 17 or Bubblewrap-managed JDK for Android
    - Android Studio / Android SDK command-line tools for Android
 8. Build the Android wrapper as a Trusted Web Activity:
-   - package name `com.gaastat.app`
-   - launch URL `https://www.gaastat.com/?store_build=android`
+   - package name `ie.pitchnote.app`
+   - launch URL `https://www.pitchnote.ie/?store_build=android`
    - generate with `npm run native:android:init`
    - generate the real App Bundle (`.aab`)
    - add `/.well-known/assetlinks.json` only after the final signing SHA-256 fingerprint is known
 9. Complete App Store Connect and Play Console forms:
-   - privacy policy URL: `https://www.gaastat.com/privacy`
-   - support URL: `https://www.gaastat.com/support`
-   - account deletion URL: `https://www.gaastat.com/account/delete`
+   - privacy policy URL: `https://www.pitchnote.ie/privacy`
+   - support URL: `https://www.pitchnote.ie/support`
+   - account deletion URL: `https://www.pitchnote.ie/account/delete`
    - data/privacy answers must mention Supabase account/cloud sync, local device storage, OpenAI voice transcription/answers, and Stripe web billing outside native store builds
 10. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
 11. Continue code cleanup separately from release-critical work:
@@ -247,7 +247,7 @@ Recommended order from here:
 13. Consider push notifications after sync reliability is proven.
 14. Consider share target later if importing shared notes, files, or match data becomes useful.
 
-Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for GAAstat.
+Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for PitchNote.
 Do not add placeholder signing files, placeholder `assetlinks.json`, or fake store credentials.
 
 ## Resume Prompt
@@ -255,5 +255,5 @@ Do not add placeholder signing files, placeholder `assetlinks.json`, or fake sto
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS native wrapper signing/TestFlight setup is next after paywall verification. Native Settings billing hardening is done and code/docs use support@gaastat.com. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS native wrapper signing/TestFlight setup is next after paywall verification. Native Settings billing hardening is done and code/docs use support@pitchnote.ie. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools.
 ```

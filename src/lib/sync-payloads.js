@@ -1,4 +1,4 @@
-export const BACKGROUND_SYNC_TAG = 'gaastat-sync-outbox'
+export const BACKGROUND_SYNC_TAG = 'pitchnote-sync-outbox'
 export const BACKGROUND_SYNC_AUTH_KEY = 'background_sync_auth'
 
 export function squadCloudId(userId, localId) {

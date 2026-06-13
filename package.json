@@ -21,9 +21,9 @@
 		"native:config:check": "node scripts/sync-native-config.mjs --check",
 		"native:doctor": "node scripts/native-store-doctor.mjs",
 		"native:ios:add": "npx cap add ios",
-		"native:ios:sync": "PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.gaastat.com npm run build && npx cap sync ios",
+		"native:ios:sync": "PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.pitchnote.ie npm run build && npx cap sync ios",
 		"native:ios:open": "npx cap open ios",
-		"native:android:init": "npx bubblewrap init --manifest=https://www.gaastat.com/manifest.json --directory=native/android/twa-project",
+		"native:android:init": "npx bubblewrap init --manifest=https://www.pitchnote.ie/manifest.json --directory=native/android/twa-project",
 		"native:android:update": "npx bubblewrap update --manifest=native/android/twa-project/twa-manifest.json",
 		"native:android:build": "npx bubblewrap build --manifest=native/android/twa-project/twa-manifest.json"
 	},

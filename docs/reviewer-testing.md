@@ -6,9 +6,9 @@ Use this before Apple App Store or Google Play submission. The goal is to give r
 
 ## Reviewer Account
 
-- Recommended email: `reviewer@gaastat.com`
+- Recommended email: `reviewer@pitchnote.ie`
 - Recommended entitlement: `personal`
-- Support email for store metadata: `support@gaastat.com`
+- Support email for store metadata: `support@pitchnote.ie`
 
 Do not commit reviewer passwords or Supabase service-role keys. Keep them in a local `.env` or pass them as one-off shell environment variables.
 
@@ -23,7 +23,7 @@ npm run store:seed-reviewer -- --dry-run
 Real seed:
 
 ```sh
-REVIEWER_EMAIL=reviewer@gaastat.com \
+REVIEWER_EMAIL=reviewer@pitchnote.ie \
 REVIEWER_PASSWORD='replace-with-a-strong-password' \
 SUPABASE_SERVICE_ROLE_KEY='replace-with-service-role-key' \
 npm run store:seed-reviewer
@@ -43,7 +43,7 @@ npm run store:verify-reviewer
 
 This signs in with `REVIEWER_EMAIL` and `REVIEWER_PASSWORD`, confirms the subscription row is active, and confirms at least 25 squad rows and 3 match rows are visible to the reviewer user. It does not print the password.
 
-If the command passes but the browser says "Invalid login credentials", check that the login email is exactly `reviewer@gaastat.com` and that the pasted password has no leading or trailing spaces. A private/incognito window is the fastest way to avoid a stale saved password.
+If the command passes but the browser says "Invalid login credentials", check that the login email is exactly `reviewer@pitchnote.ie` and that the pasted password has no leading or trailing spaces. A private/incognito window is the fastest way to avoid a stale saved password.
 
 ## Seeded Data
 
@@ -59,8 +59,8 @@ The seeded account contains:
 Open the store-mode URLs and sign in as the reviewer:
 
 ```text
-https://www.gaastat.com/?store_build=ios
-https://www.gaastat.com/?store_build=android
+https://www.pitchnote.ie/?store_build=ios
+https://www.pitchnote.ie/?store_build=android
 ```
 
 Check:
@@ -82,7 +82,7 @@ Use a concise note like this in App Store Connect and Play Console:
 
 ```text
 Reviewer account:
-Email: reviewer@gaastat.com
+Email: reviewer@pitchnote.ie
 Password: [enter the current password]
 
 This native build is store-safe. It supports signed-in access, free account use, match logging, cloud sync, and existing account entitlements. Free accounts include 2 saved matches. Plan purchases and plan management are not offered inside the app.

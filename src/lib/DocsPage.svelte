@@ -66,7 +66,7 @@
         {/each}
       </nav>
       <div class="sidebar-footer">
-        <a href="mailto:support@gaastat.com" class="sidebar-help">
+        <a href="mailto:support@pitchnote.ie" class="sidebar-help">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Can't find something?
         </a>
@@ -108,7 +108,7 @@
         <p class="docs-lead">Everything you need to go from zero to logging your first match in under 5 minutes.</p>
 
         <h2>Creating an account</h2>
-        <p>Visit <strong>gaastat.com</strong> in any browser and tap <strong>Get Started Free</strong>. Choose your account type:</p>
+        <p>Visit <strong>pitchnote.ie</strong> in any browser and tap <strong>Get Started Free</strong>. Choose your account type:</p>
         <div class="docs-steps">
           <div class="docs-step"><div class="step-num">1</div><div><strong>Personal</strong> — one coach, one team. Best if you're using this on your own.</div></div>
           <div class="docs-step"><div class="step-num">2</div><div><strong>Club</strong> — you're setting up a club and will invite other coaches via team join codes.</div></div>
@@ -118,14 +118,14 @@
 
         <h2>{IS_NATIVE_STORE_BUILD ? 'Before match day' : 'Installing as a PWA'}</h2>
         {#if IS_NATIVE_STORE_BUILD}
-          <p>Open GAAstat while you have signal, sign in, and confirm your squad appears before travelling to a ground with limited coverage.</p>
+          <p>Open PitchNote while you have signal, sign in, and confirm your squad appears before travelling to a ground with limited coverage.</p>
           <div class="docs-steps">
             <div class="docs-step"><div class="step-num">1</div><div><strong>Sign in:</strong> account verification needs a connection.</div></div>
             <div class="docs-step"><div class="step-num">2</div><div><strong>Open Match:</strong> confirm the match screen and squad are ready.</div></div>
             <div class="docs-step"><div class="step-num">3</div><div><strong>Sync:</strong> tap Sync after any squad or settings changes.</div></div>
           </div>
         {:else}
-          <p>GAAstat is a Progressive Web App that installs directly from the browser.</p>
+          <p>PitchNote is a Progressive Web App that installs directly from the browser.</p>
           <div class="docs-steps">
             <div class="docs-step"><div class="step-num">1</div><div><strong>iOS (Safari):</strong> tap the Share button -> "Add to Home Screen"</div></div>
             <div class="docs-step"><div class="step-num">2</div><div><strong>Android (Chrome):</strong> tap the three-dot menu -> "Add to Home screen" or "Install app"</div></div>
@@ -191,7 +191,7 @@
       <section id="puckout-tracking" class="docs-section">
         <div class="docs-tag">Core Feature</div>
         <h1>Puckout Tracking</h1>
-        <p class="docs-lead">The most detailed puckout analysis available for GAA coaches. Zone-based, player-linked, and visible live.</p>
+        <p class="docs-lead">Detailed puckout analysis for hurling coaches. Zone-based, player-linked, and visible live.</p>
 
         <h2>Logging a puckout</h2>
         <p>Tap <strong>Puckout</strong> in the action bar. For each puckout you record:</p>
@@ -275,7 +275,7 @@
         <p>Each player has a <strong>name</strong>, <strong>jersey number</strong>, and <strong>position</strong>. The list is divided into Starters (numbers 1–15) and Subs (everyone else). Edit any player inline — changes save automatically.</p>
 
         <h2>Pitch view</h2>
-        <p>A visual GAA formation with 15 position slots. Tap any slot to assign a player:</p>
+        <p>A visual hurling formation with 15 position slots. Tap any slot to assign a player:</p>
         <div class="docs-steps">
           <div class="docs-step"><div class="step-num">1</div><div>Tap a slot — a modal shows all your players</div></div>
           <div class="docs-step"><div class="step-num">2</div><div>Tap a player to assign them. If they were already in another slot, they swap positions with the displaced player</div></div>
@@ -314,7 +314,7 @@
         <p class="docs-lead">Visualise where your team is winning and losing on the pitch. Requires Personal Pro or higher.</p>
 
         <h2>Pitch map</h2>
-        <p>An overhead view of the GAA pitch with every logged stat event plotted as a dot. Filter by:</p>
+        <p>An overhead view of the hurling pitch with every logged stat event plotted as a dot. Filter by:</p>
         <ul class="docs-list">
           <li><strong>Stat type</strong> — Points, Goals, Wides, Tackles, or any stat</li>
           <li><strong>Period</strong> — 1st Half, 2nd Half, or specific periods</li>

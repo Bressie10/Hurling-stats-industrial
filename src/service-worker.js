@@ -53,7 +53,7 @@ self.addEventListener('fetch', (e) => {
   }
 
   // Network-first for navigations so deploys are picked up immediately;
-  // cached shell keeps the app working offline at GAA grounds.
+  // cached shell keeps the app working offline at low-signal grounds.
   if (e.request.mode === 'navigate') {
     e.respondWith(fetch(e.request).catch(() => caches.match(SHELL)))
     return
@@ -87,7 +87,7 @@ async function handleOutboxBackgroundSync() {
   const visibleClient = windows.find(client => client.visibilityState === 'visible' || client.focused)
 
   if (visibleClient) {
-    windows.forEach(client => client.postMessage({ type: 'GAASTAT_DRAIN_OUTBOX' }))
+    windows.forEach(client => client.postMessage({ type: 'PITCHNOTE_DRAIN_OUTBOX' }))
     return
   }
 

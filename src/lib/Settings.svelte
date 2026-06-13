@@ -377,7 +377,7 @@
         <input
           class="team-name-input"
           bind:value={setupClubName}
-          placeholder="Club name (e.g. Your Club GAA)"
+          placeholder="Club name (e.g. Your Club)"
           onkeydown={e => e.key === 'Enter' && handleSetupClub()}
         />
         <button class="team-save-btn" onclick={handleSetupClub} disabled={settingUpClub}>
@@ -745,7 +745,7 @@
     <div class="card about-card">
       <div class="about-row">
         <span class="about-label">Team</span>
-        <span class="about-val">{settings.teamName || 'GAAstat'}</span>
+        <span class="about-val">{settings.teamName || 'PitchNote'}</span>
       </div>
       <div class="about-row">
         <span class="about-label">Signed in as</span>

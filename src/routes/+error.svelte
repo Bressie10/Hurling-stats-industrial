@@ -17,7 +17,7 @@
 </script>
 
 <div class="error-page">
-  <img src="{base}/gaastat-logo.svg" alt="GAAstat" style="height: 36px;">
+  <img src="{base}/pitchnote-logo.svg" alt="PitchNote" style="height: 36px;">
 
   <div class="status">{page.status}</div>
 
@@ -31,7 +31,7 @@
   </div>
 
   <p class="help">
-    Need help? Email us at <a href="mailto:info@gaastat.com">info@gaastat.com</a>
+    Need help? Email us at <a href="mailto:support@pitchnote.ie">support@pitchnote.ie</a>
   </p>
 </div>
 

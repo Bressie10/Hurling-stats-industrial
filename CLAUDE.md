@@ -1,6 +1,6 @@
-# CLAUDE.md — GAAstat
+# CLAUDE.md - PitchNote
 
-PWA for GAA coaches to track hurling match stats in real time. Coaches log stats during matches, view analytics, and sync to Supabase. Works fully offline at GAA grounds.
+PWA for hurling coaches to track hurling match stats in real time. Coaches log stats during matches, view analytics, and sync to Supabase. Works fully offline at low-signal grounds.
 
 ---
 
@@ -55,12 +55,12 @@ src/
         ├── +layout.svelte
         └── history|live|match|player|settings|squad|targets|team|timeline/+page.svelte
 static/
-├── gaastat-icon.svg     # App icon source (in-app + favicon)
-├── gaastat-logo.svg
+├── pitchnote-icon.svg     # App icon source (in-app + favicon)
+├── pitchnote-logo.svg
 ├── icons/               # Generated PNGs (192/512 manifest, 180 apple-touch, 1024 store art)
 └── manifest.json
 scripts/
-└── generate-icons.mjs   # Regenerates static/icons/ from gaastat-icon.svg (uses sharp)
+└── generate-icons.mjs   # Regenerates static/icons/ from pitchnote-icon.svg (uses sharp)
 ```
 
 ---
@@ -181,7 +181,7 @@ App is **light-only**. Dark mode removed. Do not add `[data-theme="dark"]` back.
 Uses `timerStartedAt = Date.now()` (wall-clock). On restore: `elapsed = floor((Date.now() - timerStartedAt) / 1000)`. Never revert to a pure counter.
 
 ### Squad page
-- Positions use full GAA names: `'Goalkeeper'`, `'Right Corner Back'`, etc. — never old abbreviations (`GK`, `FB`).
+- Positions use full hurling position names: `'Goalkeeper'`, `'Right Corner Back'`, etc. — never old abbreviations (`GK`, `FB`).
 - `PITCH_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]`
 - A player occupies a slot iff `number >= 1 && number <= 15 && position !== 'Sub'` (`isInPitchSlot(p)`)
 - Always use `nextAvailableNumber()` for free jersey numbers — never `players.length + 1`
@@ -209,7 +209,7 @@ Sideline AI uses short clips sent to `src/routes/api/voice/transcribe`, then det
 
 ## Branding
 
-App name is **GAAstat** everywhere — in fallback strings, meta tags, legal pages, and marketing copy. Default `settingsStore.teamName` fallback is `'GAAstat'`. Club colour picker has been removed from Settings — `clubPrimaryColor` still exists in the store and is applied at runtime via `+layout.svelte`, but there is no UI to change it.
+App name is **PitchNote** everywhere — in fallback strings, meta tags, legal pages, and marketing copy. Default `settingsStore.teamName` fallback is `'PitchNote'`. Club colour picker has been removed from Settings — `clubPrimaryColor` still exists in the store and is applied at runtime via `+layout.svelte`, but there is no UI to change it.
 
 ---
 
@@ -223,7 +223,7 @@ App name is **GAAstat** everywhere — in fallback strings, meta tags, legal pag
 - `saveDraft()` on every state change — removing any call risks data loss
 - Silent auto-resume draft — no "Resume or Discard?" screen
 - `timerStartedAt` wall-clock — don't revert to counter
-- Logo/icon path `/gaastat-icon.svg` — static-root path only, never `/src/assets/`
+- Logo/icon path `/pitchnote-icon.svg` — static-root path only, never `/src/assets/`
 - `export const ssr = false` / `prerender = false` on all routes
 - `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY` in env — never hardcode
 - `stopLive()` in `Match.svelte` — called inside `doFinishMatch()` **after** `saveMatch()` + `clearDraftMatch()` succeed, never before the confirm modal. Moving it back to `finishMatch()` would end the live session even if the user cancels.
@@ -316,12 +316,12 @@ Called from `Settings.svelte → doDeleteAccount()`. It's a PostgreSQL function 
 
 **Service worker:** `src/service-worker.js` (SvelteKit-native, auto-registered in prod — no manual `register()` call). Gets `build`/`files`/`version` from `$service-worker`, so hashed asset URLs are always current and the cache name bumps per deploy. Strategy: network-first for Supabase and navigations (cached `/` shell as offline fallback), cache-first for everything else. `app.html` contains a snippet that unregisters the legacy `/sw.js` worker — keep it until existing installs have migrated.
 
-**Manifest:** `static/manifest.json` — `name`/`short_name` are `"GAAstat"`. Icons are PNGs in `static/icons/` (192 + 512, declared for both `any` and `maskable`; white background, generated via `node scripts/generate-icons.mjs`). Do not revert to SVG-only manifest icons (Play Store/TWA packaging requires PNG) or `"DB Stats"`. `icon-1024.png` is store listing art, not referenced by the manifest. Apple touch icon: `/icons/apple-touch-icon.png` (iOS ignores SVG there).
+**Manifest:** `static/manifest.json` — `name`/`short_name` are `"PitchNote"`. Icons are PNGs in `static/icons/` (192 + 512, declared for both `any` and `maskable`; white background, generated via `node scripts/generate-icons.mjs`). Do not revert to SVG-only manifest icons (Play Store/TWA packaging requires PNG) or `"DB Stats"`. `icon-1024.png` is store listing art, not referenced by the manifest. Apple touch icon: `/icons/apple-touch-icon.png` (iOS ignores SVG there).
 
 ---
 
 ## Key Goals
-- Works fully offline at any GAA ground
+- Works fully offline at low-signal grounds
 - Multiple coaches, multiple teams — fully isolated data per account
 - Fast enough one-handed on a phone during a match
 - Data never lost — auto-save draft + Supabase cloud backup

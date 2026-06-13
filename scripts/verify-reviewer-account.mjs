@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 
-const DEFAULT_EMAIL = 'reviewer@gaastat.com'
+const DEFAULT_EMAIL = 'reviewer@pitchnote.ie'
 
 function loadDotEnv(file) {
   if (!existsSync(file)) return

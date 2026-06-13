@@ -4,7 +4,7 @@ const SETTINGS_KEY = 'doora-settings'
 
 const defaults = {
   // Team
-  teamName: 'GAAstat',
+  teamName: 'PitchNote',
 
   // Match setup fields
   showVenueField: true,

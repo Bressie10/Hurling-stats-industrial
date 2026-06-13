@@ -1,7 +1,7 @@
 {
   "id": ".",
-  "name": "GAAstat",
-  "short_name": "GAAstat",
+  "name": "PitchNote",
+  "short_name": "PitchNote",
   "description": "Offline-first hurling match statistics tracker for coaches.",
   "lang": "en-IE",
   "dir": "ltr",

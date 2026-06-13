@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>GAAstat</string>
+        <string>PitchNote</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,7 +25,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>GAAstat uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions.</string>
+	<string>PitchNote uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

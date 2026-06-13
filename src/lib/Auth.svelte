@@ -64,8 +64,8 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="auth-logo" />
-      <h1>GAA Stats</h1>
+      <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="auth-logo" />
+      <h1>PitchNote</h1>
       <p>Hurling match analytics</p>
     </div>
 
@@ -91,7 +91,7 @@
 
     <!-- ── CHOOSE ── -->
     {:else if mode === 'choose'}
-      <p class="choose-sub">How are you using GAA Stats?</p>
+      <p class="choose-sub">How are you using PitchNote?</p>
       <div class="option-list">
 
         <button class="option-card" on:click={() => setMode('join')}>
@@ -206,7 +206,7 @@
         </div>
         <div class="field-group">
           <label>Club name</label>
-          <input type="text" bind:value={clubName} placeholder="e.g. Your Club GAA" />
+          <input type="text" bind:value={clubName} placeholder="e.g. Your Club" />
         </div>
         <div class="field-group">
           <label>Your email</label>

@@ -4,9 +4,9 @@ Use a Trusted Web Activity for the first Google Play release.
 
 ## Fixed Values
 
-- Package name: `com.gaastat.app`
-- Launch URL: `https://www.gaastat.com/?store_build=android`
-- Web host: `www.gaastat.com`
+- Package name: `ie.pitchnote.app`
+- Launch URL: `https://www.pitchnote.ie/?store_build=android`
+- Web host: `www.pitchnote.ie`
 - Wrapper type: Trusted Web Activity
 
 ## Build Order
@@ -35,6 +35,6 @@ Do not commit local keystores, `.aab`, or `.apk` artifacts. Root `.gitignore` ex
 
 ## Required Review URLs
 
-- Privacy: `https://www.gaastat.com/privacy`
-- Support: `https://www.gaastat.com/support`
-- Account deletion: `https://www.gaastat.com/account/delete`
+- Privacy: `https://www.pitchnote.ie/privacy`
+- Support: `https://www.pitchnote.ie/support`
+- Account deletion: `https://www.pitchnote.ie/account/delete`

@@ -1,30 +1,30 @@
 {
-  "appName": "GAAstat",
-  "appId": "com.gaastat.app",
-  "productionUrl": "https://www.gaastat.com/",
-  "supportEmail": "support@gaastat.com",
+  "appName": "PitchNote",
+  "appId": "ie.pitchnote.app",
+  "productionUrl": "https://www.pitchnote.ie/",
+  "supportEmail": "support@pitchnote.ie",
   "storeMode": {
     "queryParam": "store_build",
-    "localStorageKey": "gaastat-store-build",
+    "localStorageKey": "pitchnote-store-build",
     "allowedValues": ["ios", "android"]
   },
   "publicUrls": {
-    "privacy": "https://www.gaastat.com/privacy",
-    "terms": "https://www.gaastat.com/terms",
-    "support": "https://www.gaastat.com/support",
-    "accountDeletion": "https://www.gaastat.com/account/delete"
+    "privacy": "https://www.pitchnote.ie/privacy",
+    "terms": "https://www.pitchnote.ie/terms",
+    "support": "https://www.pitchnote.ie/support",
+    "accountDeletion": "https://www.pitchnote.ie/account/delete"
   },
   "ios": {
-    "bundleId": "com.gaastat.app",
+    "bundleId": "ie.pitchnote.app",
     "wrapper": "Capacitor",
-    "launchUrl": "https://www.gaastat.com/?store_build=ios",
-    "microphoneUsageDescription": "GAAstat uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions."
+    "launchUrl": "https://www.pitchnote.ie/?store_build=ios",
+    "microphoneUsageDescription": "PitchNote uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions."
   },
   "android": {
-    "packageName": "com.gaastat.app",
+    "packageName": "ie.pitchnote.app",
     "wrapper": "Trusted Web Activity",
-    "launchUrl": "https://www.gaastat.com/?store_build=android",
-    "assetLinksUrl": "https://www.gaastat.com/.well-known/assetlinks.json",
+    "launchUrl": "https://www.pitchnote.ie/?store_build=android",
+    "assetLinksUrl": "https://www.pitchnote.ie/.well-known/assetlinks.json",
     "assetLinksStatus": "Do not publish until the final Play signing SHA-256 fingerprint is known."
   }
 }

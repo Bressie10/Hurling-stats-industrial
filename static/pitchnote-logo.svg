@@ -1,0 +1,20 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">PitchNote logo</title>
+  <desc id="desc">PitchNote wordmark with pitch-shaped note icon.</desc>
+  <rect width="1200" height="400" fill="none"/>
+  <g transform="translate(82 74) scale(.4921875)">
+    <rect width="512" height="512" rx="116" fill="#6B1B2B"/>
+    <path d="M116 116h280c22.091 0 40 17.909 40 40v200c0 22.091-17.909 40-40 40H116c-22.091 0-40-17.909-40-40V156c0-22.091 17.909-40 40-40Z" fill="#F8F8F4"/>
+    <path d="M112 166h288v180H112V166Z" fill="#7FB069" opacity=".16"/>
+    <path d="M256 166v180M112 256h288" stroke="#6B1B2B" stroke-width="12" stroke-linecap="round" opacity=".22"/>
+    <circle cx="256" cy="256" r="42" fill="none" stroke="#6B1B2B" stroke-width="12" opacity=".22"/>
+    <path d="M150 321h84M150 288h126M150 222h92" stroke="#6B1B2B" stroke-width="18" stroke-linecap="round"/>
+    <path d="M150 183h138" stroke="#6B1B2B" stroke-width="22" stroke-linecap="round"/>
+    <path d="M280 314c22-46 45-67 70-63 22 4 36 22 50 54" fill="none" stroke="#D9A441" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="280" cy="314" r="13" fill="#D9A441"/>
+    <circle cx="350" cy="251" r="13" fill="#D9A441"/>
+    <circle cx="400" cy="305" r="13" fill="#D9A441"/>
+  </g>
+  <text x="390" y="236" font-family="Inter, Arial, Helvetica, sans-serif" font-size="112" font-weight="800" fill="#F8F8F4">Pitch</text>
+  <text x="704" y="236" font-family="Inter, Arial, Helvetica, sans-serif" font-size="112" font-weight="800" fill="#D9A441">Note</text>
+</svg>

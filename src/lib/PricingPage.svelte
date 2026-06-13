@@ -97,10 +97,10 @@
     { q: 'Is there an annual pricing option?', a: 'Not yet, but it\'s on the roadmap. Monthly billing gives you maximum flexibility for now.' },
     { q: 'Can I try it before paying?', a: `Yes — sign up free to log real matches, manage a squad, sync, and keep ${FREE_MATCH_LIMIT} saved matches. Upgrade when you want analytics, reports, and unlimited history.` },
     { q: 'What is live match sharing?', a: 'A Club Pro feature. The coach logging the match starts a live session, and anyone with the link can watch the live score, stats, and puckout breakdown update in real time — perfect for selectors not at the ground.' },
-    { q: 'Is there a custom/enterprise plan?', a: 'Yes. For county boards, schools, or large organisations needing custom stat types, white-labelling, or API access — contact us at support@gaastat.com and we\'ll build something around your needs.' },
+    { q: 'Is there a custom/enterprise plan?', a: 'Yes. For county boards, schools, or large organisations needing custom stat types, white-labelling, or API access — contact us at support@pitchnote.ie and we\'ll build something around your needs.' },
   ]
   const storeFaqs = [
-    { q: 'Can I use an existing account?', a: 'Yes. Sign in with the same GAAstat account to access the tools and entitlements already attached to that account.' },
+    { q: 'Can I use an existing account?', a: 'Yes. Sign in with the same PitchNote account to access the tools and entitlements already attached to that account.' },
     { q: 'Can I create a free account?', a: 'Yes. The store build allows free account creation, match logging, squad management, cloud sync, and the features available to your account.' },
     { q: 'Why are plan changes unavailable here?', a: 'This native store build is designed for signed-in access and free account use. Plan purchases and plan changes are not offered inside this app.' },
     { q: 'What happens to my data?', a: 'Your data is always yours. Matches and squads are stored locally first, sync when you are online, and can be exported from Settings.' },
@@ -183,7 +183,7 @@
           <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated onboarding &amp; SLA</li>
         </ul>
         {#if !IS_NATIVE_STORE_BUILD}
-          <a href="mailto:support@gaastat.com" class="pp-cta pp-cta-enterprise">Contact Us</a>
+          <a href="mailto:support@pitchnote.ie" class="pp-cta pp-cta-enterprise">Contact Us</a>
         {:else}
           <div class="pp-store-note">Enterprise purchasing is not available inside this app.</div>
         {/if}

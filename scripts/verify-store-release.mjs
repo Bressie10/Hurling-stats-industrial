@@ -76,8 +76,8 @@ async function checkManifest() {
   const manifest = await readJson('static/manifest.json')
   if (!manifest) return
 
-  check(manifest.name === 'GAAstat', 'manifest name is GAAstat')
-  check(manifest.short_name === 'GAAstat', 'manifest short_name is GAAstat')
+  check(manifest.name === 'PitchNote', 'manifest name is PitchNote')
+  check(manifest.short_name === 'PitchNote', 'manifest short_name is PitchNote')
   check(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'manifest has icons')
   check(manifest.display === 'standalone', 'manifest display is standalone')
 
@@ -111,11 +111,11 @@ async function checkNativeConfig() {
   const pkg = await readJson('package.json')
   if (!release || !twa || !capacitor) return
 
-  check(release.appId === 'com.gaastat.app', 'shared release appId is com.gaastat.app')
-  check(release.productionUrl === 'https://www.gaastat.com/', 'shared release production URL is gaastat.com')
-  check(release.supportEmail === 'support@gaastat.com', 'shared release support email is support@gaastat.com')
-  check(release.ios?.launchUrl === 'https://www.gaastat.com/?store_build=ios', 'iOS launch URL uses store_build=ios')
-  check(release.android?.launchUrl === 'https://www.gaastat.com/?store_build=android', 'Android launch URL uses store_build=android')
+  check(release.appId === 'ie.pitchnote.app', 'shared release appId is ie.pitchnote.app')
+  check(release.productionUrl === 'https://www.pitchnote.ie/', 'shared release production URL is pitchnote.ie')
+  check(release.supportEmail === 'support@pitchnote.ie', 'shared release support email is support@pitchnote.ie')
+  check(release.ios?.launchUrl === 'https://www.pitchnote.ie/?store_build=ios', 'iOS launch URL uses store_build=ios')
+  check(release.android?.launchUrl === 'https://www.pitchnote.ie/?store_build=android', 'Android launch URL uses store_build=android')
   check(twa.packageId === release.android?.packageName, 'Android TWA package matches shared release config')
   check(twa.startUrl === '/?store_build=android', 'Android TWA startUrl uses store mode')
   check(capacitor.appId === release.ios?.bundleId, 'iOS Capacitor bundle matches shared release config')
@@ -140,14 +140,14 @@ async function checkNativeConfig() {
 
   const publicUrls = release.publicUrls || {}
   for (const [name, url] of Object.entries(publicUrls)) {
-    check(String(url).startsWith('https://www.gaastat.com/'), `public ${name} URL uses production domain`)
+    check(String(url).startsWith('https://www.pitchnote.ie/'), `public ${name} URL uses production domain`)
   }
 }
 
 async function checkStoreModeCode() {
   const config = await readText('src/lib/config.js')
   check(config.includes('store_build'), 'config reads store_build query param')
-  check(config.includes('gaastat-store-build'), 'config persists store build mode')
+  check(config.includes('pitchnote-store-build'), 'config persists store build mode')
   check(config.includes('PUBLIC_STORE_BUILD'), 'config supports PUBLIC_STORE_BUILD')
 
   const entitlements = await readText('src/lib/entitlements.js')
@@ -221,7 +221,7 @@ async function checkAssetLinksState() {
   const text = await readText(assetLinks)
   const hasPlaceholder = /TODO|PLACEHOLDER|SHA256_FINGERPRINT|REPLACE_ME/i.test(text)
   check(!hasPlaceholder, 'assetlinks.json does not contain placeholder values')
-  check(text.includes('com.gaastat.app'), 'assetlinks.json includes package com.gaastat.app')
+  check(text.includes('ie.pitchnote.app'), 'assetlinks.json includes package ie.pitchnote.app')
 }
 
 async function checkLiveUrl(url, expectedTypes) {
@@ -250,9 +250,9 @@ async function checkLiveProduction() {
   for (const url of Object.values(release.publicUrls || {})) {
     await checkLiveUrl(url, 'text/html')
   }
-  await checkLiveUrl('https://www.gaastat.com/manifest.json', ['application/manifest+json', 'application/json'])
-  await checkLiveUrl('https://www.gaastat.com/icons/icon-192.png', 'image/png')
-  await checkLiveUrl('https://www.gaastat.com/icons/icon-512.png', 'image/png')
+  await checkLiveUrl('https://www.pitchnote.ie/manifest.json', ['application/manifest+json', 'application/json'])
+  await checkLiveUrl('https://www.pitchnote.ie/icons/icon-192.png', 'image/png')
+  await checkLiveUrl('https://www.pitchnote.ie/icons/icon-512.png', 'image/png')
 }
 
 await checkManifest()

@@ -24,7 +24,7 @@
     {
       q: `The app looks out of date or isn't showing the latest version`,
       a: IS_NATIVE_STORE_BUILD
-        ? `Check for an update in the store, then fully close and reopen GAAstat. If the issue continues, contact support with your device type and account email.`
+        ? `Check for an update in the store, then fully close and reopen PitchNote. If the issue continues, contact support with your device type and account email.`
         : `On iOS: delete the app from your home screen and reinstall from Safari. On Android and desktop: close all browser tabs with the app open, wait 30 seconds, then reopen — the service worker will fetch the new version automatically.`
     },
     {
@@ -58,8 +58,8 @@
       <div class="install-tag">{IS_NATIVE_STORE_BUILD ? 'Match-day readiness' : 'Installation'}</div>
       <h1>{IS_NATIVE_STORE_BUILD ? 'Get Ready Offline' : 'Install the App'}</h1>
       <p class="install-lead">{IS_NATIVE_STORE_BUILD
-        ? 'Open GAAstat before heading to the ground, sign in while you have signal, and confirm your match-day data is ready.'
-        : 'GAAstat is a Progressive Web App. Install it directly from your browser and it works fully offline at any GAA ground.'}</p>
+        ? 'Open PitchNote before heading to the ground, sign in while you have signal, and confirm your match-day data is ready.'
+        : 'PitchNote is a Progressive Web App. Install it directly from your browser and it works fully offline at low-signal grounds.'}</p>
     </div>
 
     <!-- Internet callout -->
@@ -271,7 +271,7 @@
         <p>Drop us an email and we'll help you get set up. We typically reply within a day.</p>
       </div>
       <div class="cta-actions">
-        <a href="mailto:support@gaastat.com" class="cta-btn cta-btn-primary">Email us</a>
+        <a href="mailto:support@pitchnote.ie" class="cta-btn cta-btn-primary">Email us</a>
         <button class="cta-btn cta-btn-ghost" on:click={() => onNavigate('docs')}>User Guide</button>
       </div>
     </div>

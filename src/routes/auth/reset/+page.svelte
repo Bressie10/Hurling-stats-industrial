@@ -47,16 +47,16 @@
 </script>
 
 <svelte:head>
-  <title>Reset password · GAAstat</title>
+  <title>Reset password · PitchNote</title>
 </svelte:head>
 
 <div class="wrap">
   <div class="card">
     <div class="header">
-      <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="logo">
+      <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="logo">
       <div>
         <div class="title">Reset password</div>
-        <div class="sub">Choose a new password for your GAAstat account</div>
+        <div class="sub">Choose a new password for your PitchNote account</div>
       </div>
     </div>
 

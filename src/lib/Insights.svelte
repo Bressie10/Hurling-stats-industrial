@@ -139,7 +139,7 @@
   <div class="insights-header">
     <div>
       <h2>Coaching Insights</h2>
-      <p>{season.played} match{season.played === 1 ? '' : 'es'} analysed for {$settingsStore.teamName || 'GAAstat'}</p>
+      <p>{season.played} match{season.played === 1 ? '' : 'es'} analysed for {$settingsStore.teamName || 'PitchNote'}</p>
     </div>
     {#if selectedMatch}
       <button class="save-review-btn" class:saved disabled={saving} onclick={saveReview}>

@@ -1,4 +1,4 @@
-// Renders PWA/store PNG icons from static/gaastat-icon.svg.
+// Renders PWA/store PNG icons from static/pitchnote-icon.svg.
 // Run after changing the icon: node scripts/generate-icons.mjs
 import sharp from 'sharp'
 import path from 'path'
@@ -6,7 +6,7 @@ import fs from 'fs'
 import { fileURLToPath } from 'url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const src = path.join(root, 'static', 'gaastat-icon.svg')
+const src = path.join(root, 'static', 'pitchnote-icon.svg')
 const outDir = path.join(root, 'static', 'icons')
 
 // All icons flattened onto white: maskable icons must fill the full canvas,

@@ -15,7 +15,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="loading-logo">
+    <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo">
     <div class="loading-tagline">
       <p class="loading-tagline-top">Coach Smarter.</p>
       <p class="loading-tagline-bottom">Win More.</p>

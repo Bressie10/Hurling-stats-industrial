@@ -329,7 +329,7 @@ function installListeners() {
     if (document.visibilityState === 'visible') kick()
   })
   navigator.serviceWorker?.addEventListener?.('message', (event) => {
-    if (event.data?.type === 'GAASTAT_DRAIN_OUTBOX') kick()
+    if (event.data?.type === 'PITCHNOTE_DRAIN_OUTBOX') kick()
   })
   // pagehide fires reliably on iOS Safari (where beforeunload doesn't) when the
   // app is backgrounded or the tab is closed. Sync work may not complete, but

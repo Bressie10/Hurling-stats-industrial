@@ -5,19 +5,19 @@
   export let pageType = 'privacy'
   export let onNavigate = () => {}
 
-  const contactEmail = 'support@gaastat.com'
+  const contactEmail = 'support@pitchnote.ie'
 
   const meta = {
     privacy: {
       eyebrow: 'Privacy',
       title: 'Privacy Policy',
-      lead: 'How GAAstat collects, uses, stores, and deletes data for coaches and clubs.',
+      lead: 'How PitchNote collects, uses, stores, and deletes data for coaches and clubs.',
       updated: 'June 12, 2026'
     },
     terms: {
       eyebrow: 'Terms',
       title: 'Terms of Use',
-      lead: 'The rules for using GAAstat on the web, iOS, Android, and installed app experiences.',
+      lead: 'The rules for using PitchNote on the web, iOS, Android, and installed app experiences.',
       updated: 'June 12, 2026'
     },
     support: {
@@ -29,7 +29,7 @@
     delete: {
       eyebrow: 'Account deletion',
       title: 'Delete Your Account',
-      lead: 'How to permanently delete your GAAstat account and associated cloud data.',
+      lead: 'How to permanently delete your PitchNote account and associated cloud data.',
       updated: 'June 12, 2026'
     }
   }
@@ -52,7 +52,7 @@
     {#if pageType === 'privacy'}
       <section>
         <h2>Overview</h2>
-        <p>GAAstat is an offline-first hurling match statistics app for coaches. The app stores match, squad, and settings data on your device and can sync account data to Supabase so signed-in users can back up and restore their work.</p>
+        <p>PitchNote is an offline-first hurling match statistics app for coaches. The app stores match, squad, and settings data on your device and can sync account data to Supabase so signed-in users can back up and restore their work.</p>
       </section>
 
       <section>
@@ -87,8 +87,8 @@
       </section>
     {:else if pageType === 'terms'}
       <section>
-        <h2>Using GAAstat</h2>
-        <p>GAAstat is provided for coaches and clubs to record, analyse, and review hurling match statistics. You are responsible for the accuracy of data you enter and for ensuring you have permission to record any player or team information you store in the app.</p>
+        <h2>Using PitchNote</h2>
+        <p>PitchNote is provided for coaches and clubs to record, analyse, and review hurling match statistics. You are responsible for the accuracy of data you enter and for ensuring you have permission to record any player or team information you store in the app.</p>
       </section>
 
       <section>
@@ -103,12 +103,12 @@
 
       <section>
         <h2>Offline Use</h2>
-        <p>GAAstat is designed to work offline after initial setup, but sync and account access require connectivity. Always sign in and open the app before going to a ground with limited signal.</p>
+        <p>PitchNote is designed to work offline after initial setup, but sync and account access require connectivity. Always sign in and open the app before going to a ground with limited signal.</p>
       </section>
 
       <section>
         <h2>Acceptable Use</h2>
-        <p>Do not use GAAstat to store unlawful content, access another account without permission, interfere with app services, or attempt to bypass entitlement or security controls.</p>
+        <p>Do not use PitchNote to store unlawful content, access another account without permission, interfere with app services, or attempt to bypass entitlement or security controls.</p>
       </section>
 
       <section>
@@ -138,7 +138,7 @@
 
       <section>
         <h2>Account And Data Requests</h2>
-        <p>Use the account deletion page for deletion requests. For corrections, exports, or privacy questions, email support from the address on your GAAstat account.</p>
+        <p>Use the account deletion page for deletion requests. For corrections, exports, or privacy questions, email support from the address on your PitchNote account.</p>
       </section>
     {:else if pageType === 'delete'}
       <section>
@@ -148,7 +148,7 @@
 
       <section>
         <h2>Request Deletion Without The App</h2>
-        <p>If you cannot access the app, email <a href="mailto:{contactEmail}?subject=GAAstat%20account%20deletion%20request">{contactEmail}</a> from the email address on your GAAstat account with the subject "GAAstat account deletion request".</p>
+        <p>If you cannot access the app, email <a href="mailto:{contactEmail}?subject=PitchNote%20account%20deletion%20request">{contactEmail}</a> from the email address on your PitchNote account with the subject "PitchNote account deletion request".</p>
       </section>
 
       <section>

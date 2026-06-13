@@ -1,5 +1,5 @@
 -- ============================================================
--- GAA Stats — Teams + Live Sessions schema
+-- PitchNote - Teams + Live Sessions schema
 -- Run this in: Supabase Dashboard → SQL Editor
 -- ============================================================
 

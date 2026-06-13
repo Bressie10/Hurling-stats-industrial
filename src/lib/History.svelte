@@ -259,7 +259,7 @@
         return result
       }
 
-      const clubName = $settingsStore.teamName || 'GAAstat'
+      const clubName = $settingsStore.teamName || 'PitchNote'
       const opposition = selectedMatch.opposition || 'Opposition'
       const reportInsights = analyzeMatch(selectedMatch, matches, readTargetConfig())
 
@@ -561,7 +561,7 @@
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor('#888888')
-        doc.text('GAAstat — gaastat.com', M, PH - 7)
+        doc.text('PitchNote — pitchnote.ie', M, PH - 7)
         doc.text(`Page ${pg} of ${totalPages}`, PW - M, PH - 7, { align: 'right' })
       }
 
@@ -681,7 +681,7 @@
     if (!id && id !== 0) return null
     return match.players.find(p => p.id === id)?.name?.trim() || null
   }
-  const GAA_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]
+  const HURLING_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]
   const POS_LABEL = {1:'GK',2:'RFB',3:'CFB',4:'LFB',5:'RHB',6:'CHB',7:'LHB',8:'RMF',9:'LMF',10:'RHF',11:'CHF',12:'LHF',13:'RFF',14:'CFF',15:'LFF'}
 
   // ── PRINT-ONLY COMPUTED DATA ──────────────────────────
@@ -768,9 +768,9 @@
     <!-- Print-only report header (hidden on screen) -->
     <div class="print-header">
       <div class="print-header-top">
-        <img src="{base}/gaastat-logo.svg" alt="GAAstat" class="print-logo">
+        <img src="{base}/pitchnote-logo.svg" alt="PitchNote" class="print-logo">
         <div class="print-header-right">
-          <div class="print-club">{$settingsStore.teamName || 'GAAstat'} — Match Report</div>
+          <div class="print-club">{$settingsStore.teamName || 'PitchNote'} — Match Report</div>
           <div class="print-fixture">vs {selectedMatch.opposition} · {selectedMatch.date}{selectedMatch.venue ? ` · ${selectedMatch.venue}` : ''}</div>
         </div>
       </div>
@@ -1070,7 +1070,7 @@
         <div class="print-info-block">
           <div class="print-section-title">Starting Lineup</div>
           <div class="print-lineup-grid">
-            {#each GAA_ROWS as row}
+            {#each HURLING_ROWS as row}
               <div class="print-lineup-row">
                 {#each row as pos}
                   <div class="print-lineup-slot">
@@ -1245,7 +1245,7 @@
           <line x1="380" y1="6" x2="380" y2="314" stroke="white" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
           <circle cx="90" cy="160" r="3" fill="white" opacity="0.6"/>
           <circle cx="410" cy="160" r="3" fill="white" opacity="0.6"/>
-          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'GAAstat').slice(0,10).toUpperCase()} END</text>
+          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'PitchNote').slice(0,10).toUpperCase()} END</text>
           <text x="375" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{selectedMatch.opposition.slice(0,10).toUpperCase()} END</text>
           {#each printShotEvents as e}
             <circle cx={e.x/100*500} cy={e.y/100*320} r="9" fill={evtColor(e.stat)} opacity="0.88" stroke="white" stroke-width="0.8"/>
@@ -1284,7 +1284,7 @@
           <line x1="380" y1="6" x2="380" y2="314" stroke="white" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
           <circle cx="90" cy="160" r="3" fill="white" opacity="0.6"/>
           <circle cx="410" cy="160" r="3" fill="white" opacity="0.6"/>
-          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'GAAstat').slice(0,10).toUpperCase()} END</text>
+          <text x="125" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{($settingsStore.teamName || 'PitchNote').slice(0,10).toUpperCase()} END</text>
           <text x="375" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" opacity="0.9">{selectedMatch.opposition.slice(0,10).toUpperCase()} END</text>
           {#each printAllLocatedEvents as e}
             <circle cx={e.x/100*500} cy={e.y/100*320} r="7" fill={evtColor(e.stat)} opacity="0.82" stroke="white" stroke-width="0.5"/>

@@ -154,7 +154,7 @@
     <div class="hero-glow-amber"></div>
 
     <div class="hero-content">
-      <div class="hero-eyebrow">Built for GAA Coaches</div>
+      <div class="hero-eyebrow">Built for Hurling Coaches</div>
       <h1 class="hero-title">
         Coach<br>
         <span class="accent">Smarter.</span><br>
@@ -193,9 +193,9 @@
     <div class="hero-auth" id="signin">
       <div class="auth-card-dark">
         <div class="auth-dark-header">
-          <img src="{base}/gaastat-icon.svg" alt="GAAstat" class="auth-dark-logo-mark">
+          <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="auth-dark-logo-mark">
           <div>
-            <div class="auth-dark-title">GAAstat</div>
+            <div class="auth-dark-title">PitchNote</div>
             <div class="auth-dark-sub">Hurling match analytics</div>
           </div>
         </div>
@@ -253,7 +253,7 @@
 
         <!-- CHOOSE -->
         {:else if mode === 'choose'}
-          <p class="auth-dark-choose-sub">How are you using GAA Stats?</p>
+          <p class="auth-dark-choose-sub">How are you using PitchNote?</p>
           <div class="auth-dark-option-list">
             <button class="auth-dark-option" on:click={() => setMode('join')}>
               <div class="auth-dark-option-icon blue">
@@ -366,7 +366,7 @@
             <div class="auth-dark-fields">
               <div class="auth-dark-field">
                 <label>Club name</label>
-                <input type="text" bind:value={clubName} placeholder="e.g. Your Club GAA" />
+                <input type="text" bind:value={clubName} placeholder="e.g. Your Club" />
               </div>
               <div class="auth-dark-field">
                 <label>Your email</label>
@@ -423,7 +423,7 @@
         </div>
         <h3>{IS_NATIVE_STORE_BUILD ? 'Open the app' : 'Install the PWA'}</h3>
         <p>{IS_NATIVE_STORE_BUILD
-          ? 'Sign in before heading to the ground. Once loaded, GAAstat keeps the match-day tools ready for low-signal conditions.'
+          ? 'Sign in before heading to the ground. Once loaded, PitchNote keeps the match-day tools ready for low-signal conditions.'
           : 'Add to your home screen from any browser. Works on iPhone and Android. Fully offline from day one.'}</p>
       </div>
       <div class="how-connector"></div>
@@ -433,7 +433,7 @@
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <h3>Set up your squad</h3>
-        <p>Add your players, assign jersey numbers, and set positions on a visual GAA pitch. Your lineup is ready for every match.</p>
+        <p>Add your players, assign jersey numbers, and set positions on a visual hurling pitch. Your lineup is ready for every match.</p>
       </div>
       <div class="how-connector"></div>
       <div class="how-step reveal reveal-delay-3">
@@ -455,7 +455,7 @@
         <h2 class="section-title reveal reveal-delay-1">Every stat.<br>Every match.</h2>
       </div>
       <p class="section-body reveal reveal-delay-2">
-        GAAstat gives every sideline coach a full data team in their pocket. Tap to log, swipe to analyse, share with your selectors instantly.
+        PitchNote gives every sideline coach a full data team in their pocket. Tap to log, swipe to analyse, share with your selectors instantly.
       </p>
     </div>
     <div class="features-grid">
@@ -669,7 +669,7 @@
         <div class="section-eyebrow reveal">PWA Technology</div>
         <h2 class="section-title reveal reveal-delay-1">No signal?<br><span style="color:var(--lp-lime)">No problem.</span></h2>
         <p class="section-body reveal reveal-delay-2" style="margin-bottom:32px">
-          GAA grounds are notorious for poor mobile reception. GAAstat installs directly to your phone's home screen and works completely offline — every match, every stat, every time.
+          Club grounds can be tough for mobile reception. PitchNote installs directly to your phone's home screen and works completely offline — every match, every stat, every time.
         </p>
         <ul class="check-list reveal reveal-delay-3">
           <li>Installs as a PWA — works like a native app</li>
@@ -695,7 +695,7 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#BAFF29" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
           <div>
-            <div class="ground-name">Your Club GAA</div>
+            <div class="ground-name">Your Club</div>
             <div class="ground-status">Signal: None · App status: <span>Fully operational</span></div>
           </div>
         </div>
@@ -953,7 +953,7 @@
         Data-driven<br><span class="lime">hurling</span> starts<br>here.
       </h2>
       <p class="cta-sub reveal reveal-delay-1">
-        Join GAA coaches already using GAAstat on the sideline. Works on any phone, fully offline.
+        Join hurling coaches already using PitchNote on the sideline. Works on any phone, fully offline.
       </p>
       <div class="cta-actions reveal reveal-delay-2">
         <button class="btn-large primary" on:click={() => goToSignup('personal')}>

@@ -4,8 +4,8 @@ Use a Capacitor iOS wrapper for the first App Store release.
 
 ## Fixed Values
 
-- Bundle ID: `com.gaastat.app`
-- Initial URL: `https://www.gaastat.com/?store_build=ios`
+- Bundle ID: `ie.pitchnote.app`
+- Initial URL: `https://www.pitchnote.ie/?store_build=ios`
 - Wrapper type: Capacitor iOS
 
 ## Build Order
@@ -15,7 +15,7 @@ Completed locally:
 - Full Xcode 26.5 is installed and selected.
 - `npm run native:ios:add` generated `ios/`.
 - `npm run native:ios:sync` copied a fresh store-mode web build into the wrapper.
-- GAAstat icon and splash assets replaced the default Capacitor assets.
+- PitchNote icon and splash assets replaced the default Capacitor assets.
 - `NSMicrophoneUsageDescription` is present in `ios/App/App/Info.plist`.
 - Unsigned simulator build succeeds.
 - Manual launch in the iPhone 17 simulator succeeds.
@@ -49,7 +49,7 @@ The first release should stay consumption-only/free-account inside the native ap
 The current template loads the production app URL. If iOS is later changed to package local web assets, build with:
 
 ```sh
-PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.gaastat.com npm run build
+PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.pitchnote.ie npm run build
 ```
 
 `PUBLIC_API_BASE_URL` keeps Sideline AI voice calls pointed at the production server endpoints instead of a local relative `/api` path.

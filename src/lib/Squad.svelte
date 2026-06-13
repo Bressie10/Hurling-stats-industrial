@@ -41,7 +41,7 @@
     'Sub'
   ]
 
-  // Maps jersey number → GAA position category
+  // Maps jersey number to hurling position category.
   const SLOT_POSITION = {
     1:'Goalkeeper',
     2:'Right Corner Back', 3:'Full Back', 4:'Left Corner Back',

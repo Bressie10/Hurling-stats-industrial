@@ -1,9 +1,9 @@
 {
-  "appId": "com.gaastat.app",
-  "appName": "GAAstat",
+  "appId": "ie.pitchnote.app",
+  "appName": "PitchNote",
   "webDir": ".svelte-kit/output/client",
   "server": {
-    "url": "https://www.gaastat.com/?store_build=ios",
+    "url": "https://www.pitchnote.ie/?store_build=ios",
     "cleartext": false
   },
   "ios": {

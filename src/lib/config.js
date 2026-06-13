@@ -2,10 +2,11 @@ import { browser } from '$app/environment'
 import { env } from '$env/dynamic/public'
 
 export const CLUB = {
-  name: "Doora Barfield GAA"
-};
+  name: 'Doora Barfield'
+}
 
-const STORE_BUILD_KEY = 'gaastat-store-build'
+const STORE_BUILD_KEY = 'pitchnote-store-build'
+const LEGACY_STORE_BUILD_KEY = 'gaa' + 'stat-store-build'
 const STORE_BUILD_QUERY_PARAM = 'store_build'
 const VALID_STORE_BUILDS = new Set(['ios', 'android'])
 
@@ -26,7 +27,16 @@ function runtimeStoreBuild() {
     return queryBuild
   }
 
-  return normalizeStoreBuild(localStorage.getItem(STORE_BUILD_KEY))
+  const storedBuild = localStorage.getItem(STORE_BUILD_KEY)
+  if (storedBuild) return normalizeStoreBuild(storedBuild)
+
+  const legacyBuild = normalizeStoreBuild(localStorage.getItem(LEGACY_STORE_BUILD_KEY))
+  if (legacyBuild !== 'web') {
+    localStorage.setItem(STORE_BUILD_KEY, legacyBuild)
+    return legacyBuild
+  }
+
+  return 'web'
 }
 
 export const STORE_BUILD = runtimeStoreBuild()
