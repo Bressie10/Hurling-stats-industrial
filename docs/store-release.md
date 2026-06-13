@@ -25,6 +25,7 @@ This checklist is for Apple App Store and Google Play release work. PWABuilder o
 - `PUBLIC_API_BASE_URL` is normally blank. If a native/static shell packages local assets later, set `PUBLIC_API_BASE_URL=https://www.pitchnote.ie` so Sideline AI calls the production voice endpoints.
 - Run `npm run store:check` locally before native wrapper work. Run `npm run store:check:live` before store submission.
 - Run `npm run test`, `npm run lint`, and `npm run format:check` before release-critical pushes.
+- Run `npm run billing:check` after Stripe product, price, portal, or webhook changes.
 - `npm run store:check` includes the Settings native-store guard so Stripe cancellation remains web-only in native builds.
 - Use `npm run store:seed-reviewer` to create or update the seeded store reviewer account once a Supabase service-role key is available locally.
 - Use `npm run store:verify-reviewer` after seeding or changing the reviewer password; it signs in through the public Supabase auth/RLS path and checks the seeded squad/match rows without printing the password.

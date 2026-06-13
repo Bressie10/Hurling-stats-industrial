@@ -175,6 +175,7 @@ async function checkStoreModeCode() {
 
   const settings = await readText('src/lib/Settings.svelte')
   check(settings.includes('if (!IS_NATIVE_STORE_BUILD)') && settings.includes("invoke('cancel-subscription')"), 'Settings keeps Stripe cancellation behind the web-only guard')
+  check(settings.includes('hasWebBilling = $derived(!IS_NATIVE_STORE_BUILD') && settings.includes("invoke('create-portal-session'"), 'Settings keeps Stripe portal access behind the web-only guard')
 
   const history = await readText('src/lib/History.svelte')
   check(history.includes('FREE_MATCH_LIMIT') && !history.includes('FREE_MATCH_LIMIT = 3'), 'History uses the central free match limit')

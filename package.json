@@ -17,6 +17,7 @@
 		"store:check:live": "node scripts/verify-store-release.mjs --live",
 		"store:seed-reviewer": "node scripts/seed-reviewer-account.mjs",
 		"store:verify-reviewer": "node scripts/verify-reviewer-account.mjs",
+		"billing:check": "node scripts/verify-stripe-billing.mjs",
 		"native:config": "node scripts/sync-native-config.mjs",
 		"native:config:check": "node scripts/sync-native-config.mjs --check",
 		"native:doctor": "node scripts/native-store-doctor.mjs",

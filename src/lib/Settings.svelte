@@ -16,6 +16,8 @@
   let leavingTeamId = $state(null)
   let leavingTeamName = $state('')
   let showDeleteAccountConfirm = $state(false)
+  let openingBilling = $state(false)
+  let hasWebBilling = $derived(!IS_NATIVE_STORE_BUILD && !!$subscriptionStore.stripeCustomerId)
 
   // Teams management
   let teams = $state([])
@@ -171,6 +173,22 @@
     } catch (e) {
       showToast('Failed to delete account: ' + e.message, 'error')
       deletingAccount = false
+    }
+  }
+
+  async function openBillingPortal() {
+    if (IS_NATIVE_STORE_BUILD || !$subscriptionStore.stripeCustomerId) return
+    openingBilling = true
+    try {
+      const { data, error } = await supabase.functions.invoke('create-portal-session', {
+        body: { return_url: window.location.href },
+      })
+      if (error || !data?.url) throw new Error(error?.message ?? 'No billing portal URL returned')
+      window.location.href = data.url
+    } catch (e) {
+      console.error('Billing portal error:', e)
+      showToast('Could not open billing. Please try again.', 'error')
+      openingBilling = false
     }
   }
 
@@ -759,6 +777,23 @@
         <span class="about-label">Storage</span>
         <span class="about-val">Device + Supabase cloud</span>
       </div>
+      <div class="about-row">
+        <span class="about-label">Plan</span>
+        <span class="about-val">
+          {$subscriptionStore.plan === 'club_pro'
+            ? 'Club Pro'
+            : $subscriptionStore.plan === 'club'
+              ? 'Club'
+              : $subscriptionStore.plan === 'personal'
+                ? 'Personal Pro'
+                : 'Free'}
+        </span>
+      </div>
+      {#if hasWebBilling}
+        <button class="billing-btn" onclick={openBillingPortal} disabled={openingBilling}>
+          {openingBilling ? 'Opening billing…' : 'Manage billing'}
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -1012,6 +1047,21 @@
   .about-row:last-child { border-bottom: none; }
   .about-label { color: var(--text-faint); }
   .about-val { font-weight: 500; color: var(--text); text-align: right; }
+  .billing-btn {
+    align-self: flex-start;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1.5px solid var(--primary);
+    background: none;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .billing-btn:hover { background: var(--primary); color: var(--primary-text); }
+  .billing-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }

@@ -17,6 +17,8 @@ export const subscriptionStore = writable({
   activeTeamName: null,
   activeTeamCode: null,
   currentPeriodEnd: null,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
   customFeatures: {},    // per-subscription overrides set in Supabase dashboard
   loading: true
 })
@@ -176,6 +178,8 @@ export async function loadSubscription(userId) {
       activeTeamName: activeTeam?.name ?? null,
       activeTeamCode: activeTeam?.code ?? null,
       currentPeriodEnd: sub?.current_period_end ?? null,
+      stripeCustomerId: sub?.stripe_customer_id ?? null,
+      stripeSubscriptionId: sub?.stripe_subscription_id ?? null,
       customFeatures: parseCustomFeatures(sub?.custom_features),
       loading: false
     })
@@ -185,7 +189,8 @@ export async function loadSubscription(userId) {
       plan: 'free', status: 'active', cancelAtPeriodEnd: false,
       clubId: null, clubName: null, clubRole: null, isOwner: false,
       teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
-      currentPeriodEnd: null, customFeatures: {}, loading: false
+      currentPeriodEnd: null, stripeCustomerId: null, stripeSubscriptionId: null,
+      customFeatures: {}, loading: false
     })
   }
 }

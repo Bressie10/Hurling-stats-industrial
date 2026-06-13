@@ -1,24 +1,26 @@
 import Stripe from 'https://esm.sh/stripe@22.2.1?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+import {
+  getCustomerId,
+  getInvoiceSubscriptionId,
+  getPlanByPriceId,
+  getSeatLimit,
+  getSubscriptionPeriodEnd,
+  getSubscriptionPriceId,
+  STRIPE_API_VERSION,
+} from '../_shared/billing.ts'
 
-const STRIPE_API_VERSION = '2026-02-25.clover'
-
-const PLAN_BY_PRICE: Record<string, string> = {
-  price_1Thz9rEJeWwTp7TFSriSk63s: 'personal',
-  price_1Thz9sEJeWwTp7TFiRJgny3y: 'club',
-  price_1Thz9tEJeWwTp7TFhZ8VLZGg: 'club_pro',
+function getMetadataUserId(object: { metadata?: Record<string, string> | null }): string | null {
+  return object.metadata?.user_id ?? object.metadata?.supabase_user_id ?? null
 }
 
-const SEAT_LIMITS: Record<string, number> = {
-  personal: 1,
-  club: 999,
-  club_pro: 999,
+function getJsonHeaders() {
+  return { 'Content-Type': 'application/json' }
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 })
   }
 
   const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
@@ -45,93 +47,118 @@ Deno.serve(async (req) => {
     return new Response(`Webhook error: ${e.message}`, { status: 400 })
   }
 
+  async function syncSubscription(stripeSub: Stripe.Subscription, options: {
+    userId?: string | null
+    customerId?: string | null
+    status?: string | null
+  } = {}) {
+    const priceId = getSubscriptionPriceId(stripeSub)
+    if (!priceId) throw new Error(`Subscription ${stripeSub.id} has no price`)
+
+    const plan = getPlanByPriceId()[priceId]
+    if (!plan) throw new Error(`Subscription ${stripeSub.id} uses unknown price ${priceId}`)
+
+    const row = {
+      plan,
+      status: options.status ?? stripeSub.status,
+      seat_limit: getSeatLimit(plan),
+      current_period_end: getSubscriptionPeriodEnd(stripeSub),
+      cancel_at_period_end: stripeSub.cancel_at_period_end ?? false,
+      stripe_customer_id: options.customerId ?? getCustomerId(stripeSub.customer),
+      stripe_subscription_id: stripeSub.id,
+    }
+
+    const userId = options.userId ?? getMetadataUserId(stripeSub)
+    if (userId) {
+      const { error } = await supabase.from('subscriptions')
+        .upsert({ user_id: userId, ...row }, { onConflict: 'user_id' })
+      if (error) throw new Error(`DB upsert failed: ${error.message}`)
+      return
+    }
+
+    const { error } = await supabase.from('subscriptions')
+      .update(row)
+      .eq('stripe_subscription_id', stripeSub.id)
+    if (error) throw new Error(`DB update failed: ${error.message}`)
+  }
+
   try {
     // ── checkout.session.completed ──────────────────────────────────────
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session
-      const userId = session.client_reference_id
+      const userId = session.client_reference_id ?? getMetadataUserId(session)
       if (!userId) throw new Error('No client_reference_id on session')
+      if (!session.subscription) throw new Error('No subscription on checkout session')
 
       const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string)
-      const priceId = stripeSub.items.data[0]?.price.id
-      const plan = PLAN_BY_PRICE[priceId] ?? 'personal'
-      const periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString()
+      await syncSubscription(stripeSub, {
+        userId,
+        customerId: getCustomerId(session.customer),
+      })
 
-      const { error } = await supabase.from('subscriptions')
-        .update({
-          plan,
-          status: stripeSub.status,
-          seat_limit: SEAT_LIMITS[plan] ?? 1,
-          current_period_end: periodEnd,
-          cancel_at_period_end: stripeSub.cancel_at_period_end ?? false,
-          stripe_customer_id: session.customer as string,
-          stripe_subscription_id: session.subscription as string,
-        })
-        .eq('user_id', userId)
-
-      if (error) throw new Error(`DB update failed: ${error.message}`)
-
-    // ── customer.subscription.updated ──────────────────────────────────
-    } else if (event.type === 'customer.subscription.updated') {
+    // ── customer.subscription.created / updated ────────────────────────
+    } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
       const stripeSub = event.data.object as Stripe.Subscription
-      const priceId = stripeSub.items.data[0]?.price.id
-      const plan = PLAN_BY_PRICE[priceId] ?? 'personal'
-      const periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString()
-
-      const { error } = await supabase.from('subscriptions')
-        .update({
-          plan,
-          status: stripeSub.status,
-          seat_limit: SEAT_LIMITS[plan] ?? 1,
-          current_period_end: periodEnd,
-          cancel_at_period_end: stripeSub.cancel_at_period_end ?? false,
-        })
-        .eq('stripe_subscription_id', stripeSub.id)
-
-      if (error) throw new Error(`DB update failed: ${error.message}`)
+      await syncSubscription(stripeSub)
 
     // ── customer.subscription.deleted ───────────────────────────────────
     } else if (event.type === 'customer.subscription.deleted') {
       const stripeSub = event.data.object as Stripe.Subscription
 
-      const { error } = await supabase.from('subscriptions')
-        .update({ plan: 'free', status: 'cancelled', seat_limit: 1, cancel_at_period_end: false })
+      const cancelledRow = {
+        plan: 'free',
+        status: 'cancelled',
+        seat_limit: 1,
+        current_period_end: null,
+        cancel_at_period_end: false,
+        stripe_customer_id: getCustomerId(stripeSub.customer),
+        stripe_subscription_id: stripeSub.id,
+      }
+      const { data, error } = await supabase.from('subscriptions')
+        .update(cancelledRow)
         .eq('stripe_subscription_id', stripeSub.id)
+        .select('user_id')
 
       if (error) throw new Error(`DB update failed: ${error.message}`)
+      if (!data?.length) {
+        const userId = getMetadataUserId(stripeSub)
+        if (userId) {
+          const { error: upsertError } = await supabase.from('subscriptions')
+            .upsert({ user_id: userId, ...cancelledRow }, { onConflict: 'user_id' })
+          if (upsertError) throw new Error(`DB upsert failed: ${upsertError.message}`)
+        }
+      }
 
     // ── invoice.payment_succeeded ───────────────────────────────────────
     // Keeps period end fresh on every renewal so Pro access never lapses
     } else if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object as Stripe.Invoice
-      if (!invoice.subscription) {
-        return new Response(JSON.stringify({ received: true }), { headers: { 'Content-Type': 'application/json' } })
+      const subscriptionId = getInvoiceSubscriptionId(invoice)
+      if (!subscriptionId) {
+        return new Response(JSON.stringify({ received: true }), { headers: getJsonHeaders() })
       }
-      const stripeSub = await stripe.subscriptions.retrieve(invoice.subscription as string)
-      const periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString()
 
-      await supabase.from('subscriptions')
-        .update({ status: 'active', current_period_end: periodEnd, cancel_at_period_end: false })
-        .eq('stripe_subscription_id', stripeSub.id)
+      const stripeSub = await stripe.subscriptions.retrieve(subscriptionId)
+      await syncSubscription(stripeSub, { status: stripeSub.status === 'past_due' ? 'active' : stripeSub.status })
 
     // ── invoice.payment_failed ──────────────────────────────────────────
     // Stripe retries automatically; mark past_due so UI reflects it
     } else if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as Stripe.Invoice
-      if (!invoice.subscription) {
-        return new Response(JSON.stringify({ received: true }), { headers: { 'Content-Type': 'application/json' } })
+      const subscriptionId = getInvoiceSubscriptionId(invoice)
+      if (!subscriptionId) {
+        return new Response(JSON.stringify({ received: true }), { headers: getJsonHeaders() })
       }
 
-      await supabase.from('subscriptions')
-        .update({ status: 'past_due' })
-        .eq('stripe_subscription_id', invoice.subscription as string)
+      const stripeSub = await stripe.subscriptions.retrieve(subscriptionId)
+      await syncSubscription(stripeSub, { status: 'past_due' })
     }
 
     return new Response(JSON.stringify({ received: true }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: getJsonHeaders(),
     })
   } catch (e) {
     console.error('Webhook handler error:', e)
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: getJsonHeaders() })
   }
 })

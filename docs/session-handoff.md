@@ -115,6 +115,12 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Personal Pro unlocks unlimited history, analytics routes, Stat Targets, and PDF reports
   - Club unlocks team/club management and join codes
   - Club Pro unlocks live match sharing/viewer mode
+- Stripe test-mode billing resources are configured for PitchNote lookup keys:
+  - `pitchnote_personal_monthly`: Personal Pro, EUR 7.99/month
+  - `pitchnote_club_monthly`: Club, EUR 15/month
+  - `pitchnote_club_pro_monthly`: Club Pro, EUR 25/month
+  - webhook endpoint includes checkout completion, subscription created/updated/deleted, and invoice payment success/failure events
+  - `docs/stripe-billing.md` documents the required Supabase Edge Function secrets and `npm run billing:check` verification
 
 ## Important Files
 

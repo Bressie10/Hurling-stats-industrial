@@ -1,24 +1,15 @@
 import Stripe from 'https://esm.sh/stripe@22.2.1?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getPriceIds, getSeatLimit, parseBillingPlan, STRIPE_API_VERSION } from '../_shared/billing.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-
-const STRIPE_API_VERSION = '2026-02-25.clover'
-
-const PRICE_IDS: Record<string, string> = {
-  personal: 'price_1Thz9rEJeWwTp7TFSriSk63s',
-  club: 'price_1Thz9sEJeWwTp7TFiRJgny3y',
-  club_pro: 'price_1Thz9tEJeWwTp7TFhZ8VLZGg',
-}
-
-const SEAT_LIMITS: Record<string, number> = {
-  personal: 1,
-  club: 999,
-  club_pro: 999,
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders })
   }
 
   try {
@@ -37,13 +28,15 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userErr } = await supabase.auth.getUser(token)
     if (userErr || !user) return new Response('Unauthorized', { status: 401 })
 
-    const { plan } = await req.json()
-    const priceId = PRICE_IDS[plan]
-    if (!priceId) {
+    const body = await req.json().catch(() => ({}))
+    const plan = parseBillingPlan(body.plan)
+    if (!plan) {
       return new Response(JSON.stringify({ error: 'Invalid plan' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+    const priceId = getPriceIds()[plan]
+    const seatLimit = getSeatLimit(plan)
 
     // Reuse existing Stripe customer if we have one — avoids duplicate customers on resubscribe
     const { data: existingSub } = await supabase
@@ -60,7 +53,10 @@ Deno.serve(async (req) => {
       success_url: `${appUrl}/?subscribed=true`,
       cancel_url:  `${appUrl}/?subscribed=cancelled`,
       client_reference_id: user.id,
-      metadata: { plan, seat_limit: String(SEAT_LIMITS[plan]) },
+      metadata: { user_id: user.id, plan, seat_limit: String(seatLimit) },
+      subscription_data: {
+        metadata: { user_id: user.id, plan, seat_limit: String(seatLimit) },
+      },
     }
 
     if (existingSub?.stripe_customer_id) {

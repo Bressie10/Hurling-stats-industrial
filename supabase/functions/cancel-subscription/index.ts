@@ -1,12 +1,15 @@
 import Stripe from 'https://esm.sh/stripe@22.2.1?target=deno&no-check'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { STRIPE_API_VERSION } from '../_shared/billing.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-
-const STRIPE_API_VERSION = '2026-02-25.clover'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders })
   }
 
   try {
