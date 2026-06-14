@@ -2,7 +2,7 @@ import { browser } from '$app/environment'
 import { env } from '$env/dynamic/public'
 
 export const CLUB = {
-  name: 'Doora Barfield'
+  name: 'Doora Barfield',
 }
 
 const STORE_BUILD_KEY = 'pitchnote-store-build'
@@ -11,8 +11,15 @@ const STORE_BUILD_QUERY_PARAM = 'store_build'
 const VALID_STORE_BUILDS = new Set(['ios', 'android'])
 
 function normalizeStoreBuild(value) {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return VALID_STORE_BUILDS.has(normalized) ? normalized : 'web'
+}
+
+function nativeStoreBuild() {
+  if (!browser) return 'web'
+  return normalizeStoreBuild(window.Capacitor?.getPlatform?.())
 }
 
 function runtimeStoreBuild() {
@@ -25,6 +32,12 @@ function runtimeStoreBuild() {
   if (queryBuild !== 'web') {
     localStorage.setItem(STORE_BUILD_KEY, queryBuild)
     return queryBuild
+  }
+
+  const nativeBuild = nativeStoreBuild()
+  if (nativeBuild !== 'web') {
+    localStorage.setItem(STORE_BUILD_KEY, nativeBuild)
+    return nativeBuild
   }
 
   const storedBuild = localStorage.getItem(STORE_BUILD_KEY)
@@ -41,9 +54,6 @@ function runtimeStoreBuild() {
 
 export const STORE_BUILD = runtimeStoreBuild()
 export const IS_NATIVE_STORE_BUILD = STORE_BUILD === 'ios' || STORE_BUILD === 'android'
-export const STORE_PLATFORM_LABEL = STORE_BUILD === 'ios'
-  ? 'iOS App Store'
-  : STORE_BUILD === 'android'
-    ? 'Google Play'
-    : 'web'
+export const STORE_PLATFORM_LABEL =
+  STORE_BUILD === 'ios' ? 'iOS App Store' : STORE_BUILD === 'android' ? 'Google Play' : 'web'
 export const SHOW_WEB_PURCHASES = !IS_NATIVE_STORE_BUILD

@@ -31,14 +31,14 @@ Current native status:
 
 - iOS Capacitor project exists under `ios/`, has branded icon/splash assets, includes the microphone usage string, and passes an unsigned simulator build.
 - Next iOS blocker is Apple Developer signing/TestFlight upload from Xcode.
-- Android TWA project has not been generated yet; JDK and Android SDK tools are still required.
+- Android Capacitor project exists under `android/` and includes the on-device speech recognition plugin; JDK and Android SDK tools are still required for local Android builds.
 
 ## Files
 
 - `native/shared/release.json`: single source for store IDs, URLs, and review links
-- `native/android/twa-manifest.template.json`: Android TWA release reference
+- `android/`: generated Capacitor Android project
 - `native/ios/capacitor.config.template.json`: iOS Capacitor release reference
-- `capacitor.config.json`: active iOS Capacitor config generated from `native/shared/release.json`
+- `capacitor.config.json`: active Capacitor config generated from `native/shared/release.json`
 
 ## Commands
 

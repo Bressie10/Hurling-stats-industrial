@@ -105,24 +105,22 @@ async function checkManifest() {
 
 async function checkNativeConfig() {
   const release = await readJson('native/shared/release.json')
-  const twa = await readJson('native/android/twa-manifest.template.json')
   const capacitor = await readJson('native/ios/capacitor.config.template.json')
   const activeCapacitor = await readJson('capacitor.config.json')
   const pkg = await readJson('package.json')
-  if (!release || !twa || !capacitor) return
+  if (!release || !capacitor) return
 
   check(release.appId === 'ie.pitchnote.app', 'shared release appId is ie.pitchnote.app')
   check(release.productionUrl === 'https://www.pitchnote.ie/', 'shared release production URL is pitchnote.ie')
   check(release.supportEmail === 'support@pitchnote.ie', 'shared release support email is support@pitchnote.ie')
   check(release.ios?.launchUrl === 'https://www.pitchnote.ie/?store_build=ios', 'iOS launch URL uses store_build=ios')
   check(release.android?.launchUrl === 'https://www.pitchnote.ie/?store_build=android', 'Android launch URL uses store_build=android')
-  check(twa.packageId === release.android?.packageName, 'Android TWA package matches shared release config')
-  check(twa.startUrl === '/?store_build=android', 'Android TWA startUrl uses store mode')
+  check(release.android?.wrapper === 'Capacitor', 'Android wrapper is Capacitor for native speech recognition')
   check(capacitor.appId === release.ios?.bundleId, 'iOS Capacitor bundle matches shared release config')
-  check(capacitor.server?.url === release.ios?.launchUrl, 'iOS Capacitor server URL uses store mode')
+  check(capacitor.server?.url === release.productionUrl, 'Capacitor template server URL uses shared production URL')
   check(capacitor.webDir === '.svelte-kit/output/client', 'iOS Capacitor webDir points at SvelteKit client output')
   check(activeCapacitor?.appId === release.ios?.bundleId, 'active Capacitor config bundle matches shared release config')
-  check(activeCapacitor?.server?.url === release.ios?.launchUrl, 'active Capacitor config uses store-mode launch URL')
+  check(activeCapacitor?.server?.url === release.productionUrl, 'active Capacitor config uses shared production URL')
   check(activeCapacitor?.webDir === '.svelte-kit/output/client', 'active Capacitor config webDir points at SvelteKit client output')
   check(pkg?.scripts?.['store:seed-reviewer'] === 'node scripts/seed-reviewer-account.mjs', 'reviewer seed script is registered')
   check(pkg?.scripts?.['store:verify-reviewer'] === 'node scripts/verify-reviewer-account.mjs', 'reviewer verification script is registered')
@@ -132,11 +130,21 @@ async function checkNativeConfig() {
   check(pkg?.scripts?.['native:config'] === 'node scripts/sync-native-config.mjs', 'native config script is registered')
   check(pkg?.scripts?.['native:config:check'] === 'node scripts/sync-native-config.mjs --check', 'native config check script is registered')
   check(pkg?.scripts?.['native:doctor'] === 'node scripts/native-store-doctor.mjs', 'native doctor script is registered')
+  check(pkg?.scripts?.['native:android:sync']?.includes('npx cap sync android'), 'Android Capacitor sync script is registered')
   check(existsSync(rel('scripts/seed-reviewer-account.mjs')), 'reviewer seed script exists')
   check(existsSync(rel('scripts/verify-reviewer-account.mjs')), 'reviewer verification script exists')
   check(existsSync(rel('scripts/sync-native-config.mjs')), 'native config sync script exists')
   check(existsSync(rel('scripts/native-store-doctor.mjs')), 'native doctor script exists')
   check(existsSync(rel('docs/reviewer-testing.md')), 'reviewer testing guide exists')
+  check(existsSync(rel('android/app/build.gradle')), 'Android Capacitor project exists')
+  check(existsSync(rel('android/app/src/main/java/ie/pitchnote/app/OnDeviceSpeechPlugin.java')), 'Android on-device speech plugin exists')
+  check(existsSync(rel('ios/App/App/OnDeviceSpeechPlugin.swift')), 'iOS on-device speech plugin exists')
+
+  const androidBuild = await readText('android/app/build.gradle')
+  check(androidBuild.includes('applicationId "ie.pitchnote.app"'), 'Android applicationId matches shared release config')
+
+  const androidManifest = await readText('android/app/src/main/AndroidManifest.xml')
+  check(androidManifest.includes('android.permission.RECORD_AUDIO'), 'Android microphone permission is present')
 
   const publicUrls = release.publicUrls || {}
   for (const [name, url] of Object.entries(publicUrls)) {
@@ -149,6 +157,7 @@ async function checkStoreModeCode() {
   check(config.includes('store_build'), 'config reads store_build query param')
   check(config.includes('pitchnote-store-build'), 'config persists store build mode')
   check(config.includes('PUBLIC_STORE_BUILD'), 'config supports PUBLIC_STORE_BUILD')
+  check(config.includes('window.Capacitor') && config.includes('getPlatform'), 'config detects native Capacitor platform')
 
   const entitlements = await readText('src/lib/entitlements.js')
   check(entitlements.includes('FREE_MATCH_LIMIT = 2'), 'free tier is capped at 2 saved matches')
@@ -195,6 +204,16 @@ async function checkStoreModeCode() {
   const sideline = await readText('src/lib/SidelineAI.svelte')
   check(sideline.includes("apiUrl('/api/voice/transcribe')"), 'Sideline transcription endpoint uses apiUrl')
   check(sideline.includes("apiUrl('/api/voice/answer')"), 'Sideline answer endpoint uses apiUrl')
+
+  const match = await readText('src/lib/Match.svelte')
+  check(match.includes('LiveVoiceLogger') && !match.includes('SidelineAI'), 'live match screen uses on-device voice logger')
+
+  const liveVoice = await readText('src/lib/LiveVoiceLogger.svelte')
+  check(liveVoice.includes('recognizeOnDeviceSpeech'), 'live voice logger calls the native on-device speech module')
+  check(!liveVoice.includes('/api/voice/transcribe') && !liveVoice.includes('OpenAI'), 'live voice logger does not call cloud transcription')
+
+  const parserConfig = await readText('src/lib/voice-log-config.js')
+  check(parserConfig.includes('ACTION_THRESHOLD') && parserConfig.includes('PLAYER_THRESHOLD'), 'voice log thresholds are centralized')
 }
 
 function checkRoutes() {
@@ -213,6 +232,12 @@ function checkRoutes() {
 }
 
 async function checkAssetLinksState() {
+  const release = await readJson('native/shared/release.json')
+  if (release?.android?.wrapper !== 'Trusted Web Activity') {
+    pass('assetlinks.json is not required for Capacitor Android')
+    return
+  }
+
   const assetLinks = 'static/.well-known/assetlinks.json'
   if (!existsSync(rel(assetLinks))) {
     warn('assetlinks.json is not present yet, which is expected until the final Play signing SHA-256 fingerprint is known')

@@ -16,7 +16,7 @@ Completed locally:
 - `npm run native:ios:add` generated `ios/`.
 - `npm run native:ios:sync` copied a fresh store-mode web build into the wrapper.
 - PitchNote icon and splash assets replaced the default Capacitor assets.
-- `NSMicrophoneUsageDescription` is present in `ios/App/App/Info.plist`.
+- `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` are present in `ios/App/App/Info.plist`.
 - Unsigned simulator build succeeds.
 - Manual launch in the iPhone 17 simulator succeeds.
 
@@ -52,4 +52,4 @@ The current template loads the production app URL. If iOS is later changed to pa
 PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.pitchnote.ie npm run build
 ```
 
-`PUBLIC_API_BASE_URL` keeps Sideline AI voice calls pointed at the production server endpoints instead of a local relative `/api` path.
+`PUBLIC_API_BASE_URL` keeps optional server features pointed at the production endpoints instead of a local relative `/api` path. Live voice logging uses on-device speech recognition and does not call a cloud transcription endpoint.

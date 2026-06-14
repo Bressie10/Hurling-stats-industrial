@@ -10,8 +10,8 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"test": "vitest run",
 		"lint": "eslint .",
-		"format": "prettier --write eslint.config.js prettier.config.js capacitor.config.json scripts/native-store-doctor.mjs scripts/sync-native-config.mjs src/lib/EntitlementGate.svelte src/lib/entitlements.js \"src/lib/*.test.js\"",
-		"format:check": "prettier --check eslint.config.js prettier.config.js capacitor.config.json scripts/native-store-doctor.mjs scripts/sync-native-config.mjs src/lib/EntitlementGate.svelte src/lib/entitlements.js \"src/lib/*.test.js\"",
+		"format": "prettier --write eslint.config.js prettier.config.js capacitor.config.json scripts/native-store-doctor.mjs scripts/sync-native-config.mjs src/lib/EntitlementGate.svelte src/lib/LiveVoiceLogger.svelte src/lib/Toast.svelte src/lib/config.js src/lib/entitlements.js src/lib/on-device-speech.js src/lib/toast.js src/lib/voice-log-config.js src/lib/voice-log-parser.js \"src/lib/*.test.js\"",
+		"format:check": "prettier --check eslint.config.js prettier.config.js capacitor.config.json scripts/native-store-doctor.mjs scripts/sync-native-config.mjs src/lib/EntitlementGate.svelte src/lib/LiveVoiceLogger.svelte src/lib/Toast.svelte src/lib/config.js src/lib/entitlements.js src/lib/on-device-speech.js src/lib/toast.js src/lib/voice-log-config.js src/lib/voice-log-parser.js \"src/lib/*.test.js\"",
 		"smoke:voice": "node scripts/sideline-parser-smoke.mjs",
 		"store:check": "node scripts/verify-store-release.mjs",
 		"store:check:live": "node scripts/verify-store-release.mjs --live",
@@ -24,9 +24,10 @@
 		"native:ios:add": "npx cap add ios",
 		"native:ios:sync": "PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.pitchnote.ie npm run build && npx cap sync ios",
 		"native:ios:open": "npx cap open ios",
-		"native:android:init": "npx bubblewrap init --manifest=https://www.pitchnote.ie/manifest.json --directory=native/android/twa-project",
-		"native:android:update": "npx bubblewrap update --manifest=native/android/twa-project/twa-manifest.json",
-		"native:android:build": "npx bubblewrap build --manifest=native/android/twa-project/twa-manifest.json"
+		"native:android:init": "npx cap add android",
+		"native:android:sync": "PUBLIC_STORE_BUILD=android PUBLIC_API_BASE_URL=https://www.pitchnote.ie npm run build && npx cap sync android",
+		"native:android:open": "npx cap open android",
+		"native:android:build": "npm run native:android:sync && cd android && ./gradlew assembleDebug"
 	},
 	"devDependencies": {
 		"@bubblewrap/cli": "^1.24.1",

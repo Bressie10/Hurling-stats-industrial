@@ -18,13 +18,11 @@
     "bundleId": "ie.pitchnote.app",
     "wrapper": "Capacitor",
     "launchUrl": "https://www.pitchnote.ie/?store_build=ios",
-    "microphoneUsageDescription": "PitchNote uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions."
+    "microphoneUsageDescription": "PitchNote uses the microphone for on-device voice logging and optional assistant questions."
   },
   "android": {
     "packageName": "ie.pitchnote.app",
-    "wrapper": "Trusted Web Activity",
-    "launchUrl": "https://www.pitchnote.ie/?store_build=android",
-    "assetLinksUrl": "https://www.pitchnote.ie/.well-known/assetlinks.json",
-    "assetLinksStatus": "Do not publish until the final Play signing SHA-256 fingerprint is known."
+    "wrapper": "Capacitor",
+    "launchUrl": "https://www.pitchnote.ie/?store_build=android"
   }
 }

@@ -10,8 +10,7 @@
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import ConfirmModal from './ConfirmModal.svelte'
-  import SidelineAI from './SidelineAI.svelte'
-  import { buildSidelineToolHandlers, getCurrentPeriodAndTime, getScore, normalizeStatName } from './match-tools.js'
+  import LiveVoiceLogger from './LiveVoiceLogger.svelte'
 
   // ── LIVE SHARING ─────────────────────────────────────────
   let liveSessionId = $state(null)
@@ -283,6 +282,23 @@
     scheduleAutoSync($user?.id)
   }
 
+  function removeStatEvent(playerId, stat) {
+    if (!stats[playerId]?.[stat]) return
+
+    const index = findLastIndex(events, event =>
+      String(event.playerId) === String(playerId) && event.stat === stat
+    )
+    if (index !== -1) {
+      events = events.filter((_, eventIndex) => eventIndex !== index)
+    }
+
+    stats[playerId][stat] = Math.max(0, stats[playerId][stat] - 1)
+    if (stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
+    if (stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
+    saveDraft()
+    scheduleAutoSync($user?.id)
+  }
+
   function addCustomStat() {
     const trimmed = newCustomStat.trim()
     if (!trimmed || allStats.includes(trimmed)) return
@@ -306,9 +322,6 @@
   let showPlayerPicker = $state(false)
   let pendingLog = $state(null)
   let showPitchPicker = $state(false)
-  let voicePitchPrompt = $state(null)
-  let pendingPuckoutLog = $state(null)
-  let voicePuckoutPrompt = $state(null)
   let oppositionError = $state('')
   let showCancelConfirm = $state(false)
   let showFinishConfirm = $state(false)
@@ -335,63 +348,80 @@
 
   function confirmLogWithCoords(x, y, end) {
     if (!pendingLog) return
-    if (voicePitchPrompt && (x == null || y == null)) return
     const { playerId, stat } = pendingLog
     recordStat(playerId, stat, x, y, end)
     pendingLog = null
     showPitchPicker = false
-    voicePitchPrompt = null
   }
 
   function cancelPitchPicker() {
     pendingLog = null
     showPitchPicker = false
-    voicePitchPrompt = null
-  }
-
-  function speakSidelineReply(message) {
-    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return
-    try {
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(message)
-      utterance.rate = 1.05
-      window.speechSynthesis.speak(utterance)
-    } catch (_) {}
-  }
-
-  function confirmPuckoutZone(section) {
-    if (!pendingPuckoutLog || !section) return
-    recordPuckout({
-      outcome: pendingPuckoutLog.outcome,
-      ourPlayer: pendingPuckoutLog.ourPlayer,
-      oppPlayer: pendingPuckoutLog.oppPlayer,
-      section
-    })
-    pendingPuckoutLog = null
-    voicePuckoutPrompt = null
-    showToast('Puckout logged.', 'success')
-    speakSidelineReply('Logged.')
-  }
-
-  function cancelPuckoutZonePicker() {
-    pendingPuckoutLog = null
-    voicePuckoutPrompt = null
   }
 
   function recordStat(playerId, stat, x = null, y = null, end = null) {
     if (!stats[playerId]) stats[playerId] = {}
     stats[playerId][stat] = (stats[playerId][stat] || 0) + 1
-    events = [...events, {
+    const event = {
       playerId, stat, period,
       time: timerSeconds,
       x: x ?? null,
       y: y ?? null,
       end: end ?? null
-    }]
+    }
+    events = [...events, event]
     if (stat === 'Point') matchScore.home.points++
     if (stat === 'Goal') matchScore.home.goals++
     saveDraft()
     scheduleAutoSync($user?.id)
+    return event
+  }
+
+  function eventSnapshot(event) {
+    return event ? {
+      playerId: event.playerId,
+      stat: event.stat,
+      period: event.period ?? null,
+      time: event.time ?? null,
+      x: event.x ?? null,
+      y: event.y ?? null,
+      end: event.end ?? null
+    } : null
+  }
+
+  function eventMatchesSnapshot(event, snapshot) {
+    return !!event && !!snapshot &&
+      String(event.playerId) === String(snapshot.playerId) &&
+      event.stat === snapshot.stat &&
+      (event.period ?? null) === (snapshot.period ?? null) &&
+      (event.time ?? null) === (snapshot.time ?? null) &&
+      (event.x ?? null) === (snapshot.x ?? null) &&
+      (event.y ?? null) === (snapshot.y ?? null) &&
+      (event.end ?? null) === (snapshot.end ?? null)
+  }
+
+  function handleVoiceLog(parsed) {
+    const event = recordStat(parsed.playerId, parsed.stat, null, null, null)
+    return { eventSnapshot: eventSnapshot(event) }
+  }
+
+  function undoVoiceEvent(snapshot) {
+    if (!eventMatchesSnapshot(events[events.length - 1], snapshot)) {
+      showToast('Could not undo after newer events.', 'error')
+      return false
+    }
+    undoLastStat()
+    return true
+  }
+
+  function fixVoiceEvent(snapshot, candidate, stat) {
+    if (!eventMatchesSnapshot(events[events.length - 1], snapshot)) {
+      showToast('Could not fix after newer events.', 'error')
+      return false
+    }
+    undoLastStat()
+    recordStat(candidate.playerId, stat, null, null, null)
+    return true
   }
 
   function decrement(playerId, stat) {
@@ -902,440 +932,6 @@
     return best
   })())
 
-  // ── SIDELINE AI CONTEXT AND TOOLS ─────────────
-  function getSidelineMatchContext() {
-    const context = {
-      activeMatch: screen === 'match',
-      teamName: $settingsStore.teamName || 'Home',
-      opposition: opposition || 'Opposition',
-      competition,
-      venue,
-      date: matchDate,
-      period,
-      timerSeconds,
-      timerRunning,
-      timerOverTime,
-      matchScore,
-      stats,
-      events,
-      puckouts,
-      oppScores,
-      subs_log,
-      players,
-      customStats,
-      allStats,
-      lineup
-    }
-
-    return {
-      ...context,
-      score: getScore(context),
-      periodAndTime: getCurrentPeriodAndTime(context),
-      playerCount: players.filter(p => p.name?.trim()).length,
-      availableStats: allStats
-    }
-  }
-
-  function getSidelinePlayerByNumber(playerNumber) {
-    const number = Number(playerNumber)
-    if (!Number.isInteger(number) || number <= 0) {
-      return { error: 'Need number.' }
-    }
-
-    const matches = players.filter(p => Number(p.number) === number && p.name?.trim())
-    if (matches.length === 0) return { error: `No #${number}.` }
-    if (matches.length > 1) return { error: `Duplicate #${number}. Use manual.` }
-    return { player: matches[0], number }
-  }
-
-  function sidelineWriteUnavailable() {
-    if (screen !== 'match') return { ok: false, error: 'No active match.' }
-    if (finishing) return { ok: false, error: 'Saving.' }
-    if (pendingLog || pendingPuckoutLog || showPlayerPicker || showPitchPicker || showPuckoutModal || showOppScoreModal) return { ok: false, error: 'Finish current action.' }
-    return null
-  }
-
-  function sidelinePendingResult(action, playerNumber, summary, extra = {}) {
-    return {
-      ok: false,
-      needsConfirmation: true,
-      pendingAction: { action, playerNumber, summary, ...extra },
-      message: `Pending ${summary}. Confirm?`
-    }
-  }
-
-  function getSidelineStat(stat) {
-    const requested = String(stat || '').trim()
-    if (!requested) return { error: 'Need stat.' }
-    const normalized = normalizeStatName({ allStats }, requested)
-    const match = allStats.find(s => s.toLowerCase() === String(normalized).toLowerCase())
-    if (!match) return { error: `No stat "${requested}".` }
-    return { stat: match }
-  }
-
-  function removeStatEvent(playerId, stat) {
-    if (!stats[playerId] || (stats[playerId][stat] || 0) === 0) {
-      return { ok: false, error: `No ${stat.toLowerCase()} to remove.` }
-    }
-
-    stats[playerId][stat]--
-    if (stat === 'Point' && matchScore.home.points > 0) matchScore.home.points--
-    if (stat === 'Goal' && matchScore.home.goals > 0) matchScore.home.goals--
-
-    const idx = findLastIndex(events, e => e.playerId === playerId && e.stat === stat)
-    if (idx !== -1) events = events.filter((_, i) => i !== idx)
-
-    saveDraft()
-    scheduleAutoSync($user?.id)
-    return { ok: true }
-  }
-
-  function sidelineChangePlayerStat(args = {}, action = 'change_player_stat') {
-    const unavailable = sidelineWriteUnavailable()
-    if (unavailable) return unavailable
-
-    const { player, number, error } = getSidelinePlayerByNumber(args.playerNumber)
-    if (error) return { ok: false, error }
-
-    const statResult = getSidelineStat(args.stat)
-    if (statResult.error) return { ok: false, error: statResult.error }
-    const stat = statResult.stat
-    const operation = String(args.operation || 'add').toLowerCase() === 'remove' ? 'remove' : 'add'
-    const summary = `${operation === 'remove' ? 'remove ' : ''}${stat.toLowerCase()} #${number}`
-    if (!args.confirm) {
-      return sidelinePendingResult(action, number, summary, {
-        stat,
-        operation
-      })
-    }
-
-    if (operation === 'remove') {
-      const result = removeStatEvent(player.id, stat)
-      if (!result.ok) return result
-      return {
-        ok: true,
-        action,
-        message: 'Removed.',
-        player: player.name,
-        playerNumber: number,
-        stat,
-        operation
-      }
-    }
-
-    if (shouldCapturePitch(stat)) {
-      pendingLog = { playerId: player.id, stat }
-      voicePitchPrompt = `Tap pitch location to finish.`
-      showPitchPicker = true
-      return {
-        ok: true,
-        action,
-        needsPitchLocation: true,
-        message: 'Tap location.',
-        player: player.name,
-        playerNumber: number,
-        stat
-      }
-    }
-
-    recordStat(player.id, stat, null, null, null)
-    return {
-      ok: true,
-      action,
-      message: 'Logged.',
-      player: player.name,
-      playerNumber: number,
-      stat,
-      operation
-    }
-  }
-
-  function sidelineLogStat(stat, action, args = {}) {
-    return sidelineChangePlayerStat({ ...args, stat, operation: 'add' }, action)
-  }
-
-  function sidelineEventMatchesSnapshot(event, snapshot) {
-    if (!snapshot) return true
-    return String(event?.playerId) === String(snapshot.playerId) &&
-      event?.stat === snapshot.stat &&
-      (event?.time ?? null) === (snapshot.time ?? null) &&
-      (event?.period ?? null) === (snapshot.period ?? null)
-  }
-
-  function sidelineUndoLastEvent(args = {}) {
-    const unavailable = sidelineWriteUnavailable()
-    if (unavailable) return unavailable
-    if (events.length === 0) return { ok: false, error: 'No event.' }
-
-    const last = events[events.length - 1]
-    const player = players.find(p => p.id === last.playerId)
-    const playerText = player?.number ? `#${player.number}` : (player?.name || 'unknown player')
-    const summary = `undo ${last.stat.toLowerCase()} for ${playerText}`
-
-    if (!args.confirm) {
-      return {
-        ok: false,
-        needsConfirmation: true,
-        pendingAction: {
-          action: 'undo_last_event',
-          summary,
-          snapshot: {
-            playerId: last.playerId,
-            stat: last.stat,
-            time: last.time ?? null,
-            period: last.period ?? null
-          }
-        },
-        message: `Pending ${summary}. Confirm?`
-      }
-    }
-
-    if (!sidelineEventMatchesSnapshot(events[events.length - 1], args.snapshot)) {
-      return { ok: false, error: 'Match changed - say undo again.' }
-    }
-
-    undoLastStat()
-    return {
-      ok: true,
-      action: 'undo_last_event',
-      message: 'Undone.',
-      undone: {
-        stat: last.stat,
-        player: player?.name || null,
-        playerNumber: player?.number || null
-      },
-      score: {
-        goals: matchScore.home.goals || 0,
-        points: matchScore.home.points || 0
-      }
-    }
-  }
-
-  const sidelinePuckoutSections = $derived(puckoutCols.flatMap(col => puckoutRows.map(row => `${col.key}-${row.key}`)))
-  const sidelinePuckoutSectionAliases = {
-    'short top': 'short-top',
-    'short upper': 'short-top',
-    'short bottom': 'short-bottom',
-    'short lower': 'short-bottom',
-    'own half top': 'own-half-top',
-    'own half upper': 'own-half-top',
-    'own half bottom': 'own-half-bottom',
-    'own half lower': 'own-half-bottom',
-    'midfield top': 'midfield-top',
-    'midfield upper': 'midfield-top',
-    'midfield bottom': 'midfield-bottom',
-    'midfield lower': 'midfield-bottom',
-    'opposition half top': 'opp-half-top',
-    'opposition half upper': 'opp-half-top',
-    'opposition half bottom': 'opp-half-bottom',
-    'opposition half lower': 'opp-half-bottom',
-    'opp half top': 'opp-half-top',
-    'opp half upper': 'opp-half-top',
-    'opp half bottom': 'opp-half-bottom',
-    'opp half lower': 'opp-half-bottom',
-    'long top': 'long-top',
-    'long upper': 'long-top',
-    'long bottom': 'long-bottom',
-    'long lower': 'long-bottom'
-  }
-
-  function normalizeSidelinePuckoutSection(section) {
-    const raw = String(section || '').trim().toLowerCase()
-    if (!raw) return ''
-    const exact = raw.replace(/\s+/g, '-')
-    if (sidelinePuckoutSections.includes(exact)) return exact
-    return sidelinePuckoutSectionAliases[raw] || ''
-  }
-
-  function sidelinePuckoutSummary(outcome, section = null, playerNumber = null, oppPlayerNum = null) {
-    const sectionLabel = section ? `, ${formatZoneLabel(section).toLowerCase()}` : ''
-    const playerText = playerNumber ? ` for #${playerNumber}` : ''
-    const oppText = oppPlayerNum ? ` to #${oppPlayerNum}` : ''
-    return `puckout ${outcome}${sectionLabel}${playerText}${oppText}`
-  }
-
-  function sidelineLogPuckout(args = {}) {
-    const unavailable = sidelineWriteUnavailable()
-    if (unavailable) return unavailable
-    if (!$settingsStore.trackPuckouts) return { ok: false, error: 'Puckouts off.' }
-
-    const outcome = String(args.outcome || '').trim().toLowerCase()
-    if (!['won', 'lost'].includes(outcome)) {
-      return { ok: false, error: 'Need won or lost.' }
-    }
-
-    const section = normalizeSidelinePuckoutSection(args.section)
-    if (args.section && !sidelinePuckoutSections.includes(section)) {
-      return {
-        ok: false,
-        error: `Bad section. Use: ${sidelinePuckoutSections.join(', ')}.`
-      }
-    }
-
-    let player = null
-    let playerNumber = null
-    if (args.playerNumber != null) {
-      const resolved = getSidelinePlayerByNumber(args.playerNumber)
-      if (resolved.error) return { ok: false, error: resolved.error }
-      player = resolved.player
-      playerNumber = resolved.number
-    }
-
-    let oppPlayerNum = null
-    if (args.oppPlayerNum != null && args.oppPlayerNum !== '') {
-      const number = Number(args.oppPlayerNum)
-      if (!Number.isInteger(number) || number <= 0) return { ok: false, error: 'Need opposition number.' }
-      oppPlayerNum = number
-    }
-
-    const summary = sidelinePuckoutSummary(outcome, section, playerNumber, oppPlayerNum)
-    if (!args.confirm) {
-      return {
-        ok: false,
-        needsConfirmation: true,
-        pendingAction: { action: 'log_puckout', outcome, section: section || null, playerNumber, oppPlayerNum, summary },
-        message: `Pending ${summary}. Confirm?`
-      }
-    }
-
-    if (!section) {
-      pendingPuckoutLog = {
-        outcome,
-        ourPlayer: player ? (player.name?.trim() || `#${player.number}`) : null,
-        oppPlayer: oppPlayerNum == null ? null : String(oppPlayerNum),
-        playerNumber
-      }
-      voicePuckoutPrompt = 'Tap puckout zone to finish.'
-      return {
-        ok: true,
-        action: 'log_puckout',
-        needsPuckoutZone: true,
-        message: 'Tap zone.',
-        outcome,
-        ourPlayer: player?.name || null,
-        playerNumber
-      }
-    }
-
-    recordPuckout({
-      outcome,
-      ourPlayer: player ? (player.name?.trim() || `#${player.number}`) : null,
-      oppPlayer: oppPlayerNum == null ? null : String(oppPlayerNum),
-      section
-    })
-
-    return {
-      ok: true,
-      action: 'log_puckout',
-      message: 'Logged.',
-      outcome,
-      section,
-      ourPlayer: player?.name || null,
-      playerNumber,
-      oppPlayerNum,
-      puckouts: {
-        total: puckouts.length,
-        won: puckouts.filter(p => p.outcome === 'won').length,
-        lost: puckouts.filter(p => p.outcome === 'lost').length
-      }
-    }
-  }
-
-  function sidelineLogOppositionScore(args = {}) {
-    const unavailable = sidelineWriteUnavailable()
-    if (unavailable) return unavailable
-
-    const type = String(args.type || '').trim().toLowerCase()
-    if (!['point', 'goal'].includes(type)) {
-      return { ok: false, error: 'Need point or goal.' }
-    }
-
-    let oppPlayerNum = null
-    if (args.oppPlayerNum != null && args.oppPlayerNum !== '') {
-      const number = Number(args.oppPlayerNum)
-      if (!Number.isInteger(number) || number <= 0) {
-        return { ok: false, error: 'Need opposition number.' }
-      }
-      oppPlayerNum = number
-    }
-
-    const marker = args.marker == null ? null : String(args.marker).trim() || null
-    const playerText = oppPlayerNum ? ` #${oppPlayerNum}` : ''
-    const summary = `opposition ${type}${playerText}`
-
-    if (!args.confirm) {
-      return {
-        ok: false,
-        needsConfirmation: true,
-        pendingAction: { action: 'log_opposition_score', type, oppPlayerNum, marker, summary },
-        message: `Pending ${summary}. Confirm?`
-      }
-    }
-
-    recordOppScore({
-      type,
-      oppPlayerNum,
-      marker,
-      includeDetails: $settingsStore.trackOppScores
-    })
-
-    return {
-      ok: true,
-      action: 'log_opposition_score',
-      message: 'Logged.',
-      type,
-      oppPlayerNum,
-      marker,
-      score: {
-        goals: matchScore.away.goals || 0,
-        points: matchScore.away.points || 0
-      },
-      detailsSaved: Boolean($settingsStore.trackOppScores)
-    }
-  }
-
-  function sidelineShowHeatmap(args = {}) {
-    if (screen === 'setup') return { ok: false, error: 'No active match.' }
-
-    const type = String(args.type || 'shots').toLowerCase()
-    if (type === 'puckout' || type === 'puckouts') {
-      if (!$settingsStore.trackPuckouts) return { ok: false, error: 'Puckouts off.' }
-      if (!puckouts.some(p => p.section)) return { ok: false, error: 'No puckout zones logged yet.' }
-      openStatsView('puckouts')
-      return { ok: true, action: 'show_heatmap', type: 'puckouts', message: 'Opened puckout heatmap.' }
-    }
-
-    const mapMode = ['all', 'actions', 'events'].includes(type) ? 'all' : 'shots'
-    const availableEvents = mapMode === 'all' ? htLocatedEvents : htShotMapEvents
-    if (!availableEvents.length) {
-      return {
-        ok: false,
-        error: mapMode === 'all' ? 'No pitch locations logged yet.' : 'No shot locations logged yet.'
-      }
-    }
-
-    htPitchMapFilter = mapMode
-    openStatsView('pitch')
-    return {
-      ok: true,
-      action: 'show_heatmap',
-      type: mapMode,
-      message: mapMode === 'all' ? 'Opened pitch map.' : 'Opened shot heatmap.'
-    }
-  }
-
-  const sidelineTools = {
-    ...buildSidelineToolHandlers(getSidelineMatchContext),
-    change_player_stat: (args) => sidelineChangePlayerStat(args),
-    log_goal: (args) => sidelineLogStat('Goal', 'log_goal', args),
-    log_point: (args) => sidelineLogStat('Point', 'log_point', args),
-    log_wide: (args) => sidelineLogStat('Wide', 'log_wide', args),
-    undo_last_event: (args) => sidelineUndoLastEvent(args),
-    log_puckout: (args) => sidelineLogPuckout(args),
-    log_opposition_score: (args) => sidelineLogOppositionScore(args),
-    show_heatmap: (args) => sidelineShowHeatmap(args),
-    cancel_pending_action: () => ({ ok: true, action: 'cancel_pending_action', message: 'Cancelled.' })
-  }
 </script>
 
 {#if screen === 'setup'}
@@ -1470,10 +1066,14 @@
     </div>
   </div>
 
-  <SidelineAI
-    getMatchContext={getSidelineMatchContext}
-    tools={sidelineTools}
-    pitchPrompt={voicePitchPrompt ? 'Tap pitch location to finish.' : voicePuckoutPrompt ? 'Tap puckout zone to finish.' : ''}
+  <LiveVoiceLogger
+    players={players}
+    availableStats={allStats}
+    currentHalf={period}
+    disabled={finishing || showPlayerPicker || showPitchPicker || showPuckoutModal || showOppScoreModal}
+    onLog={handleVoiceLog}
+    onUndo={undoVoiceEvent}
+    onFix={fixVoiceEvent}
   />
 
   <div class="mode-row">
@@ -1653,12 +1253,8 @@
     <div class="modal-backdrop" onclick={cancelPitchPicker}>
       <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">
-          {#if voicePitchPrompt}
-            {voicePitchPrompt}
-          {:else}
-            Where did it happen?
-            <span class="optional-tag">optional</span>
-          {/if}
+          Where did it happen?
+          <span class="optional-tag">optional</span>
         </div>
         <div class="pitch-wrap">
           <svg
@@ -1697,66 +1293,8 @@
             <text x="150" y="108" text-anchor="middle" fill="white" font-size="10" opacity="0.5">Tap where it happened</text>
           </svg>
         </div>
-        {#if voicePitchPrompt}
-          <button class="cancel-btn" onclick={cancelPitchPicker}>
-            Cancel voice log
-          </button>
-        {:else}
-          <button class="cancel-btn" onclick={() => confirmLogWithCoords(null, null, null)}>
-            Skip — log without location
-          </button>
-        {/if}
-      </div>
-    </div>
-  {/if}
-
-  {#if pendingPuckoutLog}
-    <div class="modal-backdrop" onclick={() => null}>
-      <div class="modal" onclick={(e) => e.stopPropagation()}>
-        <div class="modal-title">
-          {voicePuckoutPrompt || 'Tap puckout zone'}
-        </div>
-        <div class="modal-section-label">
-          {pendingPuckoutLog.outcome === 'won' ? 'Won puckout' : 'Lost puckout'}
-          {#if pendingPuckoutLog.ourPlayer}<span class="zone-hint">{pendingPuckoutLog.ourPlayer}</span>{/if}
-          {#if pendingPuckoutLog.oppPlayer}<span class="zone-hint">Opp #{pendingPuckoutLog.oppPlayer}</span>{/if}
-        </div>
-        <div class="puckout-pitch-wrap">
-          <svg class="puckout-pitch-svg" viewBox="0 0 300 100">
-            <rect width="300" height="100" fill="#2d7a2d" rx="4"/>
-            {#each puckoutRows as row}
-              {#each puckoutCols as col}
-                {@const zkey = col.key + '-' + row.key}
-                <rect
-                  x={col.x} y={row.y} width={col.w} height={row.h}
-                  fill="rgba(255,255,255,0.08)"
-                  stroke="rgba(255,255,255,0.2)"
-                  stroke-width="0.7"
-                  style="cursor:pointer"
-                  onclick={() => confirmPuckoutZone(zkey)}
-                />
-                <text
-                  x={col.x + col.w / 2} y={row.y + row.h / 2 + 2.5}
-                  text-anchor="middle" fill="white"
-                  font-size="6.5"
-                  opacity="0.78"
-                  style="pointer-events:none"
-                >{col.label}</text>
-              {/each}
-            {/each}
-            {#each [62, 120, 180, 238] as dx}
-              <line x1={dx} y1="4" x2={dx} y2="96" stroke="white" stroke-width="0.5" opacity="0.25"/>
-            {/each}
-            <line x1="4" y1="50" x2="296" y2="50" stroke="white" stroke-width="1" opacity="0.5"/>
-            <line x1="150" y1="4" x2="150" y2="96" stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
-            <rect x="4" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-            <rect x="280" y="30" width="16" height="40" fill="none" stroke="white" stroke-width="0.8" opacity="0.45"/>
-            <text x="33" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{($settingsStore.teamName || 'Home').slice(0,8).toUpperCase()}</text>
-            <text x="267" y="13" text-anchor="middle" fill="white" font-size="5.5" opacity="0.55" style="pointer-events:none">{(opposition || 'Opposition').slice(0,8).toUpperCase()}</text>
-          </svg>
-        </div>
-        <button class="cancel-btn" onclick={cancelPuckoutZonePicker}>
-          Cancel puckout log
+        <button class="cancel-btn" onclick={() => confirmLogWithCoords(null, null, null)}>
+          Skip — log without location
         </button>
       </div>
     </div>

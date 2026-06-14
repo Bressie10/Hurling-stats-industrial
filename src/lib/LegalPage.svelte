@@ -61,7 +61,7 @@
           <li>Account details such as email address, authentication identifiers, and club/team membership.</li>
           <li>Match and squad data you enter, including player names, player numbers, match events, notes, lineups, substitutions, puckouts, reports, and stat targets.</li>
           <li>Subscription and entitlement records needed to decide which features your account can access.</li>
-          <li>Voice clips and match context sent for Sideline AI transcription or answer generation when you choose to use voice features.</li>
+          <li>Live voice logging transcripts produced on your device, plus optional assistant questions and match context when you choose to use Sideline AI.</li>
           <li>Basic technical information needed to run the app, secure sessions, diagnose failures, and sync offline changes.</li>
         </ul>
       </section>
@@ -73,7 +73,7 @@
 
       <section>
         <h2>Storage And Processors</h2>
-        <p>Device data is stored locally using browser storage such as IndexedDB. Cloud account and sync data is stored with Supabase. Web subscription checkout and billing are handled by Stripe outside native store builds. Sideline AI features may send audio or match context to OpenAI for transcription and responses.</p>
+        <p>Device data is stored locally using browser storage such as IndexedDB. Cloud account and sync data is stored with Supabase. Web subscription checkout and billing are handled by Stripe outside native store builds. Live voice logging uses on-device speech recognition; optional Sideline AI question features may send audio or match context to OpenAI for transcription and responses.</p>
       </section>
 
       <section>

@@ -46,11 +46,10 @@ required('Capacitor config', capacitorConfig, 'capacitor.config.json')
 required('Capacitor CLI package', packageHas('@capacitor/cli'), '@capacitor/cli')
 required('Capacitor iOS package', packageHas('@capacitor/ios'), '@capacitor/ios')
 required('Capacitor Android package', packageHas('@capacitor/android'), '@capacitor/android')
-required('Bubblewrap CLI package', packageHas('@bubblewrap/cli'), '@bubblewrap/cli')
 
 const java = run('java', ['-version'])
 const javaOutput = `${java.stdout || ''}${java.stderr || ''}`.trim().split('\n')[0] || 'not found'
-required('JDK for Android/Bubblewrap', java.status === 0, javaOutput)
+required('JDK for Android', java.status === 0, javaOutput)
 
 const sdkmanager = run('sdkmanager', ['--version'])
 const androidHome = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || ''
@@ -60,10 +59,10 @@ required(
   androidHome || (sdkmanager.stderr || sdkmanager.stdout || 'sdkmanager not found').trim(),
 )
 
-const bubblewrapProject = existsSync('native/android/twa-project/twa-manifest.json')
+const androidProject = existsSync('android/app/build.gradle')
 optional(
-  'Android TWA project generated',
-  bubblewrapProject,
+  'Android Capacitor project generated',
+  androidProject,
   'run npm run native:android:init after JDK/Android SDK are installed',
 )
 

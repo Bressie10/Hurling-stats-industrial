@@ -25,7 +25,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>PitchNote uses the microphone when you choose to record Sideline AI voice commands for match logging and match questions.</string>
+	<string>PitchNote uses the microphone for on-device voice logging and optional assistant questions.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>PitchNote uses on-device speech recognition to turn spoken match events into local stat logs.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

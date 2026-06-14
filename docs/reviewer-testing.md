@@ -1,6 +1,6 @@
 # Reviewer Account And Store-Mode Testing
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
 Use this before Apple App Store or Google Play submission. The goal is to give reviewers a real account with enough data to verify the app immediately, without exposing web purchase flows inside native builds.
 
@@ -74,7 +74,7 @@ Check:
 - Insights shows match and season summaries.
 - Settings account deletion is visible.
 - Pricing/locked feature surfaces do not show Stripe checkout, prices, external purchase links, or web billing controls in store mode.
-- Sideline AI microphone permission can be requested on a real device.
+- On-device voice logging can request microphone/speech permission and log a simple spoken stat on a real device.
 
 ## Store Reviewer Notes
 

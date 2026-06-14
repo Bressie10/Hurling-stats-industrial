@@ -3,7 +3,7 @@
   "appName": "PitchNote",
   "webDir": ".svelte-kit/output/client",
   "server": {
-    "url": "https://www.pitchnote.ie/?store_build=ios",
+    "url": "https://www.pitchnote.ie/",
     "cleartext": false
   },
   "ios": {

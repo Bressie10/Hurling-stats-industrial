@@ -1,35 +1,31 @@
 # Android Store Wrapper
 
-Use a Trusted Web Activity for the first Google Play release.
+Use a Capacitor Android wrapper for the first Google Play release so live voice logging can use the native on-device speech recognizer.
 
 ## Fixed Values
 
 - Package name: `ie.pitchnote.app`
 - Launch URL: `https://www.pitchnote.ie/?store_build=android`
 - Web host: `www.pitchnote.ie`
-- Wrapper type: Trusted Web Activity
+- Wrapper type: Capacitor Android
 
 ## Build Order
 
 1. Confirm production is deployed from `main`.
 2. Install local prerequisites:
-   - JDK 17, or allow Bubblewrap to install its managed JDK when prompted.
+   - JDK 17.
    - Android Studio / Android SDK command-line tools.
 3. Run `npm run native:doctor` and resolve Android blockers.
-4. Generate the TWA project:
+4. Generate the Capacitor Android project if `android/` does not already exist:
 
    ```sh
    npm run native:android:init
    ```
 
-5. Review the generated `native/android/twa-project/twa-manifest.json` against `native/android/twa-manifest.template.json`.
-6. Build a real Android App Bundle (`.aab`) with `npm run native:android:build`.
-7. Get the final Play App Signing SHA-256 fingerprint.
-8. Add `/.well-known/assetlinks.json` to the web app using the real package name and SHA-256 fingerprint.
-9. Rebuild/redeploy production, then verify the TWA opens without a browser address bar.
-10. Complete the Play Console Data Safety form.
-
-Do not commit a placeholder `assetlinks.json`. A wrong fingerprint will fail Digital Asset Links verification and can make the release harder to diagnose.
+5. After web changes, run `npm run native:android:sync`.
+6. Build a debug wrapper locally with `npm run native:android:build`, or create a signed release/App Bundle from Android Studio.
+7. Test on a real Android device and confirm on-device voice logging works with airplane mode enabled after the language model is available.
+8. Complete the Play Console Data Safety form.
 
 Do not commit local keystores, `.aab`, or `.apk` artifacts. Root `.gitignore` excludes native signing keys and build outputs.
 

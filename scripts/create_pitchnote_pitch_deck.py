@@ -190,8 +190,8 @@ def slide_1():
     draw_text(draw, "Sideline AI for\nhurling coaches", (104, 278), 72, COL["white"], black=True, line_gap=14)
     draw_text(draw, "Speak the stat. Confirm it. PitchNote logs it into live match analytics.", (110, 486), 33, COL["muted"], bold=True, max_w=760)
     pill(draw, "90 second pitch", (110, 630, 330, 682), COL["lime"])
-    pill(draw, "Online AI + offline manual fallback", (356, 630, 760, 682), COL["orange"])
-    draw_text(draw, "Current app truth: manual match logging is offline-first; Sideline AI needs a live OpenAI Realtime connection.", (110, 960), 22, COL["muted"], bold=True, max_w=920)
+    pill(draw, "On-device voice + offline manual fallback", (356, 630, 820, 682), COL["orange"])
+    draw_text(draw, "Current app truth: manual and native voice logging are device-first; optional AI questions still need network.", (110, 960), 22, COL["muted"], bold=True, max_w=920)
     phone(draw, 1240, 112, 0.88)
     return img
 
@@ -248,7 +248,7 @@ def slide_4():
     bullet(draw, "Outbox queues Supabase sync until online", 190, 804, COL["lime"])
     rounded(draw, (1030, 570, 1780, 840), COL["panel"], outline=COL["stroke"], width=2, r=24)
     draw_text(draw, "Needs a connection", (1072, 612), 38, COL["orange"], black=True)
-    bullet(draw, "Sideline AI Realtime session and WebRTC call", 1080, 688, COL["orange"])
+    bullet(draw, "Native on-device speech recognition with roster biasing", 1080, 688, COL["orange"])
     bullet(draw, "Initial sign-in if session is not cached", 1080, 746, COL["orange"])
     bullet(draw, "Live sharing and cloud sync transport", 1080, 804, COL["orange"])
     rounded(draw, (240, 910, 1680, 984), COL["lime"], r=20)
@@ -308,7 +308,7 @@ The problem is simple. Hurling is too fast for paper notes and too physical for 
 With Sideline AI, the workflow is speak, confirm, log and analyse. The current app can voice-log goals, points, wides, player stats, custom stats, puckouts by zone, opposition scores and undo actions. It can also answer live questions about the score, clock, player stats, leaders and puckouts.
 
 ## Slide 4 - Reliability (0:48-1:05)
-The offline story is important. The core app is offline-first: manual logging, timer, drafts and local match storage work on the device, with a sync outbox for later. Sideline AI itself is online-only because it uses OpenAI Realtime over WebRTC.
+The offline story is important. The core app is offline-first: manual logging, native voice logging, timer, drafts and local match storage work on the device, with a sync outbox for later. Optional AI questions still need network access.
 
 ## Slide 5 - Hurling Data (1:05-1:20)
 This is not a generic voice recorder. The voice actions feed a hurling-specific data model: 10-zone puckout analysis, opposition scorer and marker tracking, pitch locations, player impact, targets, reports and live viewer mode for selectors.
@@ -329,8 +329,8 @@ PitchNote is a voice-first hurling match analytics app. Coaches can speak match 
 ## Current implemented app areas
 
 - Live match logging: points, goals, wides, tackles, blocks, turnovers, frees, custom stats, substitutions, notes, pitch locations, opposition scores and puckouts.
-- Sideline AI: embedded in the match screen, uses OpenAI Realtime through server-side SvelteKit routes, supports hold-to-talk, transcript display, pending action confirmation and local fallback parsing.
-- Sideline AI write commands currently supported: goals, points, wides, add/remove player stats including custom stats, puckout won/lost with exact zone, opposition goals/points and undo last event.
+- Live voice logging: embedded in the match screen, uses native on-device speech recognition, roster/action vocabulary biasing, fuzzy matching, confirmation, undo and correction UI.
+- Voice logging write commands currently supported: goals, points, wides, frees, 45s, sidelines, turnovers, yellow cards and black cards when those stats exist for the match.
 - Sideline AI read commands currently supported: match summary, score, player stat leaders, individual player quick stats, team stat totals, puckout summary, recent events and current period/time.
 - Do not claim voice support for substitutions, notes or sync changes yet.
 - Hurling-specific analytics: 10-zone puckout heatmap, puckout by player/opposition winner, scores conceded by marker and opposition player, pitch maps, timelines, player stats, team stats, targets, coaching insights, work-ons and PDF reports.
@@ -342,8 +342,8 @@ PitchNote is a voice-first hurling match analytics app. Coaches can speak match 
 - Accurate claim: manual match logging is offline-first after the app has loaded/cached and the user is signed in.
 - Accurate claim: drafts, timer, local match data and the sync outbox are local-device first.
 - Accurate claim: Supabase cloud backup waits until the device is online.
-- Accurate limitation: Sideline AI does not work offline in the current implementation.
-- Why: the current voice feature calls `/api/realtime/call`, which sends a WebRTC offer to `https://api.openai.com/v1/realtime/calls`, and also has a session route for OpenAI Realtime client secrets. That requires network and `OPENAI_API_KEY`.
+- Accurate claim: native live voice logging works without a cloud speech or LLM call once the device has an offline speech recognizer available.
+- Accurate limitation: optional Sideline AI answer/transcription routes still need network and `OPENAI_API_KEY`.
 - Accurate limitation: live sharing also needs Supabase network access.
 - Avoid saying: "Every stat, including voice, works offline." That is false.
 """

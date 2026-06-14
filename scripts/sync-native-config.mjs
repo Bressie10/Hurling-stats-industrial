@@ -41,7 +41,7 @@ writeOrCheck('capacitor.config.json', {
   appName: release.appName,
   webDir: '.svelte-kit/output/client',
   server: {
-    url: release.ios.launchUrl,
+    url: release.productionUrl,
     cleartext: false,
   },
   ios: {

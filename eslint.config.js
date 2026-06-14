@@ -13,6 +13,7 @@ export default [
       'ios/App/App/public/**',
       'ios/App/App/build/**',
       'ios/DerivedData/**',
+      'android/app/src/main/assets/**',
       'android/**/build/**',
       'node_modules/**',
       'package-lock.json',

@@ -11,7 +11,7 @@ Last updated: 2026-06-13
 - `app-development` is still the current GitHub Pages preview branch unless the workflow is changed.
 - Local branch may still be `app-development`, but `origin/main` currently includes the latest store-release work.
 - Latest production work is pushed to `origin/main`; use `git log origin/main -1` for the exact commit.
-- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. The app is being rebranded to PitchNote at `pitchnote.ie`; support email needs to be configured as `support@pitchnote.ie`. Stripe-first paywall hardening is underway for launch. Android wrapper generation is still blocked on JDK/Android SDK setup.
+- Current stage: iOS native wrapper has been generated, synced, branded, verified with a simulator build, and manually launched in the iPhone 17 simulator. Android Capacitor wrapper generation has also been added so native on-device speech recognition can work on Android. The app is PitchNote at `pitchnote.ie`; support email is `support@pitchnote.ie`. Stripe-first web billing is the launch payment path, with native apps as free companion clients.
 
 ## URLs
 
@@ -54,7 +54,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `README.md` and this handoff document record that `main` is the deployment branch and `Voice-Changes` must not be used
 - Native release scaffolding was added:
   - `native/shared/release.json` records app IDs, platform launch URLs, public review URLs, and support email
-  - `native/android/twa-manifest.template.json` is the Android TWA release reference
+  - generated `android/` project is the Android Capacitor release reference
   - `native/ios/capacitor.config.template.json` is the iOS Capacitor release reference
   - `scripts/verify-store-release.mjs` powers `npm run store:check` and `npm run store:check:live`
   - `src/lib/api.js` adds `PUBLIC_API_BASE_URL` support for native/static shells that need production voice endpoints
@@ -92,12 +92,12 @@ PWABuilder optional warnings are not the release target. The release target is A
   - root Svelte layouts now use `{@render children()}` instead of deprecated `<slot>`
   - stale tracked `codex-fix-prompt.md` was removed from the release tree
 - Native wrapper tooling was started:
-  - Capacitor 8 and Bubblewrap CLI were added as local dev tooling
+  - Capacitor 8 was added as local native tooling
   - `capacitor.config.json` is the active iOS Capacitor config generated from `native/shared/release.json`
   - `npm run native:config` and `npm run native:config:check` keep native config in sync
   - `npm run native:doctor` checks local JDK, Android SDK, Xcode, and generated native project status
   - `npm run native:ios:add`, `npm run native:ios:sync`, and `npm run native:ios:open` are available once full Xcode is installed/selected
-  - `npm run native:android:init`, `npm run native:android:update`, and `npm run native:android:build` are available once JDK/Android SDK setup is complete
+  - `npm run native:android:init`, `npm run native:android:sync`, `npm run native:android:open`, and `npm run native:android:build` are available once JDK/Android SDK setup is complete
   - root `.gitignore` now blocks native signing keys and Android/iOS build artifacts
 - iOS wrapper generation was completed locally:
   - Full Xcode 26.5 is installed and selected at `/Applications/Xcode.app/Contents/Developer`
@@ -176,7 +176,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `origin/main` was fast-forwarded through `ad5c954`, `d985470`, and `55705c6`.
   - Production URLs returned `200`: `/privacy`, `/terms`, `/support`, `/account/delete`.
 - Native scaffold verification on 2026-06-12:
-  - `npm run store:check` passed with one expected warning: `assetlinks.json` is absent until the real Play signing SHA-256 is known.
+  - `npm run store:check` passed. At that point Android was still being evaluated as a TWA, so the missing `assetlinks.json` warning was expected.
   - `npm run store:check:live` passed against `https://www.pitchnote.ie/`.
   - `npm run smoke:voice` passed.
   - Vercel-style `npm run build` passed.
@@ -185,7 +185,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Production `/app/match` HTML contains the corrected worker registration.
   - `/app/pwabuilder-sw.js` still returns `404`, which is expected; the app should no longer request that route.
 - Cleanup verification on 2026-06-12:
-  - `npm run store:check` passed with the expected `assetlinks.json` warning.
+  - `npm run store:check` passed with the then-expected TWA `assetlinks.json` warning.
   - `npm run smoke:voice` passed.
   - `git diff --check` passed.
   - `PUBLIC_SUPABASE_URL=https://example.supabase.co PUBLIC_SUPABASE_ANON_KEY=dummy OPENAI_API_KEY=dummy npm run build` passed.
@@ -198,7 +198,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run test` passed: 11 sync/outbox regression tests.
   - `npm run lint` passed with warnings only; existing unused variables remain as cleanup items.
   - `npm run format:check` passed for the new formatting baseline.
-  - `npm run store:check` passed with the expected `assetlinks.json` warning.
+  - `npm run store:check` passed with the then-expected TWA `assetlinks.json` warning.
 - Native tooling verification on 2026-06-13:
   - `npm run native:config:check` passed.
   - Full Xcode is now selected and detected correctly: Xcode 26.5, build 17F42.
@@ -207,7 +207,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `xcodebuild -list -project ios/App/App.xcodeproj` resolved Capacitor Swift Package Manager dependencies and found the `App` scheme.
   - Unsigned simulator build passed with `CODE_SIGNING_ALLOWED=NO`.
   - Manual Xcode run in the iPhone 17 simulator passed.
-  - `npm run native:doctor` now reports only Android local-machine blockers: no JDK and no Android SDK command-line tools. Android TWA generation still requires JDK/Android SDK.
+  - `npm run native:doctor` now reports Android local-machine blockers when no JDK or Android SDK command-line tools are available.
 
 ## Next Work
 
@@ -221,7 +221,7 @@ Recommended order from here:
 2. Add `support@pitchnote.ie` to App Store Connect and Google Play store metadata when those records are created.
 3. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
 4. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
-5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, 2-match cap, sync restore, account deletion, and Sideline AI microphone permission on real devices.
+5. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, on-device voice logging, 2-match cap, sync restore, and account deletion on real devices.
 6. Open the generated iOS project and configure Apple signing:
    - run `npm run native:ios:open`
    - select the `App` target
@@ -230,19 +230,18 @@ Recommended order from here:
    - create/register the App Store Connect app record for the same bundle ID
    - archive/upload a TestFlight build after signing is valid
 7. Install Android prerequisites, then rerun `npm run native:doctor`:
-   - JDK 17 or Bubblewrap-managed JDK for Android
+   - JDK 17 for Android
    - Android Studio / Android SDK command-line tools for Android
-8. Build the Android wrapper as a Trusted Web Activity:
+8. Build the Android wrapper as a Capacitor app:
    - package name `ie.pitchnote.app`
    - launch URL `https://www.pitchnote.ie/?store_build=android`
-   - generate with `npm run native:android:init`
-   - generate the real App Bundle (`.aab`)
-   - add `/.well-known/assetlinks.json` only after the final signing SHA-256 fingerprint is known
+   - sync with `npm run native:android:sync`
+   - generate the real App Bundle (`.aab`) from Android Studio or Gradle once signing is configured
 9. Complete App Store Connect and Play Console forms:
    - privacy policy URL: `https://www.pitchnote.ie/privacy`
    - support URL: `https://www.pitchnote.ie/support`
    - account deletion URL: `https://www.pitchnote.ie/account/delete`
-   - data/privacy answers must mention Supabase account/cloud sync, local device storage, OpenAI voice transcription/answers, and Stripe web billing outside native store builds
+   - data/privacy answers must mention Supabase account/cloud sync, local device storage, on-device live voice logging, optional OpenAI assistant transcription/answers, and Stripe web billing outside native store builds
 10. Confirm store-mode screens do not show prices, Stripe checkout, upgrade CTAs, or external payment links before submission.
 11. Continue code cleanup separately from release-critical work:
    - remove verified-dead CSS in `Match.svelte`, `Landing.svelte`, `Upgrade.svelte`, `LpFooter.svelte`, and related screens
@@ -254,12 +253,12 @@ Recommended order from here:
 14. Consider share target later if importing shared notes, files, or match data becomes useful.
 
 Do not add OS notes-app registration unless the product genuinely needs to receive notes from the operating system. It is probably not a good fit for PitchNote.
-Do not add placeholder signing files, placeholder `assetlinks.json`, or fake store credentials.
+Do not add placeholder signing files, local keystores, build artifacts, or fake store credentials.
 
 ## Resume Prompt
 
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS native wrapper signing/TestFlight setup is next after paywall verification. Native Settings billing hardening is done and code/docs use support@pitchnote.ie. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/Bubblewrap tooling plus native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers are Android-only: no JDK and no Android SDK command-line tools.
+Read docs/session-handoff.md, docs/store-release.md, and docs/reviewer-testing.md. Main is the approved integration/deployment target. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS and Android now use Capacitor so live voice logging can use on-device speech recognition. Native Settings billing hardening is done and code/docs use support@pitchnote.ie. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Run `npm run native:config:check` and `npm run native:doctor`; current remaining local blockers may be Android-only: no JDK and no Android SDK command-line tools.
 ```
