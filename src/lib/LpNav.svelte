@@ -396,8 +396,6 @@
   }
   .mob-item:hover { background: rgba(255,255,255,0.05); color: var(--lp-text); }
 
-  .mob-divider { height: 1px; background: rgba(26,40,64,0.6); margin: 4px 0; }
-
   .mob-ctas { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
   .mob-signin {
     width: 100%; padding: 14px; border-radius: 10px;

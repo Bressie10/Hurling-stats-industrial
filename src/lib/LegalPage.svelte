@@ -12,25 +12,25 @@
       eyebrow: 'Privacy',
       title: 'Privacy Policy',
       lead: 'How PitchNote collects, uses, stores, and deletes data for coaches and clubs.',
-      updated: 'June 12, 2026'
+      updated: 'June 17, 2026'
     },
     terms: {
       eyebrow: 'Terms',
       title: 'Terms of Use',
       lead: 'The rules for using PitchNote on the web, iOS, Android, and installed app experiences.',
-      updated: 'June 12, 2026'
+      updated: 'June 17, 2026'
     },
     support: {
       eyebrow: 'Support',
       title: 'Support',
       lead: 'Help for account access, offline sync, subscriptions, and match-day issues.',
-      updated: 'June 12, 2026'
+      updated: 'June 17, 2026'
     },
     delete: {
       eyebrow: 'Account deletion',
       title: 'Delete Your Account',
       lead: 'How to permanently delete your PitchNote account and associated cloud data.',
-      updated: 'June 12, 2026'
+      updated: 'June 17, 2026'
     }
   }
 
@@ -61,7 +61,7 @@
           <li>Account details such as email address, authentication identifiers, and club/team membership.</li>
           <li>Match and squad data you enter, including player names, player numbers, match events, notes, lineups, substitutions, puckouts, reports, and stat targets.</li>
           <li>Subscription and entitlement records needed to decide which features your account can access.</li>
-          <li>Live voice logging transcripts produced on your device, plus optional assistant questions and match context when you choose to use Sideline AI.</li>
+          <li>Match-day voice commands processed on your device for live logging, plus optional assistant questions, audio clips, and match context when you choose to use Sideline AI.</li>
           <li>Basic technical information needed to run the app, secure sessions, diagnose failures, and sync offline changes.</li>
         </ul>
       </section>
@@ -73,7 +73,7 @@
 
       <section>
         <h2>Storage And Processors</h2>
-        <p>Device data is stored locally using browser storage such as IndexedDB. Cloud account and sync data is stored with Supabase. Web subscription checkout and billing are handled by Stripe outside native store builds. Live voice logging uses on-device speech recognition; optional Sideline AI question features may send audio or match context to OpenAI for transcription and responses.</p>
+        <p>Device data is stored locally using browser storage such as IndexedDB. Cloud account and sync data is stored with Supabase. Web subscription checkout and billing are handled by Stripe outside native store builds. Live voice logging uses on-device speech recognition and does not send live match commands to OpenAI for logging; optional Sideline AI question features may send audio or match context to OpenAI for transcription and responses.</p>
       </section>
 
       <section>
@@ -133,7 +133,7 @@
 
       <section>
         <h2>Common Issues</h2>
-        <p>If sign-in fails, check your email confirmation and network connection. If data is missing on a new device, sign in with the same account and tap Sync. If voice capture is unavailable, check microphone permission and confirm you are signed in.</p>
+        <p>If sign-in fails, check your email confirmation and network connection. If data is missing on a new device, sign in with the same account and tap Sync. If voice capture is unavailable in the native app, check microphone and speech permissions, confirm you are signed in, and use tap logging if offline speech recognition is unavailable.</p>
       </section>
 
       <section>

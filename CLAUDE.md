@@ -89,16 +89,17 @@ SIDELINE_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 
 | Store | Key | Notes |
 |---|---|---|
-| `matches` | `id` (number or `'draft'`) | `loadMatches()` filters out `isDraft: true` |
-| `squad` | `id` | |
+| `matches` | `id` (number, `'draft'`, or `draft:<teamScope>`) | `loadMatches()` filters out `isDraft: true` and applies current team scope |
+| `squad` | `id` | Legacy personal squad store |
+| `squad_by_team` | `storeKey` (`teamScope:localId`) | Current team-scoped squad store, indexed by `teamScope` |
 
-Draft: saved as `id: 'draft'`, `isDraft: true`. Auto-resumed on load, cleared by `finishMatch()`.
+Draft: personal scope saves as `id: 'draft'`; active-team scope saves as `id: 'draft:<teamScope>'`; both use `isDraft: true`. Auto-resumed on load for the current scope, cleared by `finishMatch()`.
 
 ### Supabase Tables
 
 | Table | Purpose |
 |---|---|
-| `matches` / `squad` | Cloud copies per user |
+| `matches` / `squad` | Cloud copies per user, with nullable `team_id` for active-team scoped rows |
 | `profiles` | Team name, age group |
 | `club_members` | Roles: `owner` \| `admin` \| `coach` |
 | `team_members` | `(club_id, team_id, user_id, role)` — many-to-many |
@@ -111,6 +112,8 @@ All tables have RLS. `custom_features` keys: `isPro`, `isClub`, `isClubPro` (boo
 - Club: `owner` (implicit all-team access) | `admin` | `coach`
 - Team: `coach` | `player` (multiple teams via multiple `team_members` rows)
 - `activeTeamId` persisted to `localStorage('active-team-id')`
+- `src/lib/team-scope.js` is the source for the active-team localStorage key and personal/team scope normalization.
+- `supabase/migrations/20260617_team_scoped_data_and_rls.sql` adds `team_id` to match/squad cloud rows, changes match cloud conflicts to `(id, user_id)`, tightens teams/live session RLS, and validates that user-owned rows are tagged only to teams the user can access. `supabase/migrations/20260617_team_scoped_policy_reset.sql` must run after it to remove stale policy variants and recreate the intended policy set.
 
 **Code-based joins:** Team joins go through the `join_team_with_code(p_code text)` security-definer RPC. Club-code lookup goes through `find_club_by_code(p_code text)`. Do not reintroduce direct client inserts into `club_members` / `team_members` for self-join flows.
 
@@ -204,6 +207,9 @@ The `.print-only` sections in the template must stay — their SVG elements need
 
 ### Sideline AI voice
 Sideline AI uses short clips sent to `src/routes/api/voice/transcribe`, then deterministic local parsing in `src/lib/sideline-command-parser.js`. The transcribe route uses server-side `OPENAI_API_KEY`, requires the caller's Supabase bearer token, and validates it against Supabase Auth before calling OpenAI. The old OpenAI Realtime routes/client were removed; do not restore them for match logging cost control.
+
+### Native live voice logging
+`LiveVoiceLogger.svelte` is the live match logger and stays offline-first: it calls `recognizeOnDeviceSpeech()` and then `parseVoiceLog()`, not `/api/voice/transcribe`. Current v1 live voice stats are Point, Goal, Wide, Free Won, Turnover Lost, and Yellow Card. The parser accepts roster names, unambiguous surnames, initials for duplicate surnames, jersey numbers, number words, fuzzy names, and native STT alternatives. It returns `matchSource`, confidence, low-confidence state, candidates, and `needsLocation` for Point/Goal/Wide when pitch coordinates are enabled. Black/red cards, 45s, and sideline balls remain tap-only.
 
 ---
 

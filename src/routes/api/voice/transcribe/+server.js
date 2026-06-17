@@ -108,7 +108,7 @@ export async function POST({ request }) {
   let form
   try {
     form = await request.formData()
-  } catch (_) {
+  } catch {
     return json({ error: 'Expected multipart form data.' }, { status: 400, headers })
   }
 

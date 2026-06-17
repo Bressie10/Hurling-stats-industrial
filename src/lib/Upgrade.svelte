@@ -249,11 +249,6 @@
   }
   .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-  .coming-soon-note {
-    font-size: 12px;
-    color: var(--text-faint);
-    margin: 0;
-  }
   .store-build-note {
     max-width: 440px;
     font-size: 12px;

@@ -1,8 +1,10 @@
 # Stripe Billing
 
-Last updated: 2026-06-13
+Last updated: 2026-06-17
 
 PitchNote uses Stripe Checkout and Billing on the web. Native iOS and Android builds are companion clients only and must not show Stripe checkout, prices, web billing links, or external payment calls to action.
+
+The Supabase Edge Functions share `STRIPE_API_VERSION = '2026-02-25.clover'` from `supabase/functions/_shared/billing.ts`.
 
 ## Plans
 

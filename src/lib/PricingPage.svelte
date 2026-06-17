@@ -271,7 +271,7 @@
     background-size: 200px; pointer-events: none; z-index: 9999; opacity: 0.6;
   }
   .reveal { transform: translateY(20px); transition: transform .6s ease; }
-  .reveal.in { transform: none; }
+  .reveal:global(.in) { transform: none; }
   .reveal-delay-1 { transition-delay: .1s; }
   .reveal-delay-2 { transition-delay: .2s; }
 

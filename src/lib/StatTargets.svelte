@@ -32,7 +32,7 @@
         const parsed = JSON.parse(stored)
         targets = parsed.targets || {}
         customTargetStats = parsed.customStats || []
-      } catch (e) {}
+      } catch {}
     }
   })
 

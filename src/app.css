@@ -8,7 +8,18 @@
   --divider-faint: #1F1F1F;
   --input-bg: #1E1E1E;
   --input-border: #333333;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+
+  /* Elevation scale — gives flat cards depth without changing colour scheme */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.45);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.40), 0 1px 3px rgba(0,0,0,0.30);
+  --shadow-lg: 0 12px 36px rgba(0,0,0,0.50), 0 3px 10px rgba(0,0,0,0.35);
+  --glow: 0 0 0 1px rgba(var(--primary-rgb),0.35), 0 6px 22px rgba(var(--primary-rgb),0.18);
+
+  /* Consistent radius scale */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
 
   --text: #FFFFFF;
   --text-2: #CCCCCC;
@@ -36,6 +47,11 @@ body {
   font-size: 16px;
   color: var(--text);
   background: var(--bg);
+  /* Soft top-down depth so the app no longer reads as one flat black slab */
+  background-image:
+    radial-gradient(120% 70% at 50% -10%, rgba(var(--primary-rgb), 0.06), transparent 60%),
+    radial-gradient(90% 50% at 100% 0%, rgba(var(--primary-rgb), 0.03), transparent 55%);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -47,8 +63,30 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Snappier, consistent tactile feedback for primary tap targets */
+@media (hover: none) {
+  button:active { transition: transform 0.05s ease; }
+}
+
+/* Keyboard focus ring — accessible without bleeding into mouse/touch */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.35);
+  border-radius: 6px;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Thin scrollbars */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
@@ -159,6 +197,6 @@ select {
   min-height: 100vh;
 }
 
-:global(html:has(.lp)) {
+html:has(.lp) {
   scroll-padding-top: 68px;
 }

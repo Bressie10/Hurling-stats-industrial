@@ -28,7 +28,7 @@ function openAiErrorMessage(body) {
 function contextJson(context) {
   try {
     return clipText(JSON.stringify(context || {}, null, 2), MAX_CONTEXT_CHARS)
-  } catch (_) {
+  } catch {
     return '{}'
   }
 }

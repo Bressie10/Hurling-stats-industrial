@@ -9,6 +9,7 @@
   const sections = [
     { id: 'getting-started',      label: 'Getting Started' },
     { id: 'match-logging',        label: 'Match Logging' },
+    { id: 'voice-logging',        label: 'Voice Logging' },
     { id: 'puckout-tracking',     label: 'Puckout Tracking' },
     { id: 'opposition-tracking',  label: 'Opposition Tracking' },
     { id: 'quick-view-stats',     label: 'Quick View Stats' },
@@ -184,6 +185,32 @@
         <div class="docs-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span><strong>Tip:</strong> Custom stats can be added during a live match from the stats setup — you're not locked into the default list.</span>
+        </div>
+      </section>
+
+      <!-- ── Voice Logging ──────────────────────────────────────────────── -->
+      <section id="voice-logging" class="docs-section">
+        <div class="docs-tag">Native Feature</div>
+        <h1>Voice Logging</h1>
+        <p class="docs-lead">Use the native iOS or Android app to log common match events with on-device speech recognition.</p>
+
+        <h2>Using voice during a match</h2>
+        <p>Start a match, tap <strong>Voice log</strong>, then say the stat and player. Use either the player's name or jersey number.</p>
+        <ul class="docs-list">
+          <li><strong>Scores:</strong> "point 11", "goal number fourteen", or "wide jersey seven"</li>
+          <li><strong>General play:</strong> "free 11" or "turnover 7"</li>
+          <li><strong>Discipline:</strong> "yellow card 7"</li>
+        </ul>
+
+        <h2>How matching works</h2>
+        <p>The parser checks roster names, unambiguous surnames, duplicated-surname initials, jersey numbers, number words, fuzzy names, and native speech alternatives before logging the event.</p>
+
+        <h2>Pitch locations</h2>
+        <p>For Point, Goal, and Wide, voice can log the event first and then offer an optional add-location action when pitch-coordinate tracking is enabled.</p>
+
+        <div class="docs-tip">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span><strong>Voice limits:</strong> black/red cards, 45s, and sideline balls are tap-only in this version. If offline speech is unavailable, use tap logging.</span>
         </div>
       </section>
 

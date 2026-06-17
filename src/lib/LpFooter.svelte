@@ -104,13 +104,13 @@
     letter-spacing: 0.08em; color: var(--lp-text2);
   }
   .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .footer-col li button, .footer-col li a {
+  .footer-col li button {
     background: none; border: none; cursor: pointer;
     font-family: var(--lp-font-body); font-size: 14px; color: var(--lp-text3);
     padding: 0; text-align: left; text-decoration: none;
     transition: color 0.15s;
   }
-  .footer-col li button:hover, .footer-col li a:hover { color: var(--lp-text); }
+  .footer-col li button:hover { color: var(--lp-text); }
 
   /* Bottom bar */
   .footer-bottom {

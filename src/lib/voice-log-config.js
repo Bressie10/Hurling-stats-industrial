@@ -19,14 +19,6 @@ export const VOICE_ACTIONS = {
     stat: 'Free Won',
     variants: ['free', 'free taken', 'free point'],
   },
-  45: {
-    stat: '45',
-    variants: ['45', 'forty five', 'forty-five'],
-  },
-  sideline: {
-    stat: 'Sideline',
-    variants: ['sideline', 'sideline ball', 'sideline cut'],
-  },
   turnover: {
     stat: 'Turnover Lost',
     variants: ['turnover', 'lost ball', 'dispossessed'],
@@ -35,9 +27,23 @@ export const VOICE_ACTIONS = {
     stat: 'Yellow Card',
     variants: ['yellow', 'yellow card', 'booking'],
   },
+}
+
+export const UNSUPPORTED_VOICE_ACTIONS = {
+  45: {
+    stat: '45',
+    variants: ['45', 'forty five', 'forty-five'],
+    reason: 'The default stat schema does not currently expose 45 as a loggable stat.',
+  },
+  sideline: {
+    stat: 'Sideline',
+    variants: ['sideline', 'sideline ball', 'sideline cut'],
+    reason: 'The default stat schema does not currently expose Sideline as a loggable stat.',
+  },
   black: {
     stat: 'Black Card',
     variants: ['black', 'black card'],
+    reason: 'The default stat schema does not currently expose Black Card as a loggable stat.',
   },
 }
 

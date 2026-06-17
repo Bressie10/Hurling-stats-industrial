@@ -228,10 +228,10 @@ def slide_3():
         x += 445
     rounded(draw, (140, 820, 895, 952), COL["panel2"], outline=COL["stroke"], width=2, r=20)
     draw_text(draw, "Voice writes supported now", (178, 848), 22, COL["lime"], bold=True)
-    draw_text(draw, "Goals, points, wides, player/custom stats, puckouts by zone, opposition scores and undo.", (178, 888), 23, COL["white"], bold=True, max_w=650)
+    draw_text(draw, "Goals, points, wides, frees, turnovers and yellow cards, with undo/fix after logging.", (178, 888), 23, COL["white"], bold=True, max_w=650)
     rounded(draw, (1025, 820, 1780, 952), COL["panel2"], outline=COL["stroke"], width=2, r=20)
     draw_text(draw, "Not voice-supported yet", (1063, 848), 22, COL["orange"], bold=True)
-    draw_text(draw, "Substitutions, notes and sync changes remain manual in the current assistant prompt.", (1063, 888), 23, COL["white"], bold=True, max_w=650)
+    draw_text(draw, "45s, sidelines, black cards, substitutions, notes, puckouts and opposition scores remain manual.", (1063, 888), 23, COL["white"], bold=True, max_w=650)
     return img
 
 
@@ -305,7 +305,7 @@ PitchNote is a voice-first hurling analytics app for match day. The main feature
 The problem is simple. Hurling is too fast for paper notes and too physical for deep phone menus. Scores, wides, puckouts, turnovers and substitutions can happen inside one passage of play, and coaches still need accountability after the final whistle.
 
 ## Slide 3 - Product (0:27-0:48)
-With Sideline AI, the workflow is speak, confirm, log and analyse. The current app can voice-log goals, points, wides, player stats, custom stats, puckouts by zone, opposition scores and undo actions. It can also answer live questions about the score, clock, player stats, leaders and puckouts.
+With Sideline AI, the workflow is speak, confirm, log and analyse. The current live voice logger can write goals, points, wides, frees, turnovers and yellow cards, with undo and fix actions after logging. It can also answer live questions about the score, clock, player stats, leaders and puckouts.
 
 ## Slide 4 - Reliability (0:48-1:05)
 The offline story is important. The core app is offline-first: manual logging, native voice logging, timer, drafts and local match storage work on the device, with a sync outbox for later. Optional AI questions still need network access.
@@ -330,7 +330,7 @@ PitchNote is a voice-first hurling match analytics app. Coaches can speak match 
 
 - Live match logging: points, goals, wides, tackles, blocks, turnovers, frees, custom stats, substitutions, notes, pitch locations, opposition scores and puckouts.
 - Live voice logging: embedded in the match screen, uses native on-device speech recognition, roster/action vocabulary biasing, fuzzy matching, confirmation, undo and correction UI.
-- Voice logging write commands currently supported: goals, points, wides, frees, 45s, sidelines, turnovers, yellow cards and black cards when those stats exist for the match.
+- Voice logging write commands currently supported: goals, points, wides, frees, turnovers and yellow cards. 45s, sidelines and black cards are deliberately excluded until those stat types are added to the default app schema.
 - Sideline AI read commands currently supported: match summary, score, player stat leaders, individual player quick stats, team stat totals, puckout summary, recent events and current period/time.
 - Do not claim voice support for substitutions, notes or sync changes yet.
 - Hurling-specific analytics: 10-zone puckout heatmap, puckout by player/opposition winner, scores conceded by marker and opposition player, pitch maps, timelines, player stats, team stats, targets, coaching insights, work-ons and PDF reports.

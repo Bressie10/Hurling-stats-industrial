@@ -1,12 +1,23 @@
 <script>
-  import { getDB, loadMatches } from './db.js'
+  import { goto } from '$app/navigation'
+  import { loadMatches, loadSquad } from './db.js'
   import { settingsStore } from './settings-store.js'
   import { user, signOut } from './auth-store.js'
-  import { subscriptionStore, isClub, loadClubTeams, createTeam, deleteTeam, joinTeam, leaveTeam, setupClub, claimClubOwnership } from './subscription-store.js'
+  import {
+    subscriptionStore,
+    isClub,
+    loadClubTeams,
+    createTeam,
+    deleteTeam,
+    joinTeam,
+    leaveTeam,
+    setupClub,
+    claimClubOwnership,
+  } from './subscription-store.js'
   import { supabase } from './supabase.js'
   import { clearAllData } from './db.js'
   import { showToast } from './toast.js'
-  import { IS_NATIVE_STORE_BUILD, STORE_PLATFORM_LABEL } from './config.js'
+  import { IS_NATIVE_STORE_BUILD, SHOW_VOICE_TEST_HARNESS, STORE_PLATFORM_LABEL } from './config.js'
   import ConfirmModal from './ConfirmModal.svelte'
 
   let deletingAccount = $state(false)
@@ -27,10 +38,12 @@
   let editingTeamId = $state(null)
   let editingTeamName = $state('')
   const DEFAULT_MAX_TEAMS = 4
-  let maxTeams = $derived((() => {
-    const override = Number($subscriptionStore.customFeatures?.maxTeams)
-    return Number.isFinite(override) && override > 0 ? override : DEFAULT_MAX_TEAMS
-  })())
+  let maxTeams = $derived(
+    (() => {
+      const override = Number($subscriptionStore.customFeatures?.maxTeams)
+      return Number.isFinite(override) && override > 0 ? override : DEFAULT_MAX_TEAMS
+    })(),
+  )
 
   async function loadTeams() {
     if ($subscriptionStore.clubId) {
@@ -40,7 +53,10 @@
 
   async function handleAddTeam() {
     if (!newTeamName.trim()) return
-    if (teams.length >= maxTeams) { teamError = `Maximum ${maxTeams} teams reached`; return }
+    if (teams.length >= maxTeams) {
+      teamError = `Maximum ${maxTeams} teams reached`
+      return
+    }
     addingTeam = true
     teamError = ''
     try {
@@ -61,15 +77,18 @@
   async function doDeleteTeam() {
     showDeleteTeamConfirm = false
     await deleteTeam(deletingTeamId)
-    teams = teams.filter(t => t.id !== deletingTeamId)
+    teams = teams.filter((t) => t.id !== deletingTeamId)
     deletingTeamId = null
   }
 
   async function handleRenameTeam(id) {
     if (!editingTeamName.trim()) return
-    const { error } = await supabase.from('teams').update({ name: editingTeamName.trim() }).eq('id', id)
+    const { error } = await supabase
+      .from('teams')
+      .update({ name: editingTeamName.trim() })
+      .eq('id', id)
     if (!error) {
-      teams = teams.map(t => t.id === id ? { ...t, name: editingTeamName.trim() } : t)
+      teams = teams.map((t) => (t.id === id ? { ...t, name: editingTeamName.trim() } : t))
     }
     editingTeamId = null
     editingTeamName = ''
@@ -79,7 +98,9 @@
     await navigator.clipboard.writeText(code)
   }
 
-  $effect(() => { if ($subscriptionStore.clubId) loadTeams() })
+  $effect(() => {
+    if ($subscriptionStore.clubId) loadTeams()
+  })
 
   // Set up club (Club/Club Pro users with no club yet)
   let setupClubName = $state('')
@@ -87,7 +108,10 @@
   let setupClubError = $state('')
 
   async function handleSetupClub() {
-    if (!setupClubName.trim()) { setupClubError = 'Enter a club name'; return }
+    if (!setupClubName.trim()) {
+      setupClubError = 'Enter a club name'
+      return
+    }
     settingUpClub = true
     setupClubError = ''
     try {
@@ -121,7 +145,10 @@
   let joinSuccess = $state('')
 
   async function handleJoinTeam() {
-    if (!joinCode.trim()) { joinError = 'Enter a team code'; return }
+    if (!joinCode.trim()) {
+      joinError = 'Enter a team code'
+      return
+    }
     joiningTeam = true
     joinError = ''
     joinSuccess = ''
@@ -129,7 +156,7 @@
       await joinTeam(joinCode, $user.id)
       joinSuccess = 'Joined! You can switch to this team from the nav.'
       joinCode = ''
-      setTimeout(() => joinSuccess = '', 4000)
+      setTimeout(() => (joinSuccess = ''), 4000)
     } catch (e) {
       joinError = e.message
     }
@@ -192,7 +219,10 @@
     }
   }
 
-  let settings = $state({ ...$settingsStore, quickViewSections: { ...$settingsStore.quickViewSections } })
+  let settings = $state({
+    ...$settingsStore,
+    quickViewSections: { ...$settingsStore.quickViewSections },
+  })
   let savedFlash = $state(false)
   let saveTimer = $state(null)
   let exportSuccess = $state(false)
@@ -203,23 +233,32 @@
   const REQUIRED_PERIODS = ['1st Half', '2nd Half']
 
   const allPossibleStats = [
-    'Point', 'Goal', 'Wide', 'Tackle', 'Block',
-    'Turnover Won', 'Turnover Lost', 'Free Won',
-    'Yellow Card', 'Red Card', 'Penalty Won', 'Penalty Scored'
+    'Point',
+    'Goal',
+    'Wide',
+    'Tackle',
+    'Block',
+    'Turnover Won',
+    'Turnover Lost',
+    'Free Won',
+    'Yellow Card',
+    'Red Card',
+    'Penalty Won',
+    'Penalty Scored',
   ]
 
   function autoSave() {
     settingsStore.save(settings)
     savedFlash = true
     clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => savedFlash = false, 1500)
+    saveTimer = setTimeout(() => (savedFlash = false), 1500)
   }
 
   // ── Stats ──
   function toggleStat(stat) {
     if (settings.defaultStats.includes(stat)) {
       if (settings.defaultStats.length <= 1) return
-      settings.defaultStats = settings.defaultStats.filter(s => s !== stat)
+      settings.defaultStats = settings.defaultStats.filter((s) => s !== stat)
     } else {
       settings.defaultStats = [...settings.defaultStats, stat]
     }
@@ -235,24 +274,30 @@
   }
 
   const builtInStats = $derived(allPossibleStats)
-  const customDefaultStats = $derived(settings.defaultStats.filter(s => !allPossibleStats.includes(s)))
+  const customDefaultStats = $derived(
+    settings.defaultStats.filter((s) => !allPossibleStats.includes(s)),
+  )
 
   // ── Periods ──
-  function isPeriodActive(p) { return settings.periods.includes(p) }
-  function isPeriodRequired(p) { return REQUIRED_PERIODS.includes(p) }
+  function isPeriodActive(p) {
+    return settings.periods.includes(p)
+  }
+  function isPeriodRequired(p) {
+    return REQUIRED_PERIODS.includes(p)
+  }
 
   function togglePeriod(p) {
     if (isPeriodRequired(p)) return
     if (isPeriodActive(p)) {
-      settings.periods = settings.periods.filter(x => x !== p)
+      settings.periods = settings.periods.filter((x) => x !== p)
       // If defaultPeriod was the removed one, reset to first active
       if (settings.defaultPeriod === p) {
         settings.defaultPeriod = settings.periods[0] || '1st Half'
       }
     } else {
       // Re-insert in logical order: presets first in PRESET_PERIODS order, then custom
-      const presetOrder = PRESET_PERIODS.filter(x => isPeriodActive(x) || x === p)
-      const customPeriods = settings.periods.filter(x => !PRESET_PERIODS.includes(x))
+      const presetOrder = PRESET_PERIODS.filter((x) => isPeriodActive(x) || x === p)
+      const customPeriods = settings.periods.filter((x) => !PRESET_PERIODS.includes(x))
       settings.periods = [...presetOrder, ...customPeriods]
     }
     autoSave()
@@ -267,26 +312,25 @@
   }
 
   function removeCustomPeriod(p) {
-    settings.periods = settings.periods.filter(x => x !== p)
+    settings.periods = settings.periods.filter((x) => x !== p)
     if (settings.defaultPeriod === p) {
       settings.defaultPeriod = settings.periods[0] || '1st Half'
     }
     autoSave()
   }
 
-  const customPeriods = $derived(settings.periods.filter(p => !PRESET_PERIODS.includes(p)))
+  const customPeriods = $derived(settings.periods.filter((p) => !PRESET_PERIODS.includes(p)))
 
   // ── Data export ──
   async function exportData() {
     const matches = await loadMatches()
-    const db = await getDB()
-    const squad = await db.getAll('squad')
+    const squad = await loadSquad()
     const data = {
       exportDate: new Date().toISOString(),
       version: '1.0',
       settings,
       squad,
-      matches
+      matches,
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -296,12 +340,11 @@
     a.click()
     URL.revokeObjectURL(url)
     exportSuccess = true
-    setTimeout(() => exportSuccess = false, 3000)
+    setTimeout(() => (exportSuccess = false), 3000)
   }
 </script>
 
 <div class="screen">
-
   <!-- HEADER -->
   <div class="page-header">
     <div>
@@ -313,181 +356,230 @@
 
   <!-- ── MY CLUB (member view) ── -->
   {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId}
-  <div class="section-block">
-    <div class="section-title">My Club</div>
-    <div class="card">
-      {#if $subscriptionStore.clubName}
+    <div class="section-block">
+      <div class="section-title">My Club</div>
+      <div class="card">
+        {#if $subscriptionStore.clubName}
+          <div class="member-info-row">
+            <span class="member-info-label">Club</span>
+            <span class="member-info-val">{$subscriptionStore.clubName}</span>
+          </div>
+        {/if}
         <div class="member-info-row">
-          <span class="member-info-label">Club</span>
-          <span class="member-info-val">{$subscriptionStore.clubName}</span>
+          <span class="member-info-label">Plan</span>
+          <span class="member-info-val">
+            {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : 'Club'}
+          </span>
         </div>
-      {/if}
-      <div class="member-info-row">
-        <span class="member-info-label">Plan</span>
-        <span class="member-info-val">
-          {$subscriptionStore.plan === 'club_pro' ? 'Club Pro' : 'Club'}
-        </span>
       </div>
     </div>
-  </div>
 
-  <!-- ── MY TEAMS ── -->
-  <div class="section-block">
-    <div class="section-title">My Teams</div>
-    <div class="card">
-      {#if $subscriptionStore.teams.length === 0}
-        <p class="card-desc">You are not assigned to any team yet. Enter a team code below to join one.</p>
-      {:else}
-        {#each $subscriptionStore.teams as team}
-          <div class="member-team-row">
-            <div class="member-team-info">
-              <span class="member-team-name">{team.name}</span>
-              <span class="member-info-code">{team.code}</span>
+    <!-- ── MY TEAMS ── -->
+    <div class="section-block">
+      <div class="section-title">My Teams</div>
+      <div class="card">
+        {#if $subscriptionStore.teams.length === 0}
+          <p class="card-desc">
+            You are not assigned to any team yet. Enter a team code below to join one.
+          </p>
+        {:else}
+          {#each $subscriptionStore.teams as team}
+            <div class="member-team-row">
+              <div class="member-team-info">
+                <span class="member-team-name">{team.name}</span>
+                <span class="member-info-code">{team.code}</span>
+              </div>
+              <button class="team-leave-btn" onclick={() => handleLeaveTeam(team.id, team.name)}
+                >Leave</button
+              >
             </div>
-            <button class="team-leave-btn" onclick={() => handleLeaveTeam(team.id, team.name)}>Leave</button>
-          </div>
-        {/each}
-      {/if}
+          {/each}
+        {/if}
 
-      <div class="join-divider"></div>
-      <div class="card-desc" style="margin-bottom:8px">Join another team using its 6-digit code.</div>
-      <div class="join-row">
-        <input
-          class="join-input"
-          bind:value={joinCode}
-          placeholder="Team code (e.g. 482910)"
-          maxlength="6"
-          onkeydown={e => e.key === 'Enter' && handleJoinTeam()}
-        />
-        <button class="join-btn" onclick={handleJoinTeam} disabled={joiningTeam}>
-          {joiningTeam ? 'Joining…' : 'Join'}
-        </button>
-      </div>
-      {#if joinError}<p class="join-error">{joinError}</p>{/if}
-      {#if joinSuccess}<p class="join-success">{joinSuccess}</p>{/if}
-
-      {#if $subscriptionStore.teams.length > 1}
-        <div class="divider-faint"></div>
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Remember last team</div>
-            <div class="toggle-sub">Skip the team picker on login and restore your last used team automatically</div>
-          </div>
-          <button
-            class="toggle-switch"
-            class:on={settings.rememberLastTeam}
-            onclick={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
-            aria-label="Toggle remember last team"
-          ><span class="toggle-thumb"></span></button>
+        <div class="join-divider"></div>
+        <div class="card-desc" style="margin-bottom:8px">
+          Join another team using its 6-digit code.
         </div>
-      {/if}
+        <div class="join-row">
+          <input
+            class="join-input"
+            bind:value={joinCode}
+            placeholder="Team code (e.g. 482910)"
+            maxlength="6"
+            onkeydown={(e) => e.key === 'Enter' && handleJoinTeam()}
+          />
+          <button class="join-btn" onclick={handleJoinTeam} disabled={joiningTeam}>
+            {joiningTeam ? 'Joining…' : 'Join'}
+          </button>
+        </div>
+        {#if joinError}<p class="join-error">{joinError}</p>{/if}
+        {#if joinSuccess}<p class="join-success">{joinSuccess}</p>{/if}
+
+        {#if $subscriptionStore.teams.length > 1}
+          <div class="divider-faint"></div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Remember last team</div>
+              <div class="toggle-sub">
+                Skip the team picker on login and restore your last used team automatically
+              </div>
+            </div>
+            <button
+              class="toggle-switch"
+              class:on={settings.rememberLastTeam}
+              onclick={() => {
+                settings.rememberLastTeam = !settings.rememberLastTeam
+                autoSave()
+              }}
+              aria-label="Toggle remember last team"><span class="toggle-thumb"></span></button
+            >
+          </div>
+        {/if}
+      </div>
     </div>
-  </div>
   {/if}
 
   <!-- ── CLUB SETUP (Club/Club Pro with no club yet) ── -->
   {#if $isClub && !$subscriptionStore.isOwner && !$subscriptionStore.clubId}
-  <div class="section-block">
-    <div class="section-title">Club Teams</div>
-    <div class="card">
-      <p class="card-desc">Your plan includes team management. Set up your club to start creating teams and inviting coaches.</p>
-      <div class="team-add-row" style="margin-top:12px">
-        <input
-          class="team-name-input"
-          bind:value={setupClubName}
-          placeholder="Club name (e.g. Your Club)"
-          onkeydown={e => e.key === 'Enter' && handleSetupClub()}
-        />
-        <button class="team-save-btn" onclick={handleSetupClub} disabled={settingUpClub}>
-          {settingUpClub ? 'Setting up…' : 'Set up club'}
-        </button>
+    <div class="section-block">
+      <div class="section-title">Club Teams</div>
+      <div class="card">
+        <p class="card-desc">
+          Your plan includes team management. Set up your club to start creating teams and inviting
+          coaches.
+        </p>
+        <div class="team-add-row" style="margin-top:12px">
+          <input
+            class="team-name-input"
+            bind:value={setupClubName}
+            placeholder="Club name (e.g. Your Club)"
+            onkeydown={(e) => e.key === 'Enter' && handleSetupClub()}
+          />
+          <button class="team-save-btn" onclick={handleSetupClub} disabled={settingUpClub}>
+            {settingUpClub ? 'Setting up…' : 'Set up club'}
+          </button>
+        </div>
+        {#if setupClubError}<p class="team-error">{setupClubError}</p>{/if}
       </div>
-      {#if setupClubError}<p class="team-error">{setupClubError}</p>{/if}
     </div>
-  </div>
   {/if}
 
   <!-- ── CLAIM OWNERSHIP (Club/Club Pro with clubId but no owner row) ── -->
   {#if $isClub && !$subscriptionStore.isOwner && $subscriptionStore.clubId && !$subscriptionStore.clubRole}
-  <div class="section-block">
-    <div class="section-title">Club Teams</div>
-    <div class="card">
-      <p class="card-desc">Your plan includes team management but your account isn't set up as club owner yet. Click below to activate it.</p>
-      <button class="team-save-btn" style="margin-top:12px" onclick={handleClaimOwnership} disabled={claimingOwnership}>
-        {claimingOwnership ? 'Activating…' : 'Activate team management'}
-      </button>
-      {#if claimError}<p class="team-error">{claimError}</p>{/if}
+    <div class="section-block">
+      <div class="section-title">Club Teams</div>
+      <div class="card">
+        <p class="card-desc">
+          Your plan includes team management but your account isn't set up as club owner yet. Click
+          below to activate it.
+        </p>
+        <button
+          class="team-save-btn"
+          style="margin-top:12px"
+          onclick={handleClaimOwnership}
+          disabled={claimingOwnership}
+        >
+          {claimingOwnership ? 'Activating…' : 'Activate team management'}
+        </button>
+        {#if claimError}<p class="team-error">{claimError}</p>{/if}
+      </div>
     </div>
-  </div>
   {/if}
 
   <!-- ── CLUB TEAMS ── -->
   {#if $isClub && $subscriptionStore.isOwner}
-  <div class="section-block">
-    <div class="section-title">Club Teams</div>
-    <div class="card">
-      {#each teams as team}
-        <div class="team-row">
-          {#if editingTeamId === team.id}
-            <input class="team-name-input" bind:value={editingTeamName} onkeydown={e => e.key === 'Enter' && handleRenameTeam(team.id)} />
-            <button class="team-save-btn" onclick={() => handleRenameTeam(team.id)}>Save</button>
-            <button class="team-cancel-btn" onclick={() => { editingTeamId = null }}>Cancel</button>
-          {:else}
-            <div class="team-info">
-              <span class="team-name">{team.name}</span>
-              <span class="team-code-badge">Code: {team.code}</span>
-            </div>
-            <div class="team-actions">
-              <button class="team-copy-btn" onclick={() => copyCode(team.code)}>Copy code</button>
-              <button class="team-edit-btn" onclick={() => { editingTeamId = team.id; editingTeamName = team.name }}>Rename</button>
-              <button class="team-delete-btn" onclick={() => handleDeleteTeam(team.id)}>Delete</button>
-            </div>
-          {/if}
-        </div>
-      {/each}
-
-      {#if teams.length < maxTeams}
-        <div class="team-add-row">
-          <input class="team-name-input" bind:value={newTeamName} placeholder="New team name" onkeydown={e => e.key === 'Enter' && handleAddTeam()} />
-          <button class="team-save-btn" onclick={handleAddTeam} disabled={addingTeam}>
-            {addingTeam ? 'Adding…' : 'Add team'}
-          </button>
-        </div>
-      {:else}
-        <p class="team-limit-note">Maximum {maxTeams} teams reached</p>
-      {/if}
-      {#if teamError}<p class="team-error">{teamError}</p>{/if}
-
-      {#if teams.length > 1}
-        <div class="divider-faint"></div>
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <div class="toggle-label">Remember last team</div>
-            <div class="toggle-sub">Skip the team picker on login and restore your last used team automatically</div>
+    <div class="section-block">
+      <div class="section-title">Club Teams</div>
+      <div class="card">
+        {#each teams as team}
+          <div class="team-row">
+            {#if editingTeamId === team.id}
+              <input
+                class="team-name-input"
+                bind:value={editingTeamName}
+                onkeydown={(e) => e.key === 'Enter' && handleRenameTeam(team.id)}
+              />
+              <button class="team-save-btn" onclick={() => handleRenameTeam(team.id)}>Save</button>
+              <button
+                class="team-cancel-btn"
+                onclick={() => {
+                  editingTeamId = null
+                }}>Cancel</button
+              >
+            {:else}
+              <div class="team-info">
+                <span class="team-name">{team.name}</span>
+                <span class="team-code-badge">Code: {team.code}</span>
+              </div>
+              <div class="team-actions">
+                <button class="team-copy-btn" onclick={() => copyCode(team.code)}>Copy code</button>
+                <button
+                  class="team-edit-btn"
+                  onclick={() => {
+                    editingTeamId = team.id
+                    editingTeamName = team.name
+                  }}>Rename</button
+                >
+                <button class="team-delete-btn" onclick={() => handleDeleteTeam(team.id)}
+                  >Delete</button
+                >
+              </div>
+            {/if}
           </div>
-          <button
-            class="toggle-switch"
-            class:on={settings.rememberLastTeam}
-            onclick={() => { settings.rememberLastTeam = !settings.rememberLastTeam; autoSave() }}
-            aria-label="Toggle remember last team"
-          ><span class="toggle-thumb"></span></button>
-        </div>
-      {/if}
+        {/each}
+
+        {#if teams.length < maxTeams}
+          <div class="team-add-row">
+            <input
+              class="team-name-input"
+              bind:value={newTeamName}
+              placeholder="New team name"
+              onkeydown={(e) => e.key === 'Enter' && handleAddTeam()}
+            />
+            <button class="team-save-btn" onclick={handleAddTeam} disabled={addingTeam}>
+              {addingTeam ? 'Adding…' : 'Add team'}
+            </button>
+          </div>
+        {:else}
+          <p class="team-limit-note">Maximum {maxTeams} teams reached</p>
+        {/if}
+        {#if teamError}<p class="team-error">{teamError}</p>{/if}
+
+        {#if teams.length > 1}
+          <div class="divider-faint"></div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Remember last team</div>
+              <div class="toggle-sub">
+                Skip the team picker on login and restore your last used team automatically
+              </div>
+            </div>
+            <button
+              class="toggle-switch"
+              class:on={settings.rememberLastTeam}
+              onclick={() => {
+                settings.rememberLastTeam = !settings.rememberLastTeam
+                autoSave()
+              }}
+              aria-label="Toggle remember last team"><span class="toggle-thumb"></span></button
+            >
+          </div>
+        {/if}
+      </div>
     </div>
-  </div>
   {/if}
 
   <!-- ── TEAM ── -->
   {#if $subscriptionStore.isOwner || !$subscriptionStore.clubId}
-  <div class="section-block">
-    <div class="section-title">Team</div>
-    <div class="card">
-      <div class="field-group">
-        <label>Club name</label>
-        <input bind:value={settings.teamName} oninput={autoSave} placeholder="e.g. Your Club" />
+    <div class="section-block">
+      <div class="section-title">Team</div>
+      <div class="card">
+        <div class="field-group">
+          <label>Club name</label>
+          <input bind:value={settings.teamName} oninput={autoSave} placeholder="e.g. Your Club" />
+        </div>
       </div>
     </div>
-  </div>
   {/if}
 
   <!-- ── MATCH SETUP ── -->
@@ -504,9 +596,12 @@
         <button
           class="toggle-switch"
           class:on={settings.showVenueField}
-          onclick={() => { settings.showVenueField = !settings.showVenueField; autoSave() }}
-          aria-label="Toggle venue field"
-        ><span class="toggle-thumb"></span></button>
+          onclick={() => {
+            settings.showVenueField = !settings.showVenueField
+            autoSave()
+          }}
+          aria-label="Toggle venue field"><span class="toggle-thumb"></span></button
+        >
       </div>
 
       <div class="toggle-row">
@@ -517,9 +612,12 @@
         <button
           class="toggle-switch"
           class:on={settings.showCompetitionField}
-          onclick={() => { settings.showCompetitionField = !settings.showCompetitionField; autoSave() }}
-          aria-label="Toggle competition field"
-        ><span class="toggle-thumb"></span></button>
+          onclick={() => {
+            settings.showCompetitionField = !settings.showCompetitionField
+            autoSave()
+          }}
+          aria-label="Toggle competition field"><span class="toggle-thumb"></span></button
+        >
       </div>
 
       <div class="field-group" style="margin-top:4px">
@@ -538,7 +636,10 @@
   <div class="section-block">
     <div class="section-title">Match Periods</div>
     <div class="card">
-      <div class="card-desc">Choose which period options appear during a match. 1st Half and 2nd Half are always included.</div>
+      <div class="card-desc">
+        Choose which period options appear during a match. 1st Half and 2nd Half are always
+        included.
+      </div>
 
       <div class="periods-list">
         {#each PRESET_PERIODS as p}
@@ -551,7 +652,13 @@
               disabled={isPeriodRequired(p)}
             >
               {#if isPeriodActive(p)}
-                <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg
+                  style="width:12px;height:12px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"><polyline points="20 6 9 17 4 12" /></svg
+                >
               {/if}
             </button>
             <span class="period-name">{p}</span>
@@ -562,11 +669,24 @@
         {#each customPeriods as p}
           <div class="period-row">
             <button class="period-check checked" disabled>
-              <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg
+                style="width:12px;height:12px"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"><polyline points="20 6 9 17 4 12" /></svg
+              >
             </button>
             <span class="period-name">{p}</span>
             <button class="remove-period-btn" onclick={() => removeCustomPeriod(p)}>
-              <svg style="width:13px;height:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg
+                style="width:13px;height:13px"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                ><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
+              >
             </button>
           </div>
         {/each}
@@ -576,7 +696,7 @@
         <input
           bind:value={newPeriod}
           placeholder="Add custom period (e.g. Penalties)"
-          onkeydown={e => e.key === 'Enter' && addCustomPeriod()}
+          onkeydown={(e) => e.key === 'Enter' && addCustomPeriod()}
         />
         <button class="add-small-btn" onclick={addCustomPeriod}>Add</button>
       </div>
@@ -587,7 +707,10 @@
   <div class="section-block">
     <div class="section-title">Default Stats</div>
     <div class="card">
-      <div class="card-desc">These stat buttons appear in every new match. Toggle to enable or disable. At least one must be active.</div>
+      <div class="card-desc">
+        These stat buttons appear in every new match. Toggle to enable or disable. At least one must
+        be active.
+      </div>
 
       <div class="stats-grid">
         {#each builtInStats as stat}
@@ -598,7 +721,9 @@
           >
             <span class="toggle-check">
               {#if settings.defaultStats.includes(stat)}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                  ><polyline points="20 6 9 17 4 12" /></svg
+                >
               {/if}
             </span>
             {stat}
@@ -610,7 +735,7 @@
         <input
           bind:value={newCustomStat}
           placeholder="Add a custom stat..."
-          onkeydown={e => e.key === 'Enter' && addCustomDefaultStat()}
+          onkeydown={(e) => e.key === 'Enter' && addCustomDefaultStat()}
         />
         <button class="add-small-btn" onclick={addCustomDefaultStat}>Add</button>
       </div>
@@ -633,7 +758,10 @@
   <div class="section-block">
     <div class="section-title">Tracking Features</div>
     <div class="card">
-      <div class="card-desc">Toggle entire tracking features on or off. Disabling a feature hides its buttons and removes it from the stats view.</div>
+      <div class="card-desc">
+        Toggle entire tracking features on or off. Disabling a feature hides its buttons and removes
+        it from the stats view.
+      </div>
 
       <div class="toggle-row">
         <div class="toggle-info">
@@ -643,9 +771,12 @@
         <button
           class="toggle-switch"
           class:on={settings.trackPuckouts}
-          onclick={() => { settings.trackPuckouts = !settings.trackPuckouts; autoSave() }}
-          aria-label="Toggle puckout tracking"
-        ><span class="toggle-thumb"></span></button>
+          onclick={() => {
+            settings.trackPuckouts = !settings.trackPuckouts
+            autoSave()
+          }}
+          aria-label="Toggle puckout tracking"><span class="toggle-thumb"></span></button
+        >
       </div>
 
       <div class="toggle-row">
@@ -656,9 +787,12 @@
         <button
           class="toggle-switch"
           class:on={settings.trackOppScores}
-          onclick={() => { settings.trackOppScores = !settings.trackOppScores; autoSave() }}
-          aria-label="Toggle opposition score tracking"
-        ><span class="toggle-thumb"></span></button>
+          onclick={() => {
+            settings.trackOppScores = !settings.trackOppScores
+            autoSave()
+          }}
+          aria-label="Toggle opposition score tracking"><span class="toggle-thumb"></span></button
+        >
       </div>
 
       <div class="toggle-row">
@@ -669,9 +803,12 @@
         <button
           class="toggle-switch"
           class:on={settings.trackPitchCoords}
-          onclick={() => { settings.trackPitchCoords = !settings.trackPitchCoords; autoSave() }}
-          aria-label="Toggle pitch coordinates"
-        ><span class="toggle-thumb"></span></button>
+          onclick={() => {
+            settings.trackPitchCoords = !settings.trackPitchCoords
+            autoSave()
+          }}
+          aria-label="Toggle pitch coordinates"><span class="toggle-thumb"></span></button
+        >
       </div>
 
       {#if settings.trackPitchCoords}
@@ -681,7 +818,10 @@
             <option value="scores-only">Scores and wides only</option>
             <option value="all-stats">Every stat</option>
           </select>
-          <div class="field-hint">Use scores-only for faster sideline logging. Every stat restores the old full pitch prompt.</div>
+          <div class="field-hint">
+            Use scores-only for faster sideline logging. Every stat restores the old full pitch
+            prompt.
+          </div>
         </div>
       {/if}
     </div>
@@ -691,14 +831,11 @@
   <div class="section-block">
     <div class="section-title">Quick View Stats</div>
     <div class="card">
-      <div class="card-desc">Choose which sections are expanded by default when you open the Stats view during a match.</div>
+      <div class="card-desc">
+        Choose which sections are expanded by default when you open the Stats view during a match.
+      </div>
 
-      {#each [
-        { key: 'puckouts', label: 'Puckouts', sub: 'Win/loss rates, zone heatmap, player breakdowns' },
-        { key: 'conceded', label: 'Scores Conceded', sub: 'Goals and points conceded by marker' },
-        { key: 'players', label: 'Player Stats', sub: 'Full stat counts for all players' },
-        { key: 'subs', label: 'Substitutions', sub: 'Sub log with times' }
-      ] as section}
+      {#each [{ key: 'puckouts', label: 'Puckouts', sub: 'Win/loss rates, zone heatmap, player breakdowns' }, { key: 'conceded', label: 'Scores Conceded', sub: 'Goals and points conceded by marker' }, { key: 'players', label: 'Player Stats', sub: 'Full stat counts for all players' }, { key: 'subs', label: 'Substitutions', sub: 'Sub log with times' }] as section}
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-label">{section.label}</div>
@@ -708,11 +845,14 @@
             class="toggle-switch"
             class:on={settings.quickViewSections[section.key]}
             onclick={() => {
-              settings.quickViewSections = { ...settings.quickViewSections, [section.key]: !settings.quickViewSections[section.key] }
+              settings.quickViewSections = {
+                ...settings.quickViewSections,
+                [section.key]: !settings.quickViewSections[section.key],
+              }
               autoSave()
             }}
-            aria-label="Toggle {section.label}"
-          ><span class="toggle-thumb"></span></button>
+            aria-label="Toggle {section.label}"><span class="toggle-thumb"></span></button
+          >
         </div>
       {/each}
     </div>
@@ -735,7 +875,9 @@
           />
           <span class="period-val">{settings.periodLength} min</span>
         </div>
-        <div class="field-hint">Used as a reference — the timer highlights when this time is reached.</div>
+        <div class="field-hint">
+          Used as a reference — the timer highlights when this time is reached.
+        </div>
       </div>
     </div>
   </div>
@@ -744,18 +886,60 @@
   <div class="section-block">
     <div class="section-title">Data Backup</div>
     <div class="card">
-      <div class="card-desc">Download a full backup of all your matches, squad, and settings as a JSON file.</div>
+      <div class="card-desc">
+        Download a full backup of all your matches, squad, and settings as a JSON file.
+      </div>
       <button class="export-btn" class:success={exportSuccess} onclick={exportData}>
         {#if exportSuccess}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            style="width:16px;height:16px"><polyline points="20 6 9 17 4 12" /></svg
+          >
           Backup downloaded
         {:else}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            style="width:16px;height:16px"
+            ><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline
+              points="7 10 12 15 17 10"
+            /><line x1="12" y1="15" x2="12" y2="3" /></svg
+          >
           Download backup
         {/if}
       </button>
     </div>
   </div>
+
+  {#if SHOW_VOICE_TEST_HARNESS}
+    <!-- ── VOICE TEST HARNESS ── -->
+    <div class="section-block">
+      <div class="section-title">Voice Testing</div>
+      <div class="card">
+        <div class="card-desc">
+          Collect voice logging samples and export accuracy diagnostics for field testing.
+        </div>
+        <button class="export-btn" onclick={() => goto('/app/voice-test')}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            style="width:16px;height:16px"
+            ><path d="M12 18.5a6.5 6.5 0 0 0 6.5-6.5" /><path
+              d="M5.5 12A6.5 6.5 0 0 0 12 18.5"
+            /><path d="M12 3v10" /><rect x="9" y="3" width="6" height="10" rx="3" /></svg
+          >
+          Open voice accuracy test
+        </button>
+      </div>
+    </div>
+  {/if}
 
   <!-- ── ABOUT ── -->
   <div class="section-block">
@@ -801,7 +985,7 @@
   <div class="section-block">
     <div class="section-title danger-title">Danger Zone</div>
     <div class="card danger-card">
-<div class="danger-row">
+      <div class="danger-row">
         <div>
           <strong>Delete account</strong>
           <p>Permanently deletes your account and all data. Cannot be undone.</p>
@@ -812,9 +996,7 @@
       </div>
     </div>
   </div>
-
 </div>
-
 
 {#if showDeleteTeamConfirm}
   <ConfirmModal
@@ -823,7 +1005,7 @@
     confirmLabel="Delete Team"
     confirmStyle="danger"
     onConfirm={doDeleteTeam}
-    onCancel={() => showDeleteTeamConfirm = false}
+    onCancel={() => (showDeleteTeamConfirm = false)}
   />
 {/if}
 
@@ -834,7 +1016,7 @@
     confirmLabel="Leave Team"
     confirmStyle="danger"
     onConfirm={doLeaveTeam}
-    onCancel={() => showLeaveTeamConfirm = false}
+    onCancel={() => (showLeaveTeamConfirm = false)}
   />
 {/if}
 
@@ -847,12 +1029,17 @@
     confirmLabel="Delete Account"
     confirmStyle="danger"
     onConfirm={doDeleteAccount}
-    onCancel={() => showDeleteAccountConfirm = false}
+    onCancel={() => (showDeleteAccountConfirm = false)}
   />
 {/if}
 
 <style>
-  .screen { display: flex; flex-direction: column; gap: 0; padding-bottom: 2rem; }
+  .screen {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 2rem;
+  }
 
   .page-header {
     display: flex;
@@ -861,8 +1048,16 @@
     gap: 12px;
     margin-bottom: 20px;
   }
-  .page-header h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .page-header p { font-size: 13px; color: var(--text-muted); }
+  .page-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .page-header p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
 
   .saved-badge {
     padding: 6px 14px;
@@ -876,10 +1071,14 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .saved-badge.visible { opacity: 1; }
+  .saved-badge.visible {
+    opacity: 1;
+  }
 
   /* Section blocks */
-  .section-block { margin-bottom: 20px; }
+  .section-block {
+    margin-bottom: 20px;
+  }
   .section-title {
     font-size: 11px;
     font-weight: 700;
@@ -892,7 +1091,8 @@
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm);
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -907,9 +1107,18 @@
   }
 
   /* Form fields */
-  .field-group { display: flex; flex-direction: column; gap: 6px; }
-  .field-group label { font-size: 12px; font-weight: 600; color: var(--text-2); }
-  .field-group input, .field-group select {
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  .field-group input,
+  .field-group select {
     padding: 13px 14px;
     border: 1.5px solid var(--input-border);
     border-radius: 10px;
@@ -920,13 +1129,18 @@
     transition: all 0.15s;
     min-height: 46px;
   }
-  .field-group input:focus, .field-group select:focus {
+  .field-group input:focus,
+  .field-group select:focus {
     outline: none;
     border-color: var(--primary);
     background: var(--surface);
-    box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.08);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
   }
-  .field-hint { font-size: 12px; color: var(--text-faint); line-height: 1.4; }
+  .field-hint {
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.4;
+  }
 
   /* Toggle switch rows */
   .toggle-row {
@@ -937,116 +1151,309 @@
     padding: 4px 0;
     border-top: 1px solid var(--divider-faint);
   }
-  .toggle-row:first-of-type { border-top: none; }
-  .toggle-info { flex: 1; }
-  .toggle-label { font-size: 14px; font-weight: 600; color: var(--text); }
-  .toggle-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+  .toggle-row:first-of-type {
+    border-top: none;
+  }
+  .toggle-info {
+    flex: 1;
+  }
+  .toggle-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .toggle-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
 
   .toggle-switch {
-    position: relative; width: 48px; height: 28px; border-radius: 14px;
-    border: none; background: var(--divider); cursor: pointer; transition: background 0.2s;
-    flex-shrink: 0; padding: 0;
+    position: relative;
+    width: 48px;
+    height: 28px;
+    border-radius: 14px;
+    border: none;
+    background: var(--divider);
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    padding: 0;
   }
-  .toggle-switch.on { background: var(--primary); }
+  .toggle-switch.on {
+    background: var(--primary);
+  }
   .toggle-thumb {
-    position: absolute; top: 3px; left: 3px;
-    width: 22px; height: 22px; border-radius: 50%;
-    background: white; transition: transform 0.2s; display: block;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s;
+    display: block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
-  .toggle-switch.on .toggle-thumb { transform: translateX(20px); }
+  .toggle-switch.on .toggle-thumb {
+    transform: translateX(20px);
+  }
 
   /* Stats grid */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
   .stat-toggle {
-    display: flex; align-items: center; gap: 8px;
-    padding: 11px 12px; border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 12px;
+    border-radius: 8px;
     border: 1.5px solid var(--input-border);
-    background: var(--surface); font-size: 14px; font-weight: 500;
-    color: var(--text-muted); cursor: pointer; font-family: inherit;
-    transition: all 0.15s; text-align: left; min-height: 44px;
+    background: var(--surface);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    text-align: left;
+    min-height: 44px;
   }
-  .stat-toggle.active { border-color: var(--primary); color: var(--text); background: rgba(var(--primary-rgb),0.08); }
+  .stat-toggle.active {
+    border-color: var(--primary);
+    color: var(--text);
+    background: rgba(var(--primary-rgb), 0.08);
+  }
   .toggle-check {
-    width: 18px; height: 18px; border-radius: 4px;
-    border: 1.5px solid var(--input-border); background: var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1.5px solid var(--input-border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: white;
   }
-  .stat-toggle.active .toggle-check { background: var(--primary); border-color: var(--primary); }
-  .toggle-check svg { width: 11px; height: 11px; }
+  .stat-toggle.active .toggle-check {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .toggle-check svg {
+    width: 11px;
+    height: 11px;
+  }
 
   /* Add stat / add period row */
-  .add-stat-row, .add-period-row { display: flex; gap: 8px; }
-  .add-stat-row input, .add-period-row input {
-    flex: 1; padding: 11px 12px;
-    border: 1.5px solid var(--input-border); border-radius: 8px;
-    font-size: 16px; font-family: inherit;
-    background: var(--surface-3); color: var(--text); min-height: 44px;
+  .add-stat-row,
+  .add-period-row {
+    display: flex;
+    gap: 8px;
   }
-  .add-stat-row input:focus, .add-period-row input:focus {
-    outline: none; border-color: var(--primary); background: var(--surface);
+  .add-stat-row input,
+  .add-period-row input {
+    flex: 1;
+    padding: 11px 12px;
+    border: 1.5px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--surface-3);
+    color: var(--text);
+    min-height: 44px;
+  }
+  .add-stat-row input:focus,
+  .add-period-row input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--surface);
   }
   .add-small-btn {
-    padding: 11px 16px; border-radius: 8px; border: none;
-    background: var(--primary); color: white; font-size: 14px; font-weight: 600;
-    cursor: pointer; font-family: inherit; min-height: 44px; white-space: nowrap;
+    padding: 11px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 44px;
+    white-space: nowrap;
   }
 
   /* Custom stat list */
-  .custom-list { border-top: 1px solid var(--divider); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-  .custom-list-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 4px; }
-  .custom-list-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text); padding: 4px 0; }
-  .remove-text-btn { background: none; border: none; color: #e53935; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .custom-list {
+    border-top: 1px solid var(--divider);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .custom-list-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+  }
+  .custom-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text);
+    padding: 4px 0;
+  }
+  .remove-text-btn {
+    background: none;
+    border: none;
+    color: #e53935;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
 
   /* Periods list */
-  .periods-list { display: flex; flex-direction: column; gap: 2px; }
+  .periods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
   .period-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 4px; border-radius: 6px; transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 4px;
+    border-radius: 6px;
+    transition: background 0.1s;
   }
-  .period-row:hover:not(.required) { background: var(--surface-2); }
+  .period-row:hover:not(.required) {
+    background: var(--surface-2);
+  }
   .period-check {
-    width: 20px; height: 20px; border-radius: 5px;
-    border: 1.5px solid var(--input-border); background: var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; color: white; transition: all 0.15s;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    border: 1.5px solid var(--input-border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: white;
+    transition: all 0.15s;
   }
-  .period-check.checked { background: var(--primary); border-color: var(--primary); }
-  .period-check.locked { opacity: 0.5; cursor: not-allowed; }
-  .period-name { font-size: 14px; color: var(--text); flex: 1; }
-  .required-tag { font-size: 11px; color: var(--text-faint); background: var(--surface-2); padding: 2px 7px; border-radius: 4px; }
+  .period-check.checked {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .period-check.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .period-name {
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+  }
+  .required-tag {
+    font-size: 11px;
+    color: var(--text-faint);
+    background: var(--surface-2);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
   .remove-period-btn {
-    background: none; border: none; color: var(--text-faint); cursor: pointer;
-    padding: 4px; border-radius: 4px; display: flex; align-items: center;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
   }
-  .remove-period-btn:hover { color: #e53935; background: rgba(229,57,53,0.08); }
+  .remove-period-btn:hover {
+    color: #e53935;
+    background: rgba(229, 57, 53, 0.08);
+  }
 
   /* Period length slider */
-  .period-row { display: flex; align-items: center; gap: 12px; }
-  .period-row input[type="range"] { flex: 1; accent-color: var(--primary); }
-  .period-val { font-size: 15px; font-weight: 700; color: var(--primary); min-width: 56px; }
+  .period-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .period-row input[type='range'] {
+    flex: 1;
+    accent-color: var(--primary);
+  }
+  .period-val {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 56px;
+  }
 
   /* Export button */
   .export-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 18px; border-radius: 10px;
-    border: 1.5px solid var(--primary); background: none;
-    color: var(--primary); font-size: 14px; font-weight: 600;
-    cursor: pointer; font-family: inherit; transition: all 0.15s; width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border-radius: 10px;
+    border: 1.5px solid var(--primary);
+    background: none;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    width: fit-content;
   }
-  .export-btn:hover { background: var(--primary); color: white; }
-  .export-btn.success { background: #e6f4ea; border-color: #2d7a2d; color: #2d7a2d; }
+  .export-btn:hover {
+    background: var(--primary);
+    color: white;
+  }
+  .export-btn.success {
+    background: #e6f4ea;
+    border-color: #2d7a2d;
+    color: #2d7a2d;
+  }
 
   /* About */
-  .about-card { gap: 0; }
-  .about-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 0; border-bottom: 1px solid var(--divider-faint); font-size: 13px;
+  .about-card {
+    gap: 0;
   }
-  .about-row:last-child { border-bottom: none; }
-  .about-label { color: var(--text-faint); }
-  .about-val { font-weight: 500; color: var(--text); text-align: right; }
+  .about-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--divider-faint);
+    font-size: 13px;
+  }
+  .about-row:last-child {
+    border-bottom: none;
+  }
+  .about-label {
+    color: var(--text-faint);
+  }
+  .about-val {
+    font-weight: 500;
+    color: var(--text);
+    text-align: right;
+  }
   .billing-btn {
     align-self: flex-start;
     padding: 10px 16px;
@@ -1060,112 +1467,269 @@
     font-family: inherit;
     transition: all 0.15s;
   }
-  .billing-btn:hover { background: var(--primary); color: var(--primary-text); }
-  .billing-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .billing-btn:hover {
+    background: var(--primary);
+    color: var(--primary-text);
+  }
+  .billing-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 
   @media (max-width: 480px) {
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .page-header { flex-wrap: wrap; }
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .page-header {
+      flex-wrap: wrap;
+    }
   }
 
   /* ── My Club (member view) ── */
   .member-info-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 0; border-bottom: 1px solid var(--divider-faint);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--divider-faint);
   }
-  .member-info-row:last-child { border-bottom: none; }
-  .member-info-label { font-size: 13px; color: var(--text-muted); }
-  .member-info-val { font-size: 14px; font-weight: 600; color: var(--text); }
+  .member-info-row:last-child {
+    border-bottom: none;
+  }
+  .member-info-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .member-info-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
   .member-info-code {
-    font-size: 18px; font-weight: 800; color: var(--primary);
-    letter-spacing: 0.12em; font-family: monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.12em;
+    font-family: monospace;
   }
 
   /* ── My Teams ── */
   .member-team-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 0; border-bottom: 1px solid var(--divider-faint);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--divider-faint);
   }
-  .member-team-row:last-of-type { border-bottom: none; }
-  .member-team-info { display: flex; flex-direction: column; gap: 2px; }
-  .member-team-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .member-team-row:last-of-type {
+    border-bottom: none;
+  }
+  .member-team-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .member-team-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
   .team-leave-btn {
-    padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted);
-    cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.15s;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.15s;
     flex-shrink: 0;
   }
-  .team-leave-btn:hover { border-color: #e53935; color: #e53935; }
+  .team-leave-btn:hover {
+    border-color: #e53935;
+    color: #e53935;
+  }
 
-  .join-divider { height: 1px; background: var(--divider-faint); margin: 12px 0; }
-  .join-row { display: flex; gap: 8px; }
+  .join-divider {
+    height: 1px;
+    background: var(--divider-faint);
+    margin: 12px 0;
+  }
+  .join-row {
+    display: flex;
+    gap: 8px;
+  }
   .join-input {
-    flex: 1; padding: 10px 12px;
-    border: 1.5px solid var(--input-border); border-radius: 8px;
-    font-size: 14px; font-family: monospace; font-weight: 700; letter-spacing: 0.1em;
-    background: var(--surface-3); color: var(--text); transition: all 0.15s;
+    flex: 1;
+    padding: 10px 12px;
+    border: 1.5px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    background: var(--surface-3);
+    color: var(--text);
+    transition: all 0.15s;
   }
-  .join-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.08); }
+  .join-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
+  }
   .join-btn {
-    padding: 10px 16px; border-radius: 8px;
-    background: var(--primary); color: var(--primary-text);
-    border: none; font-size: 14px; font-weight: 700;
-    cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.15s;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--primary-text);
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.15s;
   }
-  .join-btn:hover { background: var(--primary-hover); }
-  .join-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .join-error { font-size: 12px; color: #c62828; margin-top: 6px; }
-  .join-success { font-size: 12px; color: #2d7a2d; font-weight: 600; margin-top: 6px; }
+  .join-btn:hover {
+    background: var(--primary-hover);
+  }
+  .join-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .join-error {
+    font-size: 12px;
+    color: #c62828;
+    margin-top: 6px;
+  }
+  .join-success {
+    font-size: 12px;
+    color: #2d7a2d;
+    font-weight: 600;
+    margin-top: 6px;
+  }
 
-  .divider-faint { height: 1px; background: var(--divider-faint); margin: 12px 0; }
+  .divider-faint {
+    height: 1px;
+    background: var(--divider-faint);
+    margin: 12px 0;
+  }
 
   /* ── Club Teams ── */
   .team-row {
-    display: flex; align-items: center; gap: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 12px 0;
     border-bottom: 1px solid var(--divider-faint);
   }
-  .team-row:last-child { border-bottom: none; }
-  .team-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-  .team-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .team-code-badge {
-    font-size: 12px; color: var(--primary); font-weight: 700;
-    letter-spacing: 0.08em; font-family: monospace;
+  .team-row:last-child {
+    border-bottom: none;
   }
-  .team-actions { display: flex; gap: 6px; }
-  .team-add-row { display: flex; gap: 8px; padding-top: 12px; }
+  .team-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+  .team-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .team-code-badge {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-family: monospace;
+  }
+  .team-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .team-add-row {
+    display: flex;
+    gap: 8px;
+    padding-top: 12px;
+  }
   .team-name-input {
-    flex: 1; padding: 8px 12px; border-radius: 8px;
-    border: 1px solid var(--input-border); background: var(--surface);
-    color: var(--text); font-size: 14px; font-family: inherit;
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
   }
   .team-save-btn {
-    padding: 8px 14px; border-radius: 8px; border: none;
-    background: var(--primary); color: var(--primary-text);
-    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
     white-space: nowrap;
   }
-  .team-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .team-cancel-btn, .team-edit-btn {
-    padding: 7px 12px; border-radius: 8px;
-    border: 1px solid var(--border); background: none;
-    color: var(--text-muted); font-size: 12px; cursor: pointer; font-family: inherit;
+  .team-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .team-cancel-btn,
+  .team-edit-btn {
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
   }
   .team-copy-btn {
-    padding: 7px 12px; border-radius: 8px;
-    border: 1px solid var(--border); background: none;
-    color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
   }
   .team-delete-btn {
-    padding: 7px 12px; border-radius: 8px;
-    border: 1px solid #fca5a5; background: none;
-    color: #e53935; font-size: 12px; cursor: pointer; font-family: inherit;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid #fca5a5;
+    background: none;
+    color: #e53935;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
   }
-  .team-limit-note { font-size: 13px; color: var(--text-muted); padding-top: 10px; }
-  .team-error { font-size: 13px; color: #e53935; padding-top: 6px; }
+  .team-limit-note {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding-top: 10px;
+  }
+  .team-error {
+    font-size: 13px;
+    color: #e53935;
+    padding-top: 6px;
+  }
 
   /* Danger zone */
-  .danger-title { color: #ef5350; }
+  .danger-title {
+    color: #ef5350;
+  }
   .danger-card {
     border-color: rgba(239, 83, 80, 0.3);
     background: rgba(239, 83, 80, 0.06);
@@ -1176,8 +1740,17 @@
     justify-content: space-between;
     gap: 16px;
   }
-  .danger-row strong { display: block; font-size: 13px; color: var(--text); margin-bottom: 3px; }
-  .danger-row p { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .danger-row strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .danger-row p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+  }
   .delete-account-btn {
     padding: 9px 16px;
     border-radius: 8px;
@@ -1192,6 +1765,12 @@
     transition: all 0.15s;
     flex-shrink: 0;
   }
-  .delete-account-btn:hover { background: #e53935; color: white; }
-  .delete-account-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .delete-account-btn:hover {
+    background: #e53935;
+    color: white;
+  }
+  .delete-account-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 </style>

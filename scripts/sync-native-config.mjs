@@ -35,16 +35,22 @@ function writeOrCheck(path, value) {
 }
 
 const release = readJson('native/shared/release.json')
+const serverUrl = String(process.env.CAPACITOR_SERVER_URL || '').trim()
 
-writeOrCheck('capacitor.config.json', {
+const capacitorConfig = {
   appId: release.ios.bundleId,
   appName: release.appName,
   webDir: '.svelte-kit/output/client',
-  server: {
-    url: release.productionUrl,
-    cleartext: false,
-  },
   ios: {
     contentInset: 'automatic',
   },
-})
+}
+
+if (serverUrl) {
+  capacitorConfig.server = {
+    url: serverUrl,
+    cleartext: serverUrl.startsWith('http://'),
+  }
+}
+
+writeOrCheck('capacitor.config.json', capacitorConfig)

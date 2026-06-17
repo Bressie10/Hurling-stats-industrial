@@ -1,4 +1,4 @@
-import { browser } from '$app/environment'
+import { browser, dev } from '$app/environment'
 import { env } from '$env/dynamic/public'
 
 export const CLUB = {
@@ -15,6 +15,14 @@ function normalizeStoreBuild(value) {
     .trim()
     .toLowerCase()
   return VALID_STORE_BUILDS.has(normalized) ? normalized : 'web'
+}
+
+function enabledPublicFlag(value) {
+  return ['1', 'true', 'yes', 'on'].includes(
+    String(value || '')
+      .trim()
+      .toLowerCase(),
+  )
 }
 
 function nativeStoreBuild() {
@@ -57,3 +65,4 @@ export const IS_NATIVE_STORE_BUILD = STORE_BUILD === 'ios' || STORE_BUILD === 'a
 export const STORE_PLATFORM_LABEL =
   STORE_BUILD === 'ios' ? 'iOS App Store' : STORE_BUILD === 'android' ? 'Google Play' : 'web'
 export const SHOW_WEB_PURCHASES = !IS_NATIVE_STORE_BUILD
+export const SHOW_VOICE_TEST_HARNESS = dev || enabledPublicFlag(env.PUBLIC_ENABLE_VOICE_TEST)

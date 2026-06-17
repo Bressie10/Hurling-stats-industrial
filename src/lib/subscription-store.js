@@ -1,8 +1,7 @@
 import { writable, derived } from 'svelte/store'
 import { supabase } from './supabase.js'
 import { canUseClub, canUseClubPro, canUsePro } from './entitlements.js'
-
-const ACTIVE_TEAM_KEY = 'active-team-id'
+import { ACTIVE_TEAM_KEY } from './team-scope.js'
 
 export const subscriptionStore = writable({
   plan: 'free',
@@ -31,7 +30,7 @@ function parseSignupIntent(value) {
   if (!value) return { type: 'personal' }
   try {
     return JSON.parse(value) || { type: 'personal' }
-  } catch (_) {
+  } catch {
     return { type: 'personal' }
   }
 }
@@ -43,7 +42,7 @@ function parseCustomFeatures(value) {
   try {
     const parsed = JSON.parse(value)
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
-  } catch (_) {
+  } catch {
     return {}
   }
 }
@@ -167,6 +166,11 @@ export async function loadSubscription(userId) {
     const storedTeamId = localStorage.getItem(ACTIVE_TEAM_KEY)
     const validStored = teams.find(t => t.id === storedTeamId)
     const activeTeam = validStored ?? (teams.length === 1 ? teams[0] : null)
+    if (activeTeam?.id) {
+      localStorage.setItem(ACTIVE_TEAM_KEY, activeTeam.id)
+    } else {
+      localStorage.removeItem(ACTIVE_TEAM_KEY)
+    }
 
     subscriptionStore.set({
       plan: sub?.plan ?? 'free',

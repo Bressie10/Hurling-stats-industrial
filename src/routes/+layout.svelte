@@ -9,6 +9,7 @@
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
   import { canUseClub, canUseFeature, FEATURES } from '$lib/entitlements.js'
+  import { shouldPromptForTeamSelection } from '$lib/team-scope.js'
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { page } from '$app/state'
@@ -19,31 +20,33 @@
   let { children } = $props()
 
   function hexToRgbString(hex) {
-    const r = parseInt(hex.slice(1,3), 16)
-    const g = parseInt(hex.slice(3,5), 16)
-    const b = parseInt(hex.slice(5,7), 16)
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
     return `${r}, ${g}, ${b}`
   }
 
   function darkenHex(hex, amount) {
-    const r = Math.max(0, parseInt(hex.slice(1,3), 16) - amount)
-    const g = Math.max(0, parseInt(hex.slice(3,5), 16) - amount)
-    const b = Math.max(0, parseInt(hex.slice(5,7), 16) - amount)
-    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`
+    const r = Math.max(0, parseInt(hex.slice(1, 3), 16) - amount)
+    const g = Math.max(0, parseInt(hex.slice(3, 5), 16) - amount)
+    const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - amount)
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
   }
 
   function contrastText(hex) {
-    const r = parseInt(hex.slice(1,3), 16)
-    const g = parseInt(hex.slice(3,5), 16)
-    const b = parseInt(hex.slice(5,7), 16)
-    return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.5 ? '#1A2015' : '#ffffff'
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? '#1A2015' : '#ffffff'
   }
 
   $effect(() => {
     if (typeof document !== 'undefined') {
       const name = $settingsStore.teamName || 'PitchNote'
       document.title = name
-      document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', name)
+      document
+        .querySelector('meta[name="apple-mobile-web-app-title"]')
+        ?.setAttribute('content', name)
 
       const color = $settingsStore.clubPrimaryColor
       if (color && /^#[0-9a-fA-F]{6}$/.test(color)) {
@@ -80,14 +83,27 @@
   let liveSession = $state(null)
 
   const isAppRoute = $derived(page.url.pathname.startsWith('/app/'))
-  const moreActive = $derived(['/app/insights', '/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(page.url.pathname))
+  const moreActive = $derived(
+    ['/app/insights', '/app/timeline', '/app/squad', '/app/targets', '/app/settings'].includes(
+      page.url.pathname,
+    ),
+  )
   const hasClubAccess = $derived(canUseClub($subscriptionStore))
-  const syncStatusLabel = $derived(syncFailed > 0 ? `${syncFailed} failed` : syncPending > 0 ? `${syncPending} pending` : '')
-  $effect(() => { if (!$authLoading && $user && page.url.pathname === '/') goto('/app/match') })
+  const syncStatusLabel = $derived(
+    syncFailed > 0 ? `${syncFailed} failed` : syncPending > 0 ? `${syncPending} pending` : '',
+  )
+  $effect(() => {
+    if (!$authLoading && $user && page.url.pathname === '/') goto('/app/match')
+  })
 
   function navigateTo(routeName) {
     goto('/app/' + routeName)
     showMoreSheet = false
+  }
+
+  function handleTeamPicked() {
+    needsTeamPick = false
+    if (typeof window !== 'undefined') window.location.reload()
   }
 
   async function refreshSyncStatus() {
@@ -100,7 +116,7 @@
       const summary = await getOutboxSummary()
       syncPending = summary.pending || 0
       syncFailed = summary.failed || 0
-    } catch (_) {}
+    } catch {}
   }
 
   onMount(() => {
@@ -123,15 +139,20 @@
       let attempts = 0
       const poll = setInterval(async () => {
         attempts++
-        const { data: { user: u } } = await supabase.auth.getUser()
-        if (!u) { clearInterval(poll); return }
+        const {
+          data: { user: u },
+        } = await supabase.auth.getUser()
+        if (!u) {
+          clearInterval(poll)
+          return
+        }
         await loadSubscription(u.id)
         let currentPlan
-        subscriptionStore.subscribe(s => currentPlan = s.plan)()
+        subscriptionStore.subscribe((s) => (currentPlan = s.plan))()
         if (currentPlan !== 'free' || attempts >= 8) {
           clearInterval(poll)
           subscribeToast = "You're now a Pro — let's go!"
-          setTimeout(() => subscribeToast = '', 5000)
+          setTimeout(() => (subscribeToast = ''), 5000)
         }
       }, 2000)
     } else if (params.get('subscribed') === 'cancelled') {
@@ -157,38 +178,64 @@
 
           if (previousUserId === u.id) {
             // Same user: drain pending mutations first, then merge cloud to local.
-            try { await flushOutbox(u.id) } catch (e) { console.warn('Outbox drain failed:', e) }
-            try { await syncFromSupabase(u.id) } catch (e) { console.warn('Cloud merge failed:', e) }
+            try {
+              await flushOutbox(u.id)
+            } catch (e) {
+              console.warn('Outbox drain failed:', e)
+            }
+            try {
+              await syncFromSupabase(u.id)
+            } catch (e) {
+              console.warn('Cloud merge failed:', e)
+            }
             dataReady = true
             await refreshSyncStatus()
           } else if (previousUserId && previousUserId !== u.id) {
             // Different user on a shared device. Best-effort push of the prior
             // user's queued mutations before wiping.
-            try { await syncToSupabase(previousUserId) } catch (e) { console.warn('Previous user sync failed:', e) }
+            try {
+              await syncToSupabase(previousUserId)
+            } catch (e) {
+              console.warn('Previous user sync failed:', e)
+            }
             await clearAllData()
             await setLastUserId(u.id)
-            try { await syncFromSupabase(u.id) } catch (e) { console.warn('Cloud merge failed:', e) }
+            try {
+              await syncFromSupabase(u.id)
+            } catch (e) {
+              console.warn('Cloud merge failed:', e)
+            }
             dataReady = true
             await refreshSyncStatus()
           } else {
             // First sign-in on this device (or post-signOut clean slate).
             await setLastUserId(u.id)
-            try { await syncFromSupabase(u.id) } catch (e) { console.warn('Cloud merge failed:', e) }
+            try {
+              await syncFromSupabase(u.id)
+            } catch (e) {
+              console.warn('Cloud merge failed:', e)
+            }
             dataReady = true
             await refreshSyncStatus()
           }
 
-          let subVal; subscriptionStore.subscribe(s => subVal = s)()
+          let subVal
+          subscriptionStore.subscribe((s) => (subVal = s))()
 
           if (canUseClub(subVal) && subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
             needsTeamSetup = true
           }
 
-          if (canUseClub(subVal) && !needsTeamSetup && subVal.teams.length > 1 && !subVal.activeTeamId) {
-            const rememberLastTeam = $settingsStore.rememberLastTeam
-            if (!rememberLastTeam) {
-              needsTeamPick = true
-            }
+          if (
+            shouldPromptForTeamSelection({
+              hasClubAccess: canUseClub(subVal),
+              needsTeamSetup,
+              teams: subVal.teams,
+              activeTeamId: subVal.activeTeamId,
+              rememberLastTeam: $settingsStore.rememberLastTeam,
+            })
+          ) {
+            needsTeamPick = true
           }
 
           if (subVal.activeTeamId && canUseFeature(subVal, FEATURES.liveSharing)) {
@@ -208,10 +255,20 @@
           dataReady = false
           needsTeamPick = false
           subscriptionStore.set({
-            plan: 'free', status: 'active', cancelAtPeriodEnd: false,
-            clubId: null, clubName: null, clubRole: null, isOwner: false,
-            teams: [], activeTeamId: null, activeTeamName: null, activeTeamCode: null,
-            currentPeriodEnd: null, customFeatures: {}, loading: false
+            plan: 'free',
+            status: 'active',
+            cancelAtPeriodEnd: false,
+            clubId: null,
+            clubName: null,
+            clubRole: null,
+            isOwner: false,
+            teams: [],
+            activeTeamId: null,
+            activeTeamName: null,
+            activeTeamCode: null,
+            currentPeriodEnd: null,
+            customFeatures: {},
+            loading: false,
           })
         }
       } catch (e) {
@@ -235,7 +292,7 @@
     } finally {
       syncing = false
       await refreshSyncStatus()
-      setTimeout(() => syncMsg = '', 3000)
+      setTimeout(() => (syncMsg = ''), 3000)
     }
   }
 
@@ -256,7 +313,7 @@
 
 {#if $authLoading}
   <div class="loading-screen">
-    <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo">
+    <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo" />
     <div class="loading-tagline">
       <p class="loading-tagline-top">Coach Smarter.</p>
       <p class="loading-tagline-bottom">Win More.</p>
@@ -265,14 +322,12 @@
       <div class="loading-bar"></div>
     </div>
   </div>
-
 {:else if !$user}
   {@render children()}
-
 {:else if isAppRoute}
   {#if !dataReady && !needsTeamSetup}
     <div class="loading-screen">
-      <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo">
+      <img src="{base}/pitchnote-icon.svg" alt="PitchNote" class="loading-logo" />
       <div class="loading-tagline">
         <p class="loading-tagline-top">Coach Smarter.</p>
         <p class="loading-tagline-bottom">Win More.</p>
@@ -281,13 +336,14 @@
         <div class="loading-bar"></div>
       </div>
     </div>
-
   {:else if needsTeamSetup && hasClubAccess}
-    <TeamSetup onDone={() => { needsTeamSetup = false }} />
-
+    <TeamSetup
+      onDone={() => {
+        needsTeamSetup = false
+      }}
+    />
   {:else if needsTeamPick && hasClubAccess}
-    <TeamPicker onPicked={() => { needsTeamPick = false }} />
-
+    <TeamPicker onPicked={handleTeamPicked} />
   {:else}
     <!-- Subscribe success toast -->
     {#if subscribeToast}
@@ -300,7 +356,13 @@
         <span class="live-dot-sm"></span>
         <strong>Live match in progress</strong>
         <span>Tap to watch</span>
-        <button class="live-banner-close" onclick={(e) => { e.stopPropagation(); liveSession = null }}>✕</button>
+        <button
+          class="live-banner-close"
+          onclick={(e) => {
+            e.stopPropagation()
+            liveSession = null
+          }}>✕</button
+        >
       </div>
     {/if}
 
@@ -308,65 +370,258 @@
       <!-- Top bar: brand + desktop tabs + actions -->
       <nav class="top-nav">
         <div class="brand">
-          <img class="brand-logo" src="{base}/pitchnote-icon.svg" alt="PitchNote">
+          <img class="brand-logo" src="{base}/pitchnote-icon.svg" alt="PitchNote" />
           <span class="brand-name">{$settingsStore.teamName || 'PitchNote'}</span>
         </div>
 
         <!-- Desktop-only tab row -->
         <div class="desk-tabs">
-          <button class:active={page.url.pathname === '/app/match'} onclick={() => navigateTo('match')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/match'}
+            onclick={() => navigateTo('match')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg
+            >
             Match
           </button>
-          <button class:active={page.url.pathname === '/app/timeline'} onclick={() => navigateTo('timeline')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/timeline'}
+            onclick={() => navigateTo('timeline')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line
+                x1="8"
+                y1="18"
+                x2="21"
+                y2="18"
+              /><line x1="3" y1="6" x2="3.01" y2="6" /><line
+                x1="3"
+                y1="12"
+                x2="3.01"
+                y2="12"
+              /><line x1="3" y1="18" x2="3.01" y2="18" /></svg
+            >
             Timeline
           </button>
-          <button class:active={page.url.pathname === '/app/player'} onclick={() => navigateTo('player')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/player'}
+            onclick={() => navigateTo('player')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle
+                cx="12"
+                cy="7"
+                r="4"
+              /></svg
+            >
             Players
           </button>
-          <button class:active={page.url.pathname === '/app/team'} onclick={() => navigateTo('team')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/team'}
+            onclick={() => navigateTo('team')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line
+                x1="6"
+                y1="20"
+                x2="6"
+                y2="14"
+              /></svg
+            >
             Team Stats
           </button>
-          <button class:active={page.url.pathname === '/app/insights'} onclick={() => navigateTo('insights')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/><circle cx="19" cy="9" r="1.5"/><circle cx="14" cy="14" r="1.5"/><circle cx="10" cy="10" r="1.5"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/insights'}
+            onclick={() => navigateTo('insights')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-4 4" /><circle
+                cx="19"
+                cy="9"
+                r="1.5"
+              /><circle cx="14" cy="14" r="1.5" /><circle cx="10" cy="10" r="1.5" /></svg
+            >
             Insights
           </button>
-          <button class:active={page.url.pathname === '/app/history'} onclick={() => navigateTo('history')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/history'}
+            onclick={() => navigateTo('history')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              /></svg
+            >
             History
           </button>
-          <button class:active={page.url.pathname === '/app/squad'} onclick={() => navigateTo('squad')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/squad'}
+            onclick={() => navigateTo('squad')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle
+                cx="9"
+                cy="7"
+                r="4"
+              /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg
+            >
             Squad
           </button>
-          <button class:active={page.url.pathname === '/app/targets'} onclick={() => navigateTo('targets')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/targets'}
+            onclick={() => navigateTo('targets')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle
+                cx="12"
+                cy="12"
+                r="2"
+              /></svg
+            >
             Targets
           </button>
-          <button class:active={page.url.pathname === '/app/settings'} onclick={() => navigateTo('settings')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <button
+            class:active={page.url.pathname === '/app/settings'}
+            onclick={() => navigateTo('settings')}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><circle cx="12" cy="12" r="3" /><path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              /></svg
+            >
             Settings
           </button>
         </div>
 
         <div class="nav-actions">
           {#if hasClubAccess && ($subscriptionStore.teams.length > 1 || ($subscriptionStore.isOwner && $subscriptionStore.teams.length > 0))}
-            <button class="switch-team-btn" onclick={() => needsTeamPick = true} title="Switch team">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <button
+              class="switch-team-btn"
+              onclick={() => (needsTeamPick = true)}
+              title="Switch team"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle
+                  cx="9"
+                  cy="7"
+                  r="4"
+                /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg
+              >
               {$subscriptionStore.activeTeamName ?? 'Pick team'}
             </button>
           {/if}
           <button class="sync-btn" class:syncing onclick={handleSync} disabled={syncing}>
             {#if syncing}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="spin"
+                ><polyline points="23 4 23 10 17 10" /><path
+                  d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+                /></svg
+              >
               Syncing…
             {:else if syncMsg}
               {syncMsg}
             {:else}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg
+              >
               Sync
             {/if}
           </button>
@@ -374,7 +629,19 @@
             <span class="sync-status-pill" class:failed={syncFailed > 0}>{syncStatusLabel}</span>
           {/if}
           <button class="signout-btn" onclick={handleSignOut}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline
+                points="16 17 21 12 16 7"
+              /><line x1="21" y1="12" x2="9" y2="12" /></svg
+            >
             Sign out
           </button>
         </div>
@@ -387,62 +654,243 @@
 
     <!-- Mobile bottom nav (hidden on desktop via CSS) -->
     <nav class="mob-nav">
-      <button class="mob-tab" class:active={page.url.pathname === '/app/match'} onclick={() => navigateTo('match')}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <button
+        class="mob-tab"
+        class:active={page.url.pathname === '/app/match'}
+        onclick={() => navigateTo('match')}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg
+        >
         <span>Match</span>
       </button>
-      <button class="mob-tab" class:active={page.url.pathname === '/app/history'} onclick={() => navigateTo('history')}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <button
+        class="mob-tab"
+        class:active={page.url.pathname === '/app/history'}
+        onclick={() => navigateTo('history')}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path
+            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+          /></svg
+        >
         <span>History</span>
       </button>
-      <button class="mob-tab" class:active={page.url.pathname === '/app/player'} onclick={() => navigateTo('player')}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <button
+        class="mob-tab"
+        class:active={page.url.pathname === '/app/player'}
+        onclick={() => navigateTo('player')}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle
+            cx="12"
+            cy="7"
+            r="4"
+          /></svg
+        >
         <span>Players</span>
       </button>
-      <button class="mob-tab" class:active={page.url.pathname === '/app/team'} onclick={() => navigateTo('team')}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <button
+        class="mob-tab"
+        class:active={page.url.pathname === '/app/team'}
+        onclick={() => navigateTo('team')}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line
+            x1="6"
+            y1="20"
+            x2="6"
+            y2="14"
+          /></svg
+        >
         <span>Team</span>
       </button>
-      <button class="mob-tab" class:active={showMoreSheet || moreActive} onclick={() => showMoreSheet = !showMoreSheet}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
+      <button
+        class="mob-tab"
+        class:active={showMoreSheet || moreActive}
+        onclick={() => (showMoreSheet = !showMoreSheet)}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><circle cx="12" cy="5" r="1.5" fill="currentColor" /><circle
+            cx="12"
+            cy="12"
+            r="1.5"
+            fill="currentColor"
+          /><circle cx="12" cy="19" r="1.5" fill="currentColor" /></svg
+        >
         <span>More</span>
       </button>
     </nav>
 
     <!-- More bottom sheet -->
     {#if showMoreSheet}
-      <div class="more-backdrop" onclick={() => showMoreSheet = false}>
+      <div class="more-backdrop" onclick={() => (showMoreSheet = false)}>
         <div class="more-sheet" onclick={(e) => e.stopPropagation()}>
           <div class="more-handle"></div>
           <div class="more-sheet-title">More</div>
           <div class="more-grid">
-            <button class="more-item" class:active={page.url.pathname === '/app/insights'} onclick={() => navigateTo('insights')}>
+            <button
+              class="more-item"
+              class:active={page.url.pathname === '/app/insights'}
+              onclick={() => navigateTo('insights')}
+            >
               <div class="more-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/><circle cx="19" cy="9" r="1.5"/><circle cx="14" cy="14" r="1.5"/><circle cx="10" cy="10" r="1.5"/></svg>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-4 4" /><circle
+                    cx="19"
+                    cy="9"
+                    r="1.5"
+                  /><circle cx="14" cy="14" r="1.5" /><circle cx="10" cy="10" r="1.5" /></svg
+                >
               </div>
               <span>Insights</span>
             </button>
-            <button class="more-item" class:active={page.url.pathname === '/app/timeline'} onclick={() => navigateTo('timeline')}>
+            <button
+              class="more-item"
+              class:active={page.url.pathname === '/app/timeline'}
+              onclick={() => navigateTo('timeline')}
+            >
               <div class="more-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line
+                    x1="8"
+                    y1="18"
+                    x2="21"
+                    y2="18"
+                  /><line x1="3" y1="6" x2="3.01" y2="6" /><line
+                    x1="3"
+                    y1="12"
+                    x2="3.01"
+                    y2="12"
+                  /><line x1="3" y1="18" x2="3.01" y2="18" /></svg
+                >
               </div>
               <span>Timeline</span>
             </button>
-            <button class="more-item" class:active={page.url.pathname === '/app/squad'} onclick={() => navigateTo('squad')}>
+            <button
+              class="more-item"
+              class:active={page.url.pathname === '/app/squad'}
+              onclick={() => navigateTo('squad')}
+            >
               <div class="more-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle
+                    cx="9"
+                    cy="7"
+                    r="4"
+                  /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path
+                    d="M16 3.13a4 4 0 0 1 0 7.75"
+                  /></svg
+                >
               </div>
               <span>Squad</span>
             </button>
-            <button class="more-item" class:active={page.url.pathname === '/app/targets'} onclick={() => navigateTo('targets')}>
+            <button
+              class="more-item"
+              class:active={page.url.pathname === '/app/targets'}
+              onclick={() => navigateTo('targets')}
+            >
               <div class="more-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle
+                    cx="12"
+                    cy="12"
+                    r="2"
+                  /></svg
+                >
               </div>
               <span>Targets</span>
             </button>
-            <button class="more-item" class:active={page.url.pathname === '/app/settings'} onclick={() => navigateTo('settings')}>
+            <button
+              class="more-item"
+              class:active={page.url.pathname === '/app/settings'}
+              onclick={() => navigateTo('settings')}
+            >
               <div class="more-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><circle cx="12" cy="12" r="3" /><path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                  /></svg
+                >
               </div>
               <span>Settings</span>
             </button>
@@ -461,7 +909,6 @@
       </div>
     {/if}
   {/if}
-
 {:else}
   {@render children()}
 {/if}
@@ -475,7 +922,7 @@
     confirmLabel="Sign Out"
     confirmStyle="danger"
     onConfirm={doSignOut}
-    onCancel={() => showSignOutConfirm = false}
+    onCancel={() => (showSignOutConfirm = false)}
   />
 {/if}
 
@@ -496,13 +943,16 @@
     object-fit: contain;
     animation: pulse 2s ease-in-out infinite;
   }
-  .loading-text {
-    color: var(--text-faint);
-    font-size: 13px;
-  }
   @keyframes pulse {
-    0%, 100% { opacity: 0.5; transform: scale(1); }
-    50% { opacity: 0.85; transform: scale(1.04); }
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.04);
+    }
   }
 
   /* ── APP SHELL ── */
@@ -517,7 +967,9 @@
     display: flex;
     align-items: center;
     border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    background: rgba(26, 26, 26, 0.78);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    backdrop-filter: saturate(160%) blur(14px);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -553,34 +1005,56 @@
     overflow-x: auto;
     scrollbar-width: none;
   }
-  .desk-tabs::-webkit-scrollbar { display: none; }
+  .desk-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .desk-tabs {
+    gap: 2px;
+    padding: 0 6px;
+    align-items: center;
+  }
   .desk-tabs button {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 0 14px;
-    height: 52px;
+    gap: 6px;
+    padding: 0 13px;
+    height: 36px;
     border: none;
+    border-radius: 9px;
     background: none;
     font-size: 13px;
     color: var(--text-muted);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s,
+      box-shadow 0.2s;
     white-space: nowrap;
     font-family: inherit;
     font-weight: 500;
     flex-shrink: 0;
   }
-  .desk-tabs button svg { opacity: 0.7; flex-shrink: 0; }
-  .desk-tabs button:hover { color: var(--text); background: var(--surface-2); }
-  .desk-tabs button:hover svg { opacity: 1; }
+  .desk-tabs button svg {
+    opacity: 0.65;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .desk-tabs button:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .desk-tabs button:hover svg {
+    opacity: 1;
+  }
   .desk-tabs button.active {
     color: var(--primary);
     font-weight: 600;
-    border-bottom: 2px solid var(--primary);
+    background: rgba(var(--primary-rgb), 0.12);
+    box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), 0.28);
   }
-  .desk-tabs button.active svg { opacity: 1; }
+  .desk-tabs button.active svg {
+    opacity: 1;
+  }
 
   /* Nav actions */
   .nav-actions {
@@ -610,7 +1084,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .switch-team-btn:hover { background: var(--primary); color: var(--primary-text); }
+  .switch-team-btn:hover {
+    background: var(--primary);
+    color: var(--primary-text);
+  }
 
   .sync-btn {
     display: inline-flex;
@@ -628,8 +1105,14 @@
     white-space: nowrap;
     transition: all 0.15s;
   }
-  .sync-btn:hover { background: var(--primary); color: white; }
-  .sync-btn.syncing { opacity: 0.6; cursor: not-allowed; }
+  .sync-btn:hover {
+    background: var(--primary);
+    color: white;
+  }
+  .sync-btn.syncing {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
   .sync-status-pill {
     display: inline-flex;
     align-items: center;
@@ -642,7 +1125,7 @@
     white-space: nowrap;
   }
   .sync-status-pill.failed {
-    background: rgba(229,57,53,0.12);
+    background: rgba(229, 57, 53, 0.12);
     color: #e53935;
   }
   .signout-btn {
@@ -660,21 +1143,42 @@
     white-space: nowrap;
     transition: all 0.15s;
   }
-  .signout-btn:hover { border-color: #e53935; color: #e53935; }
+  .signout-btn:hover {
+    border-color: #e53935;
+    color: #e53935;
+  }
 
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+  }
 
   /* ── SUBSCRIBE TOAST ── */
   @keyframes toast-in {
-    0%   { opacity: 0; transform: translateX(-50%) translateY(24px) scale(0.9); }
-    60%  { transform: translateX(-50%) translateY(-4px) scale(1.03); }
-    100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    0% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(24px) scale(0.9);
+    }
+    60% {
+      transform: translateX(-50%) translateY(-4px) scale(1.03);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
   }
 
   @keyframes shimmer {
-    0%   { background-position: -200% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .subscribe-toast {
@@ -690,32 +1194,63 @@
     letter-spacing: 0.01em;
     padding: 14px 28px;
     border-radius: 32px;
-    box-shadow: 0 8px 32px rgba(45, 122, 45, 0.45), 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow:
+      0 8px 32px rgba(45, 122, 45, 0.45),
+      0 2px 8px rgba(0, 0, 0, 0.15);
     z-index: 9999;
     white-space: nowrap;
-    animation: toast-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-               shimmer 2s linear 0.5s infinite;
+    animation:
+      toast-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+      shimmer 2s linear 0.5s infinite;
   }
 
   /* ── LIVE BANNER ── */
   .live-banner {
-    display: flex; align-items: center; gap: 8px;
-    background: #e53935; color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #e53935;
+    color: white;
     padding: 10px 16px;
-    font-size: 13px; font-weight: 600;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    position: sticky; top: 0; z-index: 200;
+    position: sticky;
+    top: 0;
+    z-index: 200;
   }
-  .live-banner span:not(.live-dot-sm) { font-size: 12px; font-weight: 400; opacity: 0.85; margin-left: 4px; flex: 1; }
+  .live-banner span:not(.live-dot-sm) {
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.85;
+    margin-left: 4px;
+    flex: 1;
+  }
   .live-dot-sm {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: white; flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+    flex-shrink: 0;
     animation: livepulse 1.2s ease-in-out infinite;
   }
-  @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes livepulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
   .live-banner-close {
-    background: none; border: none; color: white;
-    font-size: 14px; cursor: pointer; opacity: 0.7; padding: 0 4px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0 4px;
   }
 
   /* ── MAIN CONTENT ── */
@@ -741,7 +1276,9 @@
   /* ── MOBILE BREAKPOINT ── */
   @media (max-width: 640px) {
     /* Collapse desktop tabs */
-    .desk-tabs { display: none; }
+    .desk-tabs {
+      display: none;
+    }
 
     /* Slim top bar */
     .top-nav {
@@ -754,7 +1291,9 @@
       border-right: none;
       height: 52px;
     }
-    .nav-actions { display: none; } /* moved into More sheet */
+    .nav-actions {
+      display: none;
+    } /* moved into More sheet */
 
     /* Main gets bottom padding for the bottom nav */
     main {
@@ -769,11 +1308,13 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--surface);
+      background: rgba(26, 26, 26, 0.82);
+      -webkit-backdrop-filter: saturate(160%) blur(16px);
+      backdrop-filter: saturate(160%) blur(16px);
       border-top: 1px solid var(--border);
-      padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+      padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
       z-index: 100;
-      box-shadow: 0 -4px 16px rgba(26,32,21,0.08);
+      box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.35);
     }
     .mob-tab {
       flex: 1;
@@ -781,28 +1322,41 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
-      padding: 6px 4px;
+      gap: 4px;
+      padding: 7px 4px;
       border: none;
+      border-radius: 12px;
       background: none;
       color: var(--text-faint);
       font-size: 10px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       font-family: inherit;
-      transition: color 0.15s;
+      transition: color 0.15s, background 0.18s;
       -webkit-tap-highlight-color: transparent;
     }
-    .mob-tab svg { flex-shrink: 0; }
-    .mob-tab.active { color: var(--primary); }
-    .mob-tab.active svg { stroke-width: 2.5; }
+    .mob-tab svg {
+      flex-shrink: 0;
+      transition: transform 0.18s ease;
+    }
+    .mob-tab:active {
+      transform: scale(0.94);
+    }
+    .mob-tab.active {
+      color: var(--primary);
+      background: rgba(var(--primary-rgb), 0.1);
+    }
+    .mob-tab.active svg {
+      stroke-width: 2.5;
+      transform: translateY(-1px);
+    }
 
     /* More sheet */
     .more-backdrop {
       display: flex;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.4);
+      background: rgba(0, 0, 0, 0.4);
       z-index: 150;
       align-items: flex-end;
       justify-content: center;
@@ -816,11 +1370,15 @@
       max-width: 640px;
       padding: 12px 20px calc(20px + env(safe-area-inset-bottom));
       animation: slideUp 0.22s cubic-bezier(0.32, 0.72, 0, 1);
-      box-shadow: 0 -8px 32px rgba(26,32,21,0.15);
+      box-shadow: 0 -8px 32px rgba(26, 32, 21, 0.15);
     }
     @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
     }
     .more-handle {
       width: 36px;
@@ -879,7 +1437,9 @@
       background: rgba(var(--primary-rgb), 0.1);
       border-color: rgba(var(--primary-rgb), 0.25);
     }
-    .more-item:active { transform: scale(0.96); }
+    .more-item:active {
+      transform: scale(0.96);
+    }
     .more-actions {
       display: flex;
       flex-direction: column;
@@ -900,8 +1460,14 @@
       font-family: inherit;
       transition: all 0.15s;
     }
-    .more-sync-btn:hover { background: var(--primary); color: white; }
-    .more-sync-btn.syncing { opacity: 0.6; cursor: not-allowed; }
+    .more-sync-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+    .more-sync-btn.syncing {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .more-sync-status {
       text-align: center;
       padding: 9px 10px;
@@ -912,7 +1478,7 @@
       font-weight: 700;
     }
     .more-sync-status.failed {
-      background: rgba(229,57,53,0.12);
+      background: rgba(229, 57, 53, 0.12);
       color: #e53935;
     }
     .more-signout-btn {
@@ -927,6 +1493,9 @@
       font-family: inherit;
       transition: all 0.15s;
     }
-    .more-signout-btn:hover { border-color: #e53935; color: #e53935; }
+    .more-signout-btn:hover {
+      border-color: #e53935;
+      color: #e53935;
+    }
   }
 </style>

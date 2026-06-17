@@ -22,21 +22,32 @@ public class OnDeviceSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
     private var bestConfidence = 0.0
     private var alternatives: [[String: Any]] = []
 
+    @objc override public func load() {
+        logDiagnostics("load", speechDiagnostics(localeIdentifier: "en-IE"))
+    }
+
     @objc func isAvailable(_ call: CAPPluginCall) {
         guard #available(iOS 13.0, *) else {
-            call.resolve(["available": false, "reason": "ios_13_required"])
+            let diagnostics = speechDiagnostics(localeIdentifier: call.getString("locale") ?? "en-IE")
+            logDiagnostics("isAvailable", diagnostics)
+            call.resolve(["available": false, "reason": "ios_13_required", "diagnostics": diagnostics])
             return
         }
 
-        let locale = Locale(identifier: call.getString("locale") ?? "en_IE")
+        let localeIdentifier = call.getString("locale") ?? "en-IE"
+        let locale = Locale(identifier: localeIdentifier)
+        let diagnostics = speechDiagnostics(localeIdentifier: localeIdentifier)
+        logDiagnostics("isAvailable", diagnostics)
+
         guard let recognizer = SFSpeechRecognizer(locale: locale) else {
-            call.resolve(["available": false, "reason": "recognizer_unavailable"])
+            call.resolve(["available": false, "reason": "recognizer_unavailable", "diagnostics": diagnostics])
             return
         }
 
         call.resolve([
             "available": recognizer.isAvailable && recognizer.supportsOnDeviceRecognition,
-            "reason": recognizer.supportsOnDeviceRecognition ? "" : "offline_model_unavailable"
+            "reason": recognizer.supportsOnDeviceRecognition ? "" : "offline_model_unavailable",
+            "diagnostics": diagnostics
         ])
     }
 
@@ -78,7 +89,10 @@ public class OnDeviceSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @available(iOS 13.0, *)
     private func startRecognition(_ call: CAPPluginCall) {
-        let localeIdentifier = call.getString("locale") ?? "en_IE"
+        let localeIdentifier = call.getString("locale") ?? "en-IE"
+        let diagnostics = speechDiagnostics(localeIdentifier: localeIdentifier)
+        logDiagnostics("recognize", diagnostics)
+
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)) else {
             call.reject("Speech recognizer is unavailable.", "UNAVAILABLE")
             return
@@ -143,6 +157,53 @@ public class OnDeviceSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
             cleanup()
             call.reject(error.localizedDescription)
         }
+    }
+
+    private func speechDiagnostics(localeIdentifier: String) -> [String: Any] {
+        var diagnostics: [String: Any] = [
+            "requestedLocale": localeIdentifier,
+            "authorizationStatus": speechAuthorizationStatusLabel(SFSpeechRecognizer.authorizationStatus())
+        ]
+
+        if #available(iOS 13.0, *) {
+            if let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)) {
+                diagnostics["recognizerInitialized"] = true
+                diagnostics["recognizerLocale"] = recognizer.locale.identifier
+                diagnostics["recognizerIsAvailable"] = recognizer.isAvailable
+                diagnostics["supportsOnDeviceRecognition"] = recognizer.supportsOnDeviceRecognition
+            } else {
+                diagnostics["recognizerInitialized"] = false
+                diagnostics["recognizerLocale"] = ""
+                diagnostics["recognizerIsAvailable"] = false
+                diagnostics["supportsOnDeviceRecognition"] = false
+            }
+        } else {
+            diagnostics["recognizerInitialized"] = false
+            diagnostics["recognizerLocale"] = ""
+            diagnostics["recognizerIsAvailable"] = false
+            diagnostics["supportsOnDeviceRecognition"] = false
+        }
+
+        return diagnostics
+    }
+
+    private func speechAuthorizationStatusLabel(_ status: SFSpeechRecognizerAuthorizationStatus) -> String {
+        switch status {
+        case .authorized:
+            return "authorized"
+        case .denied:
+            return "denied"
+        case .restricted:
+            return "restricted"
+        case .notDetermined:
+            return "notDetermined"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    private func logDiagnostics(_ context: String, _ diagnostics: [String: Any]) {
+        NSLog("PitchNote OnDeviceSpeech %@ diagnostics: %@", context, String(describing: diagnostics))
     }
 
     private func averageConfidence(_ transcription: SFTranscription) -> Double {

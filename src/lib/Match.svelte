@@ -81,7 +81,6 @@
   let venue = $state('')
   let competition = $state('')
   let matchDate = $state(new Date().toISOString().split('T')[0])
-  let nextId = $state(21)
   let events = $state([])
   let lastSavedMatchId = $state(null)
   let lastSavedFixture = $state('')
@@ -102,7 +101,6 @@
   // ── PUCKOUT TRACKING ─────────────────────────
   let puckouts = $state([])
   let showPuckoutModal = $state(false)
-  let puckoutStep = $state(1)         // 1=outcome, 2=our player, 3=zone, 4=opp player
   let puckoutOutcome = $state(null)   // 'won' | 'lost'
   let puckoutOurPlayer = $state(null) // player name string
   let puckoutOppPlayer = $state('')   // text input
@@ -145,7 +143,6 @@
     if (saved && saved.length > 0) {
       saved.sort((a, b) => a.number - b.number)
       players = saved
-      nextId = Math.max(...saved.map(p => p.id)) + 1
     } else {
       players = defaultSquad.map(p => ({ ...p }))
     }
@@ -321,6 +318,7 @@
   let selectedStat = $state(null)
   let showPlayerPicker = $state(false)
   let pendingLog = $state(null)
+  let pendingVoiceLocation = $state(null)
   let showPitchPicker = $state(false)
   let oppositionError = $state('')
   let showCancelConfirm = $state(false)
@@ -347,6 +345,13 @@
   }
 
   function confirmLogWithCoords(x, y, end) {
+    if (pendingVoiceLocation) {
+      updateVoiceEventLocation(pendingVoiceLocation, x, y, end)
+      pendingVoiceLocation = null
+      showPitchPicker = false
+      return
+    }
+
     if (!pendingLog) return
     const { playerId, stat } = pendingLog
     recordStat(playerId, stat, x, y, end)
@@ -356,6 +361,7 @@
 
   function cancelPitchPicker() {
     pendingLog = null
+    pendingVoiceLocation = null
     showPitchPicker = false
   }
 
@@ -403,6 +409,35 @@
   function handleVoiceLog(parsed) {
     const event = recordStat(parsed.playerId, parsed.stat, null, null, null)
     return { eventSnapshot: eventSnapshot(event) }
+  }
+
+  function addVoiceLocation(snapshot) {
+    if (!eventMatchesSnapshot(events[events.length - 1], snapshot)) {
+      showToast('Could not add location after newer events.', 'error')
+      return false
+    }
+    pendingLog = null
+    pendingVoiceLocation = snapshot
+    showPitchPicker = true
+    return true
+  }
+
+  function updateVoiceEventLocation(snapshot, x, y, end) {
+    if (!eventMatchesSnapshot(events[events.length - 1], snapshot)) {
+      showToast('Could not add location after newer events.', 'error')
+      return false
+    }
+    const lastIndex = events.length - 1
+    const updated = {
+      ...events[lastIndex],
+      x: x ?? null,
+      y: y ?? null,
+      end: end ?? null
+    }
+    events = [...events.slice(0, lastIndex), updated]
+    saveDraft()
+    scheduleAutoSync($user?.id)
+    return true
   }
 
   function undoVoiceEvent(snapshot) {
@@ -524,7 +559,7 @@
       // requiring the coach to manually tap Sync.
       scheduleAutoSync($user?.id)
       showToast('Match saved!', 'success')
-    } catch (e) {
+    } catch {
       showToast('Save failed — please try again. Your match data is still safe.', 'error')
       // Resume from where pauseTimer() left off. timerAccumulatedMs already
       // holds the full elapsed time; startTimer() just sets a new wall-clock
@@ -684,7 +719,6 @@
 
   // ── PUCKOUT FUNCTIONS ────────────────────────
   function openPuckoutModal() {
-    puckoutStep = 1
     puckoutOutcome = null
     puckoutOurPlayer = null
     puckoutOppPlayer = ''
@@ -1070,10 +1104,13 @@
     players={players}
     availableStats={allStats}
     currentHalf={period}
+    locationStats={allStats.filter(shouldCapturePitch)}
+    trackLocations={$settingsStore.trackPitchCoords}
     disabled={finishing || showPlayerPicker || showPitchPicker || showPuckoutModal || showOppScoreModal}
     onLog={handleVoiceLog}
     onUndo={undoVoiceEvent}
     onFix={fixVoiceEvent}
+    onAddLocation={addVoiceLocation}
   />
 
   <div class="mode-row">
@@ -1253,7 +1290,7 @@
     <div class="modal-backdrop" onclick={cancelPitchPicker}>
       <div class="modal" onclick={(e) => e.stopPropagation()}>
         <div class="modal-title">
-          Where did it happen?
+          {pendingVoiceLocation ? 'Add location' : 'Where did it happen?'}
           <span class="optional-tag">optional</span>
         </div>
         <div class="pitch-wrap">
@@ -1294,7 +1331,7 @@
           </svg>
         </div>
         <button class="cancel-btn" onclick={() => confirmLogWithCoords(null, null, null)}>
-          Skip — log without location
+          {pendingVoiceLocation ? 'Leave without location' : 'Skip — log without location'}
         </button>
       </div>
     </div>
@@ -2031,102 +2068,7 @@
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; max-width: 720px; width: 100%; margin: 0 auto; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
-
-  /* ── RECOVERY SCREEN ── */
-  .recover-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60vh;
-    padding: 1rem 0;
-  }
-  .recover-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2rem 1.75rem;
-    width: 100%;
-    max-width: 480px;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-  }
-  .recover-header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
-  .recover-logo { width: 56px; height: 56px; object-fit: contain; }
-  .recover-badge {
-    display: inline-block;
-    background: rgba(224,160,32,0.12);
-    color: #9a6000;
-    border: 1px solid #e0a020;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    padding: 4px 12px;
-    text-transform: uppercase;
-  }
-  .recover-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
-  .recover-sub { font-size: 13px; color: var(--text-muted); margin: 0; }
-
-  .recover-match-info {
-    background: var(--surface-2);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .recover-fixture { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .recover-team { font-size: 15px; font-weight: 700; color: var(--text); }
-  .recover-vs { font-size: 12px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; }
-  .recover-meta { font-size: 13px; color: var(--text-muted); }
-
-  .recover-stats-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    background: rgba(var(--primary-rgb),0.08);
-    border: 1px solid rgba(var(--primary-rgb),0.2);
-    border-radius: 10px;
-    padding: 1rem;
-  }
-  .recover-stat { text-align: center; flex: 1; }
-  .recover-stat-val { font-size: 18px; font-weight: 700; color: var(--primary); }
-  .recover-stat-label { font-size: 10px; color: var(--text-faint); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .recover-stat-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
-
-  .recover-actions { display: flex; flex-direction: column; gap: 10px; }
-  .recover-resume-btn {
-    width: 100%;
-    padding: 15px;
-    background: var(--primary);
-    color: var(--primary-text);
-    border: none;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.2s;
-  }
-  .recover-resume-btn:hover { background: var(--primary-hover); }
-  .recover-discard-btn {
-    width: 100%;
-    padding: 12px;
-    background: none;
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.15s;
-  }
-  .recover-discard-btn:hover { border-color: #e53935; color: #e53935; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1rem; box-shadow: var(--shadow-sm); }
 
   .setup-hero { display: flex; align-items: center; gap: 16px; padding: 0.5rem 0; }
   .hero-logo { width: 64px; height: 64px; object-fit: contain; }
@@ -2155,22 +2097,22 @@
   .start-btn { width: 100%; padding: 16px; background: var(--primary); color: var(--primary-text); border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: background 0.15s; }
   .start-btn:hover { opacity: 0.85; }
   .start-arrow { font-size: 20px; }
-  .match-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
-  .match-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .match-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 16px; box-shadow: var(--shadow-sm); }
+  .match-title { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
   .vs { font-weight: 400; color: var(--text-muted); margin: 0 6px; }
   .match-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .scoreboard { display: flex; align-items: flex-start; gap: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  .scoreboard { display: flex; align-items: flex-start; gap: 12px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 16px; box-shadow: var(--shadow-md); }
   .score-block { text-align: center; min-width: 52px; }
-  .score-label { font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; }
-  .score-val { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
-  .score-divider { font-size: 22px; color: var(--text-faint); margin-top: 13px; }
+  .score-label { font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.06em; }
+  .score-val { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .score-divider { font-size: 22px; color: var(--text-faint); margin-top: 15px; }
   .opp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
   .opp-btn { padding: 6px 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--input-border); border-radius: 6px; background: var(--surface); cursor: pointer; color: var(--text-2); font-family: inherit; min-height: 34px; min-width: 34px; transition: all 0.15s; }
   .opp-btn:hover { border-color: var(--primary); color: var(--primary); }
   .timer-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .timer-left { display: flex; align-items: center; gap: 10px; }
-  .timer-display { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); min-width: 80px; }
-  .timer-display.running { color: var(--primary); }
+  .timer-display { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text); min-width: 88px; letter-spacing: -0.01em; transition: color 0.2s; }
+  .timer-display.running { color: var(--primary); text-shadow: 0 0 18px rgba(var(--primary-rgb), 0.35); }
   .timer-display.overtime { color: #e53935; }
   .timer-display.overtime.running { color: #e53935; }
   .timer-btns { display: flex; gap: 6px; }
@@ -2195,9 +2137,9 @@
   .sub-btn:hover { background: var(--primary); color: var(--primary-text); }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-  .stat-btn { position: relative; padding: 18px 12px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--surface); font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center; font-family: inherit; min-height: 64px; }
-  .stat-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(var(--primary-rgb),0.08); }
-  .stat-btn:active { transform: scale(0.97); }
+  .stat-btn { position: relative; padding: 18px 12px; border-radius: var(--r-md); border: 1.5px solid var(--input-border); background: linear-gradient(180deg, var(--surface-2), var(--surface)); font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; transition: transform 0.1s, border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s; text-align: center; font-family: inherit; min-height: 64px; box-shadow: var(--shadow-sm); }
+  .stat-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(var(--primary-rgb),0.1); box-shadow: var(--glow); }
+  .stat-btn:active { transform: scale(0.96); box-shadow: var(--shadow-sm); }
   .stat-btn.dashed { border-style: dashed; color: var(--text-faint); font-weight: 400; }
   .stat-btn.dashed:hover { color: var(--primary); border-color: var(--primary); }
   .custom-tag { display: block; font-size: 10px; font-weight: 400; color: var(--text-faint); margin-top: 4px; }
@@ -2229,16 +2171,18 @@
   .sub-time { font-weight: 700; color: var(--primary); min-width: 44px; }
   .sub-detail { flex: 1; color: var(--text); }
   .sub-period { font-size: 11px; color: var(--text-faint); }
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 200; }
-  .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 1.5rem; width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); display: flex; align-items: flex-end; justify-content: center; z-index: 200; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-bottom: none; border-radius: var(--r-xl) var(--r-xl) 0 0; padding: 1.5rem; width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: modal-rise 0.24s cubic-bezier(0.32, 0.72, 0, 1); }
+  @keyframes modal-rise { from { transform: translateY(24px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
   .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
   .modal-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin: 0.75rem 0 0.5rem; }
   .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
   .opp-num-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
   .opp-num-btn { display: flex; align-items: center; justify-content: center; padding: 10px 4px; border-radius: 8px; border: 1.5px solid var(--input-border); background: var(--surface); cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text); transition: all 0.15s; }
   .opp-num-btn:active { transform: scale(0.93); border-color: var(--primary); background: rgba(var(--primary-rgb),0.08); }
-  .player-btn { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--surface); cursor: pointer; transition: all 0.15s; gap: 4px; font-family: inherit; min-height: 64px; }
-  .player-btn:active { transform: scale(0.96); border-color: var(--primary); background: rgba(var(--primary-rgb),0.08); }
+  .player-btn { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; border-radius: var(--r-md); border: 1.5px solid var(--input-border); background: linear-gradient(180deg, var(--surface-2), var(--surface)); cursor: pointer; transition: transform 0.1s, border-color 0.15s, background 0.15s, box-shadow 0.15s; gap: 4px; font-family: inherit; min-height: 64px; box-shadow: var(--shadow-sm); }
+  .player-btn:hover { border-color: rgba(var(--primary-rgb),0.5); box-shadow: var(--shadow-md); }
+  .player-btn:active { transform: scale(0.95); border-color: var(--primary); background: rgba(var(--primary-rgb),0.1); }
   .player-btn.sub { opacity: 0.7; }
   .player-num { font-size: 18px; color: var(--text); font-weight: 800; line-height: 1; }
   .player-name { font-size: 12px; font-weight: 600; color: var(--text-muted); text-align: center; }
@@ -2572,17 +2516,6 @@
   .confirm-log-btn:hover:not(:disabled) { background: var(--primary-hover); }
   .confirm-log-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── QUICK VIEW STATS SCREEN ── */
-  .ht-meta { font-size: 13px; color: var(--text-muted); }
-
-  .ht-score-card { text-align: center; }
-  .ht-score-row { display: flex; align-items: center; justify-content: center; gap: 24px; }
-  .ht-score-team { text-align: center; }
-  .ht-score-team.right { text-align: center; }
-  .ht-team-name { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
-  .ht-score { font-size: 36px; font-weight: 700; color: var(--text); }
-  .ht-score-divider { font-size: 28px; color: var(--text-faint); }
-
   .ht-stats-row {
     display: flex;
     align-items: center;
@@ -2598,8 +2531,6 @@
   .ht-stat-label { font-size: 10px; color: var(--text-faint); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
   .ht-stat-divider { width: 1px; height: 36px; background: var(--divider); flex-shrink: 0; }
 
-  .ht-breakdown { border-top: 1px solid var(--divider-faint); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-  .ht-breakdown-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); margin-bottom: 6px; }
   .ht-breakdown-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--divider-faint); font-size: 13px; }
   .ht-breakdown-row:last-child { border-bottom: none; }
   .ht-breakdown-name { flex: 1; font-weight: 600; color: var(--text); }
@@ -2610,8 +2541,6 @@
   .lost-badge { background: rgba(229,57,53,0.12); color: #e53935; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
   .goal-badge { background: rgba(229,57,53,0.12); color: #e53935; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
   .point-badge { background: rgba(224,160,32,0.12); color: #9a6000; font-weight: 700; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
-
-  .ht-conceded-total { font-size: 14px; font-weight: 600; color: var(--text); }
 
   /* ── LIVE SHARING ── */
   .live-share-row {

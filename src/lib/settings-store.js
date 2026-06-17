@@ -58,7 +58,7 @@ function createSettingsStore() {
     if (stored) parsed = JSON.parse(stored)
   } catch (e) {
     console.warn('Settings corrupted — resetting to defaults:', e)
-    try { localStorage.removeItem(SETTINGS_KEY) } catch (_) {}
+    try { localStorage.removeItem(SETTINGS_KEY) } catch {}
   }
 
   const initial = {
@@ -73,7 +73,7 @@ function createSettingsStore() {
     pitchCaptureMode: parsed.pitchCaptureMode || defaults.pitchCaptureMode,
   }
 
-  const { subscribe, set, update } = writable(initial)
+  const { subscribe, set } = writable(initial)
 
   return {
     subscribe,

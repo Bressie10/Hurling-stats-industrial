@@ -6,14 +6,55 @@ import {
   voiceActionVocabulary,
 } from './voice-log-config.js'
 
+const NUMBER_WORDS = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  thirty: 30,
+}
+
+const PLAYER_REFERENCE_FILLERS =
+  /\b(?:a|an|the|that|thats|it|its|for|from|to|by|with|player|jersey|jersy|shirt|number|num|no|scored|scorer|got|gets|won|lost)\b/g
+
 function compact(value) {
   return String(value || '')
     .trim()
     .replace(/\s+/g, ' ')
 }
 
+function normalizeNumberWords(value) {
+  let text = String(value || '')
+
+  text = text.replace(
+    /\b(twenty|thirty)\s+(one|two|three|four|five|six|seven|eight|nine)\b/g,
+    (_, ten, unit) => String(NUMBER_WORDS[ten] + NUMBER_WORDS[unit]),
+  )
+
+  return text.replace(
+    /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty)\b/g,
+    (word) => String(NUMBER_WORDS[word] || word),
+  )
+}
+
 export function normalizeVoiceText(value) {
-  return compact(value)
+  const text = compact(value)
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
@@ -21,6 +62,8 @@ export function normalizeVoiceText(value) {
     .replace(/[^a-z0-9#\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+
+  return normalizeNumberWords(text).replace(/\s+/g, ' ').trim()
 }
 
 function tokenize(value) {
@@ -160,8 +203,16 @@ function extractNumbers(text) {
   return [...normalizeVoiceText(text).matchAll(/\b(\d{1,2})\b/g)].map((match) => Number(match[1]))
 }
 
+function cleanPlayerReference(reference) {
+  return normalizeVoiceText(reference)
+    .replace(/#/g, ' ')
+    .replace(PLAYER_REFERENCE_FILLERS, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function hasCollisionDisambiguation(reference, entry) {
-  const normalized = normalizeVoiceText(reference)
+  const normalized = cleanPlayerReference(reference)
   const tokens = normalized.split(' ').filter(Boolean)
   const numbers = extractNumbers(normalized)
   const hasNumber = entry.number != null && numbers.includes(entry.number)
@@ -177,40 +228,65 @@ function hasCollisionDisambiguation(reference, entry) {
 }
 
 function scorePlayer(reference, entry) {
-  const normalized = normalizeVoiceText(reference)
+  const normalized = cleanPlayerReference(reference)
   const numbers = extractNumbers(normalized)
-  const fullScore = levenshteinSimilarity(normalized, entry.normalizedName)
-  const surnameScore = levenshteinSimilarity(
-    normalized.replace(/\b\d{1,2}\b/g, '').trim(),
-    entry.surname,
-  )
-  const numberScore = entry.number != null && numbers.includes(entry.number) ? 0.92 : 0
+  const withoutNumbers = normalized.replace(/\b\d{1,2}\b/g, '').trim()
+  const fullScore = levenshteinSimilarity(withoutNumbers || normalized, entry.normalizedName)
+  const surnameScore = levenshteinSimilarity(withoutNumbers, entry.surname)
+  const numberScore = entry.number != null && numbers.includes(entry.number) ? 0.97 : 0
+  const hasInitial =
+    entry.first &&
+    entry.surname &&
+    new RegExp(`\\b${escapeRegex(entry.first[0])}\\b\\s+${escapeRegex(entry.surname)}\\b`).test(
+      normalized,
+    )
+
+  const scored = [
+    { score: fullScore, matchSource: fullScore >= 0.98 ? 'full_name' : 'fuzzy' },
+    { score: surnameScore, matchSource: surnameScore >= 0.98 ? 'surname' : 'fuzzy' },
+    { score: numberScore, matchSource: 'number' },
+    { score: hasInitial ? 0.96 : 0, matchSource: 'initial' },
+  ].sort((a, b) => b.score - a.score)
+
+  let best = scored[0] || { score: 0, matchSource: 'fuzzy' }
 
   if (!entry.hasSurnameCollision) {
-    return Math.max(fullScore, surnameScore, numberScore)
+    return best
   }
 
   if (!hasCollisionDisambiguation(normalized, entry)) {
-    return Math.min(Math.max(fullScore, numberScore), PLAYER_THRESHOLD - 0.01)
+    return {
+      score: Math.min(Math.max(fullScore, numberScore), PLAYER_THRESHOLD - 0.01),
+      matchSource: best.matchSource,
+    }
   }
 
-  return Math.max(fullScore, surnameScore, numberScore, 0.95)
+  best = scored.find((candidate) => candidate.score > 0) || best
+  return { score: Math.max(best.score, 0.95), matchSource: best.matchSource }
 }
 
 export function matchVoicePlayer(reference, roster = [], { threshold = PLAYER_THRESHOLD } = {}) {
   const candidates = rosterEntries(roster)
-    .map((entry) => ({
-      player: entry.player,
-      playerId: entry.playerId,
-      name: entry.name,
-      number: entry.number,
-      score: scorePlayer(reference, entry),
-    }))
+    .map((entry) => {
+      const scored = scorePlayer(reference, entry)
+      return {
+        player: entry.player,
+        playerId: entry.playerId,
+        name: entry.name,
+        number: entry.number,
+        score: scored.score,
+        matchSource: scored.matchSource,
+      }
+    })
     .sort((a, b) => b.score - a.score)
 
   const topCandidates = candidates.slice(0, 3)
   const best = topCandidates[0] || null
   if (!best || best.score < threshold) {
+    return { ok: false, candidates: topCandidates }
+  }
+  const second = topCandidates[1] || null
+  if (second && second.score >= threshold && best.score - second.score < 0.01) {
     return { ok: false, candidates: topCandidates }
   }
   return { ok: true, match: best, candidates: topCandidates }
@@ -220,7 +296,15 @@ export function buildVoiceVocabulary(roster = [], availableStats = []) {
   const playerPhrases = rosterEntries(roster).flatMap((entry) => {
     const phrases = [entry.name]
     if (entry.surname && !entry.hasSurnameCollision) phrases.push(entry.surname)
-    if (entry.number != null) phrases.push(String(entry.number), `${entry.name} ${entry.number}`)
+    if (entry.number != null) {
+      phrases.push(
+        String(entry.number),
+        `${entry.name} ${entry.number}`,
+        `jersey ${entry.number}`,
+        `number ${entry.number}`,
+        `player ${entry.number}`,
+      )
+    }
     if (entry.first && entry.surname) phrases.push(`${entry.first[0]} ${entry.surname}`)
     return phrases
   })
@@ -235,7 +319,35 @@ export function buildVoiceVocabulary(roster = [], availableStats = []) {
     .slice(0, 200)
 }
 
-export function parseVoiceLog(
+function normalizeAlternatives(alternatives = []) {
+  const rows = Array.isArray(alternatives) ? alternatives : []
+  return rows
+    .map((alternative) => {
+      if (typeof alternative === 'string') {
+        return { transcript: normalizeVoiceText(alternative), confidence: null }
+      }
+      return {
+        transcript: normalizeVoiceText(alternative?.transcript || alternative?.text || ''),
+        confidence:
+          typeof alternative?.confidence === 'number' && Number.isFinite(alternative.confidence)
+            ? alternative.confidence
+            : null,
+      }
+    })
+    .filter((alternative) => alternative.transcript)
+}
+
+function resultRank(result) {
+  if (result.status === 'ok') return 3 + (result.confidence || 0)
+  if (result.status === 'ambiguous_player') {
+    const candidateScore = result.candidates?.[0]?.score || 0
+    return 2 + Math.min(result.actionScore || 0, candidateScore)
+  }
+  if (result.status === 'no_action_detected') return 1
+  return 0
+}
+
+function parseSingleVoiceLog(
   transcript,
   {
     roster = [],
@@ -245,6 +357,8 @@ export function parseVoiceLog(
     actionThreshold = ACTION_THRESHOLD,
     playerThreshold = PLAYER_THRESHOLD,
     lowConfidenceThreshold = LOW_CONFIDENCE_THRESHOLD,
+    trackLocations = false,
+    locationStats = [],
   } = {},
 ) {
   const text = normalizeVoiceText(transcript)
@@ -268,18 +382,45 @@ export function parseVoiceLog(
   }
 
   const confidence = Math.min(matchedAction.score, playerResult.match.score)
+  const locatedStats = new Set(locationStats.map((stat) => normalizeVoiceText(stat)))
   return {
     status: 'ok',
     transcript: text,
     player: playerResult.match.player,
     playerId: playerResult.match.playerId,
     playerName: playerResult.match.name,
+    matchSource: playerResult.match.matchSource,
     action: matchedAction.canonical,
     stat: matchedAction.stat,
     timestamp: now(),
     half: currentHalf,
     confidence,
     lowConfidence: confidence < lowConfidenceThreshold,
+    needsLocation: Boolean(
+      trackLocations && locatedStats.has(normalizeVoiceText(matchedAction.stat)),
+    ),
     candidates: playerResult.candidates,
+  }
+}
+
+export function parseVoiceLog(transcript, options = {}) {
+  const alternatives = normalizeAlternatives(options.alternatives)
+  const seen = new Set()
+  const transcripts = [
+    normalizeVoiceText(transcript),
+    ...alternatives.map((alternative) => alternative.transcript),
+  ].filter((text) => {
+    if (!text || seen.has(text)) return false
+    seen.add(text)
+    return true
+  })
+
+  const results = transcripts.map((text) => parseSingleVoiceLog(text, options))
+  const best =
+    results.sort((a, b) => resultRank(b) - resultRank(a))[0] || parseSingleVoiceLog('', options)
+
+  return {
+    ...best,
+    alternatives,
   }
 }

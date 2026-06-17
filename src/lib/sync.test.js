@@ -1,7 +1,15 @@
 import FDBFactory from 'fake-indexeddb/lib/FDBFactory'
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteMatch, getDB, getOutboxCount, loadMatches, loadSquad, saveMatch } from './db.js'
+import {
+  deleteMatch,
+  getDB,
+  getOutboxCount,
+  loadMatches,
+  loadSquad,
+  saveMatch,
+  saveSquad,
+} from './db.js'
 
 const { mockSupabase, cloudRows, mutationCalls, mutationErrors } = vi.hoisted(() => ({
   mockSupabase: {
@@ -15,6 +23,7 @@ const { mockSupabase, cloudRows, mutationCalls, mutationErrors } = vi.hoisted(()
     squad: [],
   },
   mutationCalls: {
+    deletes: [],
     upserts: [],
   },
   mutationErrors: {
@@ -31,10 +40,39 @@ function resetIndexedDb() {
 }
 
 function createTableClient(table) {
+  function deleteBuilder() {
+    const filters = []
+    let recorded = false
+    const record = (extra = {}) => {
+      if (recorded) return
+      recorded = true
+      mutationCalls.deletes.push({ table, filters: [...filters], ...extra })
+    }
+    const builder = {
+      eq: vi.fn((column, value) => {
+        filters.push({ column, value })
+        return builder
+      }),
+      in: vi.fn((column, values) => {
+        if (Array.isArray(values)) {
+          cloudRows[table] = (cloudRows[table] || []).filter((row) => !values.includes(row.id))
+        }
+        record({ column, values })
+        return Promise.resolve({ error: null })
+      }),
+      then: (resolve, reject) => {
+        record()
+        return Promise.resolve({ error: null }).then(resolve, reject)
+      },
+    }
+    return builder
+  }
+
   return {
     select: vi.fn(() => ({
       eq: vi.fn(() => Promise.resolve({ data: cloudRows[table] ?? [], error: null })),
     })),
+    delete: vi.fn(deleteBuilder),
     upsert: vi.fn((payload, options) => {
       mutationCalls.upserts.push({ table, payload, options })
       return Promise.resolve({ error: mutationErrors.upsert[table] ?? null })
@@ -84,6 +122,7 @@ describe('Supabase sync merge', () => {
     mockSupabase.from.mockImplementation(createTableClient)
     cloudRows.matches = []
     cloudRows.squad = []
+    mutationCalls.deletes = []
     mutationCalls.upserts = []
     mutationErrors.upsert = {}
   })
@@ -126,6 +165,35 @@ describe('Supabase sync merge', () => {
 
     expect(await loadMatches()).toMatchObject([{ id: 22, opposition: 'New Local Match' }])
     expect(await loadSquad()).toMatchObject([{ id: 3, name: 'New Local Player' }])
+  })
+
+  it('does not overwrite newer local team-scoped matches with stale cloud rows', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const db = await getDB()
+    await db.put('matches', {
+      id: 88,
+      teamScope,
+      teamId: teamScope,
+      opposition: 'New Team Match',
+      score: {},
+      stats: {},
+      events: [],
+      updated_at: 5000,
+    })
+    cloudRows.matches = [
+      cloudMatch('88', 1000, {
+        opposition: 'Stale Team Cloud Match',
+        teamScope,
+        teamId: teamScope,
+      }),
+    ]
+    const { syncFromSupabase } = await import('./sync.js')
+
+    await expect(syncFromSupabase('user-a')).resolves.toBe(true)
+
+    expect(await loadMatches({ teamScope })).toMatchObject([
+      { id: 88, opposition: 'New Team Match' },
+    ])
   })
 
   it('skips cloud matches that have a pending local delete mutation', async () => {
@@ -175,12 +243,32 @@ describe('Supabase sync merge', () => {
     expect(mutationCalls.upserts).toHaveLength(1)
     expect(mutationCalls.upserts[0]).toMatchObject({
       table: 'matches',
-      options: { onConflict: 'id' },
+      options: { onConflict: 'id,user_id' },
     })
     expect(mutationCalls.upserts[0].payload).toMatchObject({
       id: '55',
       user_id: 'user-a',
       data: { opposition: 'Queued Match' },
     })
+  })
+
+  it('syncs an emptied squad by deleting remote squad rows in the same scope', async () => {
+    cloudRows.squad = [
+      cloudSquad(7, 2000, { name: 'Remove One' }),
+      cloudSquad(8, 2000, { name: 'Remove Two' }),
+    ]
+    await saveSquad([])
+    const { syncToSupabase } = await import('./sync.js')
+
+    await expect(syncToSupabase('user-a')).resolves.toBe(true)
+
+    expect(mutationCalls.upserts).toHaveLength(0)
+    expect(mutationCalls.deletes).toContainEqual({
+      table: 'squad',
+      filters: [{ column: 'user_id', value: 'user-a' }],
+      column: 'id',
+      values: ['user-a:7', 'user-a:8'],
+    })
+    expect(await loadSquad()).toEqual([])
   })
 })

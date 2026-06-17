@@ -13,7 +13,7 @@ Use a Capacitor Android wrapper for the first Google Play release so live voice 
 
 1. Confirm production is deployed from `main`.
 2. Install local prerequisites:
-   - JDK 17.
+   - JDK 21 or newer.
    - Android Studio / Android SDK command-line tools.
 3. Run `npm run native:doctor` and resolve Android blockers.
 4. Generate the Capacitor Android project if `android/` does not already exist:

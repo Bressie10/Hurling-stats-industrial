@@ -2,6 +2,7 @@ import { writable } from 'svelte/store'
 import { supabase } from './supabase.js'
 import { clearAllData } from './db.js'
 import { flushOutbox } from './sync.js'
+import { ACTIVE_TEAM_KEY } from './team-scope.js'
 
 export const user = writable(null)
 export const authLoading = writable(true)
@@ -66,7 +67,7 @@ export async function signOut() {
   }
   await clearAllData()
   if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem('active-team-id')
+    localStorage.removeItem(ACTIVE_TEAM_KEY)
     localStorage.removeItem('doora-team-targets')
     localStorage.removeItem('signup_intent')
   }

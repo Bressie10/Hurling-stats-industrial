@@ -11,8 +11,6 @@
   import { showToast } from './toast.js'
   import { IS_NATIVE_STORE_BUILD } from './config.js'
   import { FREE_MATCH_LIMIT } from './entitlements.js'
-  import { jsPDF } from 'jspdf'
-  import html2canvas from 'html2canvas'
 
   const { proAccess = false } = $props()
 
@@ -129,7 +127,7 @@
         targets: parsed.targets || {},
         customStats: parsed.customStats || []
       }
-    } catch (_) {
+    } catch {
       return { targets: {}, customStats: [] }
     }
   }
@@ -137,6 +135,10 @@
   async function generatePDF() {
     pdfGenerating = true
     try {
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ])
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
       const M = 15         // margin
@@ -230,7 +232,7 @@
             backgroundColor: null, scale: 2, useCORS: true, logging: false
           })
           result = { dataUrl: canvas.toDataURL('image/png'), w: canvas.width, h: canvas.height }
-        } catch(e) {
+        } catch {
           // Fallback: XMLSerializer (reliable for SVG elements)
           try {
             const vb = (el.getAttribute('viewBox') || '0 0 500 320').split(' ').map(Number)
@@ -1531,9 +1533,10 @@
   }
 
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1rem; box-shadow: var(--shadow-sm); }
 
-  .season-card { background: #1a1a1a; border-radius: 14px; padding: 1.25rem; color: white; }
+  .season-card { background: linear-gradient(150deg, var(--surface-2), #161616 70%); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.25rem; color: white; box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .season-card::before { content: ''; position: absolute; top: -40%; right: -10%; width: 220px; height: 220px; background: radial-gradient(circle, rgba(var(--primary-rgb),0.12), transparent 70%); pointer-events: none; }
   .season-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.5; margin-bottom: 1rem; }
   .season-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .season-stat { text-align: center; }
@@ -1547,10 +1550,10 @@
   .search-input:focus { outline: none; border-color: var(--primary); }
   .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
   .filter-pill { padding: 8px 16px; border-radius: 20px; border: 1px solid var(--input-border); background: none; font-size: 13px; color: var(--text-muted); cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.15s; min-height: 38px; }
-  .filter-pill.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .filter-pill.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 
-  .match-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; cursor: pointer; position: relative; transition: all 0.15s; }
-  .match-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(var(--primary-rgb),0.08); }
+  .match-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1rem 1.25rem; cursor: pointer; position: relative; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; box-shadow: var(--shadow-sm); }
+  .match-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
   .match-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .match-card-left { display: flex; align-items: center; gap: 12px; flex: 1; }
   .match-opposition { font-size: 15px; font-weight: 700; color: var(--text); }

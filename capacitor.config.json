@@ -2,10 +2,6 @@
   "appId": "ie.pitchnote.app",
   "appName": "PitchNote",
   "webDir": ".svelte-kit/output/client",
-  "server": {
-    "url": "https://www.pitchnote.ie/",
-    "cleartext": false
-  },
   "ios": {
     "contentInset": "automatic"
   }

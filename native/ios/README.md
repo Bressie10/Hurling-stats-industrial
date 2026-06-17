@@ -24,7 +24,7 @@ Next build order:
 
 1. Confirm production is deployed from `main`.
 2. Run `npm run native:config:check`.
-3. Run `npm run native:doctor` and confirm only Android blockers remain.
+3. Run `npm run native:doctor` and resolve any local native-tooling blockers it reports.
 4. After web changes, sync the current web build into the native project:
 
    ```sh
@@ -46,10 +46,10 @@ The first release should stay consumption-only/free-account inside the native ap
 
 ## Static Packaging Note
 
-The current template loads the production app URL. If iOS is later changed to package local web assets, build with:
+The current template packages local web assets and omits `server.url`. Build and sync with:
 
 ```sh
-PUBLIC_STORE_BUILD=ios PUBLIC_API_BASE_URL=https://www.pitchnote.ie npm run build
+npm run native:ios:sync
 ```
 
 `PUBLIC_API_BASE_URL` keeps optional server features pointed at the production endpoints instead of a local relative `/api` path. Live voice logging uses on-device speech recognition and does not call a cloud transcription endpoint.

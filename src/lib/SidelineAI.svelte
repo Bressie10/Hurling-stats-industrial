@@ -103,7 +103,7 @@
       utterance.rate = 1.05
       utterance.pitch = 1
       window.speechSynthesis.speak(utterance)
-    } catch (_) {}
+    } catch {}
   }
 
   function setReply(message, { speak = true } = {}) {
@@ -177,7 +177,7 @@
   function stop() {
     sessionGeneration += 1
     if (typeof window !== 'undefined') {
-      try { window.speechSynthesis?.cancel?.() } catch (_) {}
+      try { window.speechSynthesis?.cancel?.() } catch {}
     }
     stopActiveRecording({ discard: true })
     mediaStream?.getTracks?.().forEach(track => track.stop())
@@ -282,7 +282,7 @@
     if (!discard) setReply('Processing voice...', { speak: false })
     try {
       mediaRecorder.requestData?.()
-    } catch (_) {}
+    } catch {}
     mediaRecorder.stop()
   }
 

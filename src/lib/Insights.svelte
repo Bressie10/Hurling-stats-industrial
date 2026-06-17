@@ -67,7 +67,7 @@
         targets: parsed.targets || {},
         customStats: parsed.customStats || []
       }
-    } catch (_) {
+    } catch {
       return { targets: {}, customStats: [] }
     }
   }

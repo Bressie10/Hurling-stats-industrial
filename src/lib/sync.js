@@ -1,16 +1,22 @@
 import { supabase } from './supabase.js'
 import {
-  loadMatches, loadSquad,
-  getReadyMutations, markMutationDone, markMutationFailed, getOutboxCount,
-  getDB
+  loadSquad,
+  replaceSquadForScope,
+  getReadyMutations,
+  markMutationDone,
+  markMutationFailed,
+  getOutboxCount,
+  getDB,
 } from './db.js'
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public'
 import {
   BACKGROUND_SYNC_AUTH_KEY,
   BACKGROUND_SYNC_TAG,
   matchToData,
+  normalizePayloadTeamScope,
+  rowTeamScope,
   squadCloudId,
-  squadLocalIdFromRow
+  squadLocalIdFromRow,
 } from './sync-payloads.js'
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -33,8 +39,10 @@ export function scheduleAutoSync(userId) {
   if (!userId) return
   activeUserId = userId
   installListeners()
-  requestBackgroundOutboxSync(userId).catch(e => console.warn('Background sync registration failed:', e))
-  drainOutbox(userId).catch(e => console.warn('Auto-sync drain failed:', e))
+  requestBackgroundOutboxSync(userId).catch((e) =>
+    console.warn('Background sync registration failed:', e),
+  )
+  drainOutbox(userId).catch((e) => console.warn('Auto-sync drain failed:', e))
 }
 
 // Manual Sync button — drain pending mutations, then merge cloud → local.
@@ -71,7 +79,11 @@ export async function flushOutbox(userId) {
   if (!userId) return false
   activeUserId = userId
   installListeners()
-  try { await saveBackgroundSyncAuth(userId) } catch (e) { console.warn('Background sync auth save failed:', e) }
+  try {
+    await saveBackgroundSyncAuth(userId)
+  } catch (e) {
+    console.warn('Background sync auth save failed:', e)
+  }
   return drainOutbox(userId)
 }
 
@@ -93,8 +105,8 @@ async function saveBackgroundSyncAuth(userId) {
       expires_at: session.expires_at || 0,
       supabase_url: PUBLIC_SUPABASE_URL,
       supabase_anon_key: PUBLIC_SUPABASE_ANON_KEY,
-      saved_at: Date.now()
-    }
+      saved_at: Date.now(),
+    },
   })
   return true
 }
@@ -145,13 +157,16 @@ function drainOutbox(userId) {
 
 async function applyMutation(userId, m) {
   if (m.op === 'upsert_match') {
-    const { error } = await supabase
-      .from('matches')
-      .upsert({
+    const data = matchToData(m.payload)
+    const { error } = await supabase.from('matches').upsert(
+      {
         id: String(m.payload.id),
         user_id: userId,
-        data: matchToData(m.payload)
-      }, { onConflict: 'id' })
+        team_id: m.team_id ?? data.teamId ?? null,
+        data,
+      },
+      { onConflict: 'id,user_id' },
+    )
     if (error) throw error
     return
   }
@@ -167,35 +182,45 @@ async function applyMutation(userId, m) {
   }
 
   if (m.op === 'upsert_squad') {
+    const teamScope = normalizePayloadTeamScope(m.teamScope ?? m.team_id)
     const players = m.payload || []
-    if (players.length === 0) return
 
-    const rows = players.map(p => ({
-      id: squadCloudId(userId, p.id),
-      user_id: userId,
-      data: {
-        local_id: p.id,
-        name: p.name,
-        number: p.number,
-        position: p.position,
-        updated_at: p.updated_at || 0
-      }
-    }))
-    const { error } = await supabase
-      .from('squad')
-      .upsert(rows, { onConflict: 'id,user_id' })
-    if (error) throw error
+    if (players.length > 0) {
+      const rows = players.map((p) => ({
+        id: squadCloudId(userId, p.id, teamScope),
+        user_id: userId,
+        team_id: m.team_id ?? null,
+        data: {
+          local_id: p.id,
+          name: p.name,
+          number: p.number,
+          position: p.position,
+          teamScope,
+          teamId: m.team_id ?? null,
+          updated_at: p.updated_at || 0,
+        },
+      }))
+      const { error } = await supabase.from('squad').upsert(rows, { onConflict: 'id,user_id' })
+      if (error) throw error
+    }
 
     // Reconcile deletions: anything in cloud but not in our roster is gone.
     const { data: remote, error: selErr } = await supabase
-      .from('squad').select('id').eq('user_id', userId)
+      .from('squad')
+      .select('id,data,team_id')
+      .eq('user_id', userId)
     if (selErr) throw selErr
     if (remote) {
-      const keep = new Set(players.map(p => squadCloudId(userId, p.id)))
-      const toDelete = remote.filter(r => !keep.has(String(r.id))).map(r => r.id)
+      const keep = new Set(players.map((p) => squadCloudId(userId, p.id, teamScope)))
+      const toDelete = remote
+        .filter((r) => rowTeamScope(r) === teamScope && !keep.has(String(r.id)))
+        .map((r) => r.id)
       if (toDelete.length > 0) {
         const { error } = await supabase
-          .from('squad').delete().eq('user_id', userId).in('id', toDelete)
+          .from('squad')
+          .delete()
+          .eq('user_id', userId)
+          .in('id', toDelete)
         if (error) throw error
       }
     }
@@ -209,9 +234,17 @@ async function getPendingDeleteMatchIds(db) {
   const all = await db.getAll('sync_outbox')
   return new Set(
     all
-      .filter(m => m.op === 'delete_match')
-      .map(m => String(m.entity_id))
+      .filter((m) => m.op === 'delete_match')
+      .map((m) => matchMergeKey(m.entity_id, normalizePayloadTeamScope(m.teamScope ?? m.team_id))),
   )
+}
+
+function matchScope(record) {
+  return normalizePayloadTeamScope(record?.teamScope ?? record?.team_id ?? record?.teamId)
+}
+
+function matchMergeKey(id, teamScope) {
+  return `${String(id)}:${normalizePayloadTeamScope(teamScope)}`
 }
 
 function matchLocalIdFromCloud(rowId, localMatch) {
@@ -230,7 +263,7 @@ async function pullFromCloud(userId) {
   try {
     const [matchRes, squadRes] = await Promise.all([
       supabase.from('matches').select('*').eq('user_id', userId),
-      supabase.from('squad').select('*').eq('user_id', userId)
+      supabase.from('squad').select('*').eq('user_id', userId),
     ])
     if (matchRes.error) throw matchRes.error
     if (squadRes.error) throw squadRes.error
@@ -239,15 +272,16 @@ async function pullFromCloud(userId) {
 
     // Matches: per-id merge by updated_at.
     if (matchRes.data) {
-      const localMatches = await loadMatches()
-      const localById = new Map(localMatches.map(m => [String(m.id), m]))
+      const localMatches = (await db.getAll('matches')).filter((m) => !m.isDraft)
+      const localByKey = new Map(localMatches.map((m) => [matchMergeKey(m.id, matchScope(m)), m]))
       const pendingDeletes = await getPendingDeleteMatchIds(db)
       const tx = db.transaction('matches', 'readwrite')
       for (const row of matchRes.data) {
-        if (pendingDeletes.has(String(row.id))) continue
         const d = row.data || {}
+        const teamScope = normalizePayloadTeamScope(d.teamScope ?? row.team_id)
+        if (pendingDeletes.has(matchMergeKey(row.id, teamScope))) continue
         const cloudTs = d.updated_at || 0
-        const localM = localById.get(String(row.id))
+        const localM = localByKey.get(matchMergeKey(row.id, teamScope))
         const localTs = localM?.updated_at || 0
         if (!localM || cloudTs > localTs) {
           tx.store.put({
@@ -269,7 +303,9 @@ async function pullFromCloud(userId) {
             lineup: d.lineup ?? {},
             coachSummary: d.coachSummary ?? '',
             workOns: d.workOns ?? [],
-            updated_at: cloudTs
+            teamScope,
+            teamId: d.teamId ?? row.team_id ?? null,
+            updated_at: cloudTs,
           })
         }
       }
@@ -282,24 +318,32 @@ async function pullFromCloud(userId) {
     // (which have no data.updated_at and would otherwise tie at 0 forever).
     // Local edits aren't squashed; they sit in the outbox until the next drain.
     if (squadRes.data) {
-      const localSquad = await loadSquad()
-      const localMax = localSquad.reduce((m, p) => Math.max(m, p.updated_at || 0), 0)
-      const cloudMax = squadRes.data.reduce((m, r) => Math.max(m, r.data?.updated_at || 0), 0)
-      const cloudHasData = squadRes.data.length > 0
-      const localEmpty = localSquad.length === 0
-      if (cloudHasData && (localEmpty || cloudMax > localMax)) {
-        const tx = db.transaction('squad', 'readwrite')
-        tx.store.clear()
-        for (const row of squadRes.data) {
-          tx.store.put({
-            id: squadLocalIdFromRow(row),
-            name: row.data?.name,
-            number: row.data?.number,
-            position: row.data?.position,
-            updated_at: row.data?.updated_at || 0
-          })
+      const byScope = new Map()
+      for (const row of squadRes.data) {
+        const scope = rowTeamScope(row)
+        if (!byScope.has(scope)) byScope.set(scope, [])
+        byScope.get(scope).push(row)
+      }
+
+      for (const [teamScope, rows] of byScope) {
+        const localSquad = await loadSquad({ teamScope })
+        const localMax = localSquad.reduce((m, p) => Math.max(m, p.updated_at || 0), 0)
+        const cloudMax = rows.reduce((m, r) => Math.max(m, r.data?.updated_at || 0), 0)
+        const localEmpty = localSquad.length === 0
+        if (rows.length > 0 && (localEmpty || cloudMax > localMax)) {
+          await replaceSquadForScope(
+            rows.map((row) => ({
+              id: squadLocalIdFromRow(row),
+              name: row.data?.name,
+              number: row.data?.number,
+              position: row.data?.position,
+              teamScope,
+              teamId: row.data?.teamId ?? row.team_id ?? null,
+              updated_at: row.data?.updated_at || 0,
+            })),
+            teamScope,
+          )
         }
-        await tx.done
       }
     }
 

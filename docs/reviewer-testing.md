@@ -1,6 +1,6 @@
 # Reviewer Account And Store-Mode Testing
 
-Last updated: 2026-06-14
+Last updated: 2026-06-17
 
 Use this before Apple App Store or Google Play submission. The goal is to give reviewers a real account with enough data to verify the app immediately, without exposing web purchase flows inside native builds.
 
@@ -74,7 +74,9 @@ Check:
 - Insights shows match and season summaries.
 - Settings account deletion is visible.
 - Pricing/locked feature surfaces do not show Stripe checkout, prices, external purchase links, or web billing controls in store mode.
-- On-device voice logging can request microphone/speech permission and log a simple spoken stat on a real device.
+- On-device voice logging can request microphone/speech permission and log simple supported spoken stats such as `point 11`, `goal number fourteen`, `wide jersey seven`, `free 11`, `turnover 7`, or `yellow card 7` on a real device.
+- Field-test voice logging in a deliberately flagged build with `PUBLIC_ENABLE_VOICE_TEST=1`, then use `/app/voice-test` and the process in `docs/voice-accuracy-testing.md` before calling the feature pitch-ready.
+- If checking a Club/Club Pro reviewer account, switch teams and confirm squad, drafts, match history, and live sharing stay scoped to the active team.
 
 ## Store Reviewer Notes
 

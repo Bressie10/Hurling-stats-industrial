@@ -8,13 +8,15 @@ import {
   getOutboxCount,
   getReadyMutations,
   markMutationDone,
-  markMutationFailed
+  markMutationFailed,
 } from '$lib/db.js'
 import {
   BACKGROUND_SYNC_AUTH_KEY,
   BACKGROUND_SYNC_TAG,
   matchToData,
-  squadCloudId
+  normalizePayloadTeamScope,
+  rowTeamScope,
+  squadCloudId,
 } from '$lib/sync-payloads.js'
 
 const CACHE = `gaa-${version}`
@@ -28,7 +30,7 @@ self.addEventListener('install', (e) => {
     caches
       .open(CACHE)
       .then((c) => c.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting()),
   )
 })
 
@@ -37,7 +39,7 @@ self.addEventListener('activate', (e) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
   )
 })
 
@@ -70,7 +72,7 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, clone))
         return res
       })
-    })
+    }),
   )
 })
 
@@ -82,12 +84,14 @@ self.addEventListener('sync', (e) => {
 async function handleOutboxBackgroundSync() {
   const windows = await self.clients.matchAll({
     type: 'window',
-    includeUncontrolled: true
+    includeUncontrolled: true,
   })
-  const visibleClient = windows.find(client => client.visibilityState === 'visible' || client.focused)
+  const visibleClient = windows.find(
+    (client) => client.visibilityState === 'visible' || client.focused,
+  )
 
   if (visibleClient) {
-    windows.forEach(client => client.postMessage({ type: 'PITCHNOTE_DRAIN_OUTBOX' }))
+    windows.forEach((client) => client.postMessage({ type: 'PITCHNOTE_DRAIN_OUTBOX' }))
     return
   }
 
@@ -110,7 +114,7 @@ async function getBackgroundSyncAuth() {
     userId: auth.user_id,
     accessToken: auth.access_token,
     supabaseUrl: auth.supabase_url || PUBLIC_SUPABASE_URL,
-    supabaseAnonKey: auth.supabase_anon_key || PUBLIC_SUPABASE_ANON_KEY
+    supabaseAnonKey: auth.supabase_anon_key || PUBLIC_SUPABASE_ANON_KEY,
   }
 }
 
@@ -122,14 +126,18 @@ function restUrl(auth, table, params = {}) {
   return url
 }
 
-async function supabaseRest(auth, table, { method = 'GET', params = {}, body = null, prefer = null } = {}) {
+async function supabaseRest(
+  auth,
+  table,
+  { method = 'GET', params = {}, body = null, prefer = null } = {},
+) {
   if (!auth.supabaseUrl || !auth.supabaseAnonKey) {
     throw new Error('Supabase background sync config missing.')
   }
 
   const headers = {
     apikey: auth.supabaseAnonKey,
-    Authorization: `Bearer ${auth.accessToken}`
+    Authorization: `Bearer ${auth.accessToken}`,
   }
   if (body !== null) headers['Content-Type'] = 'application/json'
   if (prefer) headers.Prefer = prefer
@@ -137,7 +145,7 @@ async function supabaseRest(auth, table, { method = 'GET', params = {}, body = n
   const response = await fetch(restUrl(auth, table, params), {
     method,
     headers,
-    body: body === null ? null : JSON.stringify(body)
+    body: body === null ? null : JSON.stringify(body),
   })
 
   if (!response.ok) {
@@ -154,15 +162,17 @@ async function applyMutationFromServiceWorker(auth, mutation) {
   const userId = auth.userId
 
   if (mutation.op === 'upsert_match') {
+    const data = matchToData(mutation.payload)
     await supabaseRest(auth, 'matches', {
       method: 'POST',
-      params: { on_conflict: 'id' },
+      params: { on_conflict: 'id,user_id' },
       prefer: 'resolution=merge-duplicates,return=minimal',
       body: {
         id: String(mutation.payload.id),
         user_id: userId,
-        data: matchToData(mutation.payload)
-      }
+        team_id: mutation.team_id ?? data.teamId ?? null,
+        data,
+      },
     })
     return
   }
@@ -172,56 +182,59 @@ async function applyMutationFromServiceWorker(auth, mutation) {
       method: 'DELETE',
       params: {
         id: `eq.${String(mutation.entity_id)}`,
-        user_id: `eq.${userId}`
-      }
+        user_id: `eq.${userId}`,
+      },
     })
     return
   }
 
   if (mutation.op === 'upsert_squad') {
+    const teamScope = normalizePayloadTeamScope(mutation.teamScope ?? mutation.team_id)
     const players = mutation.payload || []
-    if (players.length === 0) return
 
-    const rows = players.map(player => ({
-      id: squadCloudId(userId, player.id),
-      user_id: userId,
-      data: {
-        local_id: player.id,
-        name: player.name,
-        number: player.number,
-        position: player.position,
-        updated_at: player.updated_at || 0
-      }
-    }))
+    if (players.length > 0) {
+      const rows = players.map((player) => ({
+        id: squadCloudId(userId, player.id, teamScope),
+        user_id: userId,
+        team_id: mutation.team_id ?? null,
+        data: {
+          local_id: player.id,
+          name: player.name,
+          number: player.number,
+          position: player.position,
+          teamScope,
+          teamId: mutation.team_id ?? null,
+          updated_at: player.updated_at || 0,
+        },
+      }))
 
-    await supabaseRest(auth, 'squad', {
-      method: 'POST',
-      params: { on_conflict: 'id,user_id' },
-      prefer: 'resolution=merge-duplicates,return=minimal',
-      body: rows
-    })
+      await supabaseRest(auth, 'squad', {
+        method: 'POST',
+        params: { on_conflict: 'id,user_id' },
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: rows,
+      })
+    }
 
     const remote = await supabaseRest(auth, 'squad', {
       params: {
-        select: 'id',
-        user_id: `eq.${userId}`
-      }
+        select: 'id,data,team_id',
+        user_id: `eq.${userId}`,
+      },
     })
-    const keep = new Set(players.map(player => squadCloudId(userId, player.id)))
+    const keep = new Set(players.map((player) => squadCloudId(userId, player.id, teamScope)))
     const toDelete = (remote || [])
-      .filter(row => !keep.has(String(row.id)))
-      .map(row => String(row.id))
+      .filter((row) => rowTeamScope(row) === teamScope && !keep.has(String(row.id)))
+      .map((row) => String(row.id))
 
     if (toDelete.length > 0) {
-      const inList = toDelete
-        .map(id => `"${id.replace(/"/g, '\\"')}"`)
-        .join(',')
+      const inList = toDelete.map((id) => `"${id.replace(/"/g, '\\"')}"`).join(',')
       await supabaseRest(auth, 'squad', {
         method: 'DELETE',
         params: {
           user_id: `eq.${userId}`,
-          id: `in.(${inList})`
-        }
+          id: `in.(${inList})`,
+        },
       })
     }
     return

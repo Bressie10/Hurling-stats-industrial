@@ -11,12 +11,11 @@
   let error = null
   let successMsg = null
   let ready = false
-  let recoveryMode = false
 
   onMount(() => {
     // Supabase fires PASSWORD_RECOVERY when the user lands here from the email link.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') { recoveryMode = true; ready = true }
+      if (event === 'PASSWORD_RECOVERY') { ready = true }
     })
     // If the recovery session is already established (or token has already been consumed),
     // we still let the user try to set a password — Supabase will reject if no session.

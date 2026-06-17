@@ -402,7 +402,7 @@
 
 <style>
   .screen { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2rem; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1rem; box-shadow: var(--shadow-sm); }
   .selector-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
   .field-group label { font-size: 12px; font-weight: 600; color: var(--text-2); }

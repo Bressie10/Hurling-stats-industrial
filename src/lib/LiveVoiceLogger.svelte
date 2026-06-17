@@ -9,9 +9,12 @@
     availableStats = [],
     currentHalf = '',
     disabled = false,
+    locationStats = [],
+    trackLocations = false,
     onLog = () => null,
     onUndo = () => false,
     onFix = () => false,
+    onAddLocation = () => false,
   } = $props()
 
   let status = $state('idle')
@@ -40,7 +43,7 @@
     showCorrection = false
     status = 'checking'
 
-    const availability = await isOnDeviceSpeechAvailable()
+    const availability = await isOnDeviceSpeechAvailable({ locale: 'en-IE' })
     if (!availability?.available) {
       status = 'idle'
       message =
@@ -58,9 +61,12 @@
       })
       status = 'processing'
       const parsed = parseVoiceLog(speech?.transcript || '', {
+        alternatives: speech?.alternatives || [],
         roster,
         availableStats,
         currentHalf,
+        locationStats,
+        trackLocations,
       })
       handleParsedResult(parsed)
     } catch (e) {
@@ -89,6 +95,34 @@
 
     const result = onLog(parsed)
     if (result?.eventSnapshot) {
+      const actions = [
+        {
+          label: 'undo',
+          onClick: () => {
+            onUndo(result.eventSnapshot)
+            correction = null
+            showCorrection = false
+          },
+        },
+        {
+          label: 'fix',
+          onClick: () => {
+            showCorrection = true
+          },
+        },
+      ]
+
+      if (parsed.needsLocation) {
+        actions.push({
+          label: 'add location',
+          onClick: () => {
+            onAddLocation(result.eventSnapshot)
+            correction = null
+            showCorrection = false
+          },
+        })
+      }
+
       correction = {
         eventSnapshot: result.eventSnapshot,
         stat: parsed.stat,
@@ -99,27 +133,19 @@
         `Logged: ${parsed.playerName} — ${parsed.stat}`,
         parsed.lowConfidence ? 'warning' : 'success',
         {
-          durationMs: 3000,
-          actions: [
-            {
-              label: '✕ undo',
-              onClick: () => {
-                onUndo(result.eventSnapshot)
-                correction = null
-                showCorrection = false
-              },
-            },
-            {
-              label: '✏ fix',
-              onClick: () => {
-                showCorrection = true
-              },
-            },
-          ],
+          durationMs: parsed.needsLocation ? 5000 : 3000,
+          actions,
         },
       )
     }
-    message = parsed.lowConfidence ? 'Logged. Check it.' : 'Logged.'
+    message =
+      parsed.lowConfidence && parsed.needsLocation
+        ? 'Logged. Check it, then add location if needed.'
+        : parsed.needsLocation
+          ? 'Logged. Add location if needed.'
+          : parsed.lowConfidence
+            ? 'Logged. Check it.'
+            : 'Logged.'
   }
 
   function resolveCandidate(candidate, source = ambiguousResult) {
@@ -164,6 +190,11 @@
     </button>
     <span class="voice-status">{statusText}</span>
   </div>
+
+  <details class="voice-help">
+    <summary>Voice limits</summary>
+    <p>Black/red cards, 45s, and sideline balls are tap-only in this version.</p>
+  </details>
 
   {#if ambiguousResult}
     <div class="voice-candidates">
@@ -238,6 +269,19 @@
     font-size: 12px;
     color: var(--text-muted);
     line-height: 1.4;
+  }
+  .voice-help {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .voice-help summary {
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .voice-help p {
+    margin: 6px 0 0;
   }
   .voice-candidates {
     display: flex;

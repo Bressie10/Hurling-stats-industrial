@@ -15,8 +15,6 @@
   let loading = false
   let error = null
   let successMsg = null
-  let selectedPersonalPlan = 'free'
-  let selectedClubPlan = 'club'
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) { error = 'Please enter your email and password'; return }
@@ -72,7 +70,7 @@
     loading = false
   }
 
-  function reset() { error = null; successMsg = null; selectedPersonalPlan = null; selectedClubPlan = null }
+  function reset() { error = null; successMsg = null }
   function setMode(m) { mode = m; reset() }
 
   function goToSignup(m) {
@@ -1192,48 +1190,6 @@
     cursor: pointer; color: var(--lp-text2); flex-shrink: 0;
   }
   .auth-dark-back-btn:hover { border-color: var(--lp-lime); color: var(--lp-lime); }
-  .auth-dark-tier-note {
-    font-size: 12px; color: var(--lp-text3);
-    background: rgba(255,255,255,0.03); border: 1px solid var(--lp-border);
-    border-radius: 8px; padding: 10px 12px; line-height: 1.6;
-  }
-  .auth-dark-tier-note strong { color: var(--lp-lime); }
-
-  /* ── SIGNUP PLAN CARDS ────────────────────────────────────────────────── */
-  .signup-plan-cards {
-    display: flex; gap: 10px; margin-top: 4px;
-  }
-  .signup-plan-card {
-    flex: 1; display: flex; flex-direction: column; gap: 8px;
-    background: rgba(255,255,255,0.04); border: 1.5px solid var(--lp-border);
-    border-radius: 14px; padding: 16px 14px;
-    text-align: left; cursor: pointer; font-family: inherit;
-    color: var(--lp-text); transition: border-color 0.15s, background 0.15s;
-    position: relative;
-  }
-  .signup-plan-card:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.07); }
-  .signup-plan-card.featured { border-color: var(--lp-lime); background: rgba(118,190,0,0.06); }
-  .signup-plan-card.featured:hover { background: rgba(118,190,0,0.1); }
-  .spc-badge {
-    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-    background: var(--lp-lime); color: #0f1a06;
-    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
-    padding: 2px 10px; border-radius: 20px; white-space: nowrap;
-  }
-  .spc-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lp-text2); }
-  .spc-price { font-size: 24px; font-weight: 800; color: var(--lp-text); letter-spacing: -0.03em; line-height: 1; }
-  .spc-price span { font-size: 12px; font-weight: 500; color: var(--lp-text3); }
-  .spc-features { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-  .spc-features li { font-size: 11px; color: var(--lp-text3); display: flex; align-items: center; gap: 5px; }
-  .spc-features li::before { content: '✓'; color: var(--lp-lime); font-size: 10px; font-weight: 700; }
-  .spc-cta {
-    font-size: 12px; font-weight: 700; text-align: center;
-    padding: 8px; border-radius: 8px;
-    background: rgba(255,255,255,0.06); color: var(--lp-text2);
-    margin-top: 4px;
-  }
-  .spc-cta.primary { background: var(--lp-lime); color: #0f1a06; }
-
   /* ── STRIP ────────────────────────────────────────────────────────────── */
   .strip {
     border-top: 1px solid var(--lp-border); border-bottom: 1px solid var(--lp-border);
@@ -1390,9 +1346,6 @@
   .chart-title { font-family: var(--lp-font-sub); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--lp-text2); }
   .chart-period { font-size: 11px; color: var(--lp-text3); font-family: var(--lp-font-sub); }
   .chart-area { position: relative; margin-bottom: 16px; }
-  .bar-chart { width: 100%; height: 100%; }
-  .chart-labels { display: flex; justify-content: space-between; }
-  .chart-label { font-size: 10px; color: var(--lp-text3); font-family: var(--lp-font-sub); }
   .player-compare { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--lp-border); }
   .compare-sub { font-family: var(--lp-font-sub); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--lp-text3); margin-bottom: 8px; }
   .compare-row { display: flex; align-items: center; gap: 10px; }
@@ -1420,115 +1373,6 @@
   .tl-text { flex: 1; font-size: 13px; color: var(--lp-text); font-family: var(--lp-font-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
   .tl-player { font-size: 11px; color: var(--lp-text3); font-family: var(--lp-font-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
   .tl-halftime { padding: 10px 12px; text-align: center; font-family: var(--lp-font-sub); font-size: 11px; color: var(--lp-text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; border-top: 1px solid var(--lp-border); margin-top: 4px; }
-
-  /* ── PRICING ──────────────────────────────────────────────────────────── */
-  .pricing-section {
-    padding: 100px 80px; background: var(--lp-bg2);
-    border-top: 1px solid var(--lp-border); position: relative; overflow: hidden;
-  }
-  .pricing-section::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--lp-lime), transparent); opacity: 0.3;
-  }
-  .pricing-header { text-align: center; margin-bottom: 64px; }
-  .pricing-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 2px;
-    align-items: stretch;
-  }
-  .plan-card {
-    background: var(--lp-surface); padding: 32px 24px;
-    display: flex; flex-direction: column; gap: 0; position: relative;
-    transition: background .3s;
-  }
-  .plan-card:hover { background: var(--lp-surface2); }
-  .plan-name {
-    font-family: var(--lp-font-sub); font-size: 16px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.08em; color: var(--lp-text2);
-    margin-bottom: 12px;
-  }
-  .plan-price {
-    font-family: var(--lp-font-head); font-size: 52px; line-height: 1;
-    color: var(--lp-text); margin-bottom: 4px;
-  }
-  .plan-period { font-size: 16px; color: var(--lp-text3); }
-  .plan-tagline { font-size: 13px; color: var(--lp-text3); margin-bottom: 24px; }
-  .plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; flex: 1; }
-  .plan-features li {
-    font-size: 13px; color: var(--lp-text2);
-    display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;
-  }
-  .plan-features li::before {
-    content: ''; width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px;
-    background: rgba(186,255,41,0.12); border: 1px solid rgba(186,255,41,0.25);
-    border-radius: 50%;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8l3 3 7-6' stroke='%23BAFF29' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size: 10px; background-position: center; background-repeat: no-repeat;
-  }
-  .plan-feature-faded { opacity: 0.35; }
-  .plan-feature-faded::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 8h6' stroke='%234A6280' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background: rgba(74,98,128,0.12); border-color: rgba(74,98,128,0.2);
-  }
-  .plan-btn {
-    display: block; width: 100%; padding: 13px 16px; text-align: center;
-    background: rgba(186,255,41,0.08); color: var(--lp-lime);
-    border: 1px solid rgba(186,255,41,0.25); border-radius: 8px;
-    font-family: var(--lp-font-sub); font-size: 14px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    cursor: pointer; transition: all .2s; text-decoration: none;
-  }
-  .plan-btn:hover { background: rgba(186,255,41,0.14); border-color: var(--lp-lime); }
-
-  /* Featured plan */
-  .plan-featured {
-    background: var(--lp-surface2);
-    border-top: 2px solid var(--lp-lime) !important;
-    position: relative;
-  }
-  .plan-badge {
-    position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
-    background: var(--lp-lime); color: var(--lp-bg);
-    font-family: var(--lp-font-sub); font-size: 11px; font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 3px 12px; border-radius: 0 0 8px 8px;
-  }
-  .plan-featured .plan-price { color: var(--lp-lime); }
-  .plan-btn-featured {
-    background: var(--lp-lime); color: var(--lp-bg);
-    border-color: var(--lp-lime);
-  }
-  .plan-btn-featured:hover { background: var(--lp-lime-dim); border-color: var(--lp-lime-dim); }
-
-  /* Custom plan */
-  .plan-custom {
-    background: var(--lp-surface);
-    border-left: 2px solid rgba(255,184,0,0.4);
-    position: relative;
-  }
-  .plan-custom:hover { background: var(--lp-surface2); }
-  .plan-custom-badge {
-    display: inline-block; background: rgba(255,184,0,0.12);
-    border: 1px solid rgba(255,184,0,0.3); color: var(--lp-amber);
-    font-family: var(--lp-font-sub); font-size: 11px; font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 3px 10px; border-radius: 4px; margin-bottom: 12px;
-  }
-  .plan-custom .plan-name { color: var(--lp-amber); }
-  .plan-price-custom {
-    font-family: var(--lp-font-head); font-size: 36px; line-height: 1;
-    color: var(--lp-amber); margin-bottom: 4px;
-  }
-  .plan-btn-custom {
-    background: rgba(255,184,0,0.08); color: var(--lp-amber);
-    border: 1px solid rgba(255,184,0,0.25);
-  }
-  .plan-btn-custom:hover { background: rgba(255,184,0,0.14); border-color: var(--lp-amber); }
-  .plan-custom-note {
-    margin-top: 16px; font-size: 12px; color: var(--lp-text3);
-    line-height: 1.6; padding-top: 12px; border-top: 1px solid var(--lp-border);
-  }
 
   /* ── CTA ──────────────────────────────────────────────────────────────── */
   .cta-section {
@@ -1658,50 +1502,16 @@
   .club-code-label { font-size: 12px; color: var(--lp-text3); }
   .club-code-val { font-family: monospace; font-size: 22px; font-weight: 800; color: var(--lp-lime); letter-spacing: 0.2em; }
 
-  /* ── FAQ ──────────────────────────────────────────────────────────────── */
-  .faq-section { padding: 100px 80px; background: var(--lp-bg2); }
-  .faq-inner { max-width: 900px; margin: 0 auto; }
-  .faq-header { margin-bottom: 56px; }
-  .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .faq-item {
-    padding: 24px; border-radius: 14px;
-    background: var(--lp-surface); border: 1px solid var(--lp-border);
-    display: flex; flex-direction: column; gap: 10px;
-    transition: border-color 0.2s;
-  }
-  .faq-item:hover { border-color: rgba(186,255,41,0.2); }
-  .faq-q {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: 15px; font-weight: 700; color: var(--lp-text); line-height: 1.4;
-  }
-  .faq-q svg { flex-shrink: 0; margin-top: 2px; color: var(--lp-lime); }
-  .faq-a { font-size: 14px; color: var(--lp-text3); line-height: 1.7; padding-left: 26px; }
-  .faq-more {
-    margin-top: 40px; text-align: center;
-    font-size: 15px; color: var(--lp-text3);
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-  }
-  .faq-docs-link {
-    background: none; border: none; cursor: pointer;
-    font-family: var(--lp-font-body); font-size: 15px; font-weight: 700; color: var(--lp-lime);
-    transition: opacity 0.15s;
-  }
-  .faq-docs-link:hover { opacity: 0.75; }
-
   /* footer now in LpFooter.svelte */
 
   /* ── SCROLL REVEAL ────────────────────────────────────────────────────── */
   .reveal { transform: translateY(24px); transition: transform .7s ease; }
-  .reveal.in { transform: translateY(0); }
+  .reveal:global(.in) { transform: translateY(0); }
   .reveal-delay-1 { transition-delay: .1s; }
   .reveal-delay-2 { transition-delay: .2s; }
   .reveal-delay-3 { transition-delay: .3s; }
 
   /* ── RESPONSIVE ───────────────────────────────────────────────────────── */
-  @media (max-width: 1100px) {
-    .pricing-grid { grid-template-columns: repeat(3, 1fr); }
-    .plan-custom { grid-column: span 1; }
-  }
   @media (max-width: 900px) {
     .hero { grid-template-columns: 1fr; }
     .hero-content { padding: 40px 24px 24px; }
@@ -1717,16 +1527,12 @@
     .analytics-section { padding: 60px 24px; }
     .analytics-inner { grid-template-columns: 1fr; }
     .timeline-section { grid-template-columns: 1fr; padding: 60px 24px; }
-    .pricing-section { padding: 60px 24px; }
-    .pricing-grid { grid-template-columns: 1fr; }
     .cta-section { padding: 80px 24px; }
     .how-section { padding: 60px 24px; }
     .how-steps { flex-direction: column; align-items: center; }
     .how-connector { width: 2px; height: 40px; background: linear-gradient(180deg, rgba(186,255,41,0.3), rgba(186,255,41,0.05)); margin: 0; }
     .club-section { padding: 60px 24px; }
     .club-inner { grid-template-columns: 1fr; gap: 40px; }
-    .faq-section { padding: 60px 24px; }
-    .faq-grid { grid-template-columns: 1fr; }
   }
 
 </style>
