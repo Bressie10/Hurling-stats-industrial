@@ -74,12 +74,25 @@ guardedBy(
   'hasWebBilling = $derived(!IS_NATIVE_STORE_BUILD',
   'billing portal flow',
 )
-guardedBy(
-  'src/lib/Settings.svelte',
-  'cancel-subscription',
-  'if (!IS_NATIVE_STORE_BUILD)',
-  'subscription cancel flow',
-)
+
+{
+  const settings = read('src/lib/Settings.svelte')
+  const deleteStart = settings.indexOf('async function doDeleteAccount')
+  const portalStart = settings.indexOf('async function openBillingPortal')
+  const deleteBlock = settings.slice(deleteStart, portalStart)
+  if (
+    deleteStart >= 0 &&
+    portalStart > deleteStart &&
+    deleteBlock.includes("invoke('cancel-subscription')") &&
+    deleteBlock.indexOf("invoke('cancel-subscription')") <
+      deleteBlock.indexOf("supabase.rpc('delete_own_account')") &&
+    deleteBlock.includes('Native builds still do not expose checkout')
+  ) {
+    pass('subscription cancellation is limited to account deletion before server deletion')
+  } else {
+    fail('subscription cancellation is limited to account deletion before server deletion')
+  }
+}
 
 if (failures.length) {
   console.error('')

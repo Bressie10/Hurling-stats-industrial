@@ -189,13 +189,13 @@
     showDeleteAccountConfirm = false
     deletingAccount = true
     try {
-      if (!IS_NATIVE_STORE_BUILD) {
-        // Web-only: native store builds must not expose or trigger Stripe billing flows.
-        const { error: cancelErr } = await supabase.functions.invoke('cancel-subscription')
-        if (cancelErr) console.warn('Stripe cancellation failed during account delete:', cancelErr)
-      }
+      // Account deletion should stop future web billing even in native companion builds.
+      // Native builds still do not expose checkout, pricing, portal, or billing-management UI.
+      const { error: cancelErr } = await supabase.functions.invoke('cancel-subscription')
+      if (cancelErr) throw new Error(`Could not cancel billing: ${cancelErr.message}`)
+      const { error: deleteErr } = await supabase.rpc('delete_own_account')
+      if (deleteErr) throw deleteErr
       await clearAllData()
-      await supabase.rpc('delete_own_account')
       await signOut()
     } catch (e) {
       showToast('Failed to delete account: ' + e.message, 'error')
@@ -1024,7 +1024,7 @@
   <ConfirmModal
     title="Delete your account?"
     message={IS_NATIVE_STORE_BUILD
-      ? `This will permanently delete your account, matches, squad, and data. Plan management is not available inside this ${STORE_PLATFORM_LABEL} build.`
+      ? `This will permanently delete your account, matches, squad, and data. Any web subscription will be cancelled first. Purchases and plan changes are not offered inside this ${STORE_PLATFORM_LABEL} build.`
       : 'This will permanently delete all your matches, squad, and data. This cannot be undone.'}
     confirmLabel="Delete Account"
     confirmStyle="danger"

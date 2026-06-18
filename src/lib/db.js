@@ -199,6 +199,12 @@ export async function loadMatches(options = {}) {
   return all.filter((m) => !m.isDraft && scopeMatches(m, teamScope))
 }
 
+export async function countFinishedMatches() {
+  const db = await getDB()
+  const all = await db.getAll('matches')
+  return all.filter((m) => !m.isDraft).length
+}
+
 // Atomic local delete + cloud-delete intent.
 export async function deleteMatch(matchId, options = {}) {
   const db = await getDB()

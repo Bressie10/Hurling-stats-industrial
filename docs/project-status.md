@@ -1,12 +1,12 @@
 # PitchNote Project Status
 
-Last updated: 2026-06-17
+Last updated: 2026-06-18
 
 This document is a practical project handoff: what PitchNote is, what has been built, what has been verified, what still needs work, and where the main risks are. It is written from the current local workspace state.
 
 ## Short Version
 
-PitchNote is in late integration / pre-release shape. The core web app is substantially built, the rebrand to PitchNote is in place, Stripe-first billing has been implemented for the web, native iOS and Android wrappers exist, team-scoped data/RLS has been verified against Supabase, and on-device voice logging has been implemented. It is not yet field-ready or store-submission-ready because the production domain does not resolve, Android/iOS physical-device voice tests and real pitch accuracy testing remain, live billing deployment checks remain, and app-store signing, store metadata, and final native review passes still need to be completed.
+PitchNote is in late integration / pre-release shape. The core web app is substantially built, the rebrand to PitchNote is in place, Stripe-first billing has been implemented for the web, native iOS and Android wrappers exist, team-scoped data/RLS has been verified against Supabase, and on-device voice logging has been implemented. It is not yet field-ready or store-submission-ready because the production domain is not registered/active, Android/iOS physical-device voice tests and real pitch accuracy testing remain, live billing deployment checks remain, and app-store signing, store metadata, and final native review passes still need to be completed.
 
 The current launch strategy is:
 
@@ -20,18 +20,18 @@ The current launch strategy is:
 
 Current rough progress by area:
 
-| Area                       | Status                                                                                                       | Practical estimate |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------ |
-| Core web match app         | Built and usable, needs normal QA                                                                            | 80-90%             |
+| Area                       | Status                                                                                                                                   | Practical estimate |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Core web match app         | Built and usable, needs normal QA                                                                                                        | 80-90%             |
 | Offline data and sync      | Implemented with regression tests; team-scoped local/cloud sync and live Supabase RLS verification pass; deployed/device sync QA remains | 80-90%             |
-| PitchNote rebrand          | Code/docs mostly switched                                                                                    | 85-90%             |
-| Stripe web billing         | Implemented in test-mode shape, live deploy checks remain                                                    | 75-85%             |
-| Native store-safe mode     | Implemented, needs full real-device review                                                                   | 70-80%             |
-| iOS wrapper                | Generated, simulator build works, signing/TestFlight pending                                                 | 60-70%             |
-| Android wrapper            | Debug APK builds and emulator launch passed; physical install/voice still pending                            | 55-65%             |
-| On-device voice logging    | Implemented, unit-tested, parser improved for jersey numbers/STT alternatives, not field-validated           | 50-65%             |
-| Store submission readiness | Docs/scaffolding exist, accounts/forms/signing still pending                                                 | 45-55%             |
-| Overall release posture    | Pre-release integration, not final launch                                                                    | 65-75%             |
+| PitchNote rebrand          | Code/docs mostly switched                                                                                                                | 85-90%             |
+| Stripe web billing         | Implemented in test-mode shape; Supabase function URLs are reachable, end-to-end checkout/webhook testing remains                        | 80-85%             |
+| Native store-safe mode     | Implemented, needs full real-device review                                                                                               | 70-80%             |
+| iOS wrapper                | Generated, simulator build works, signed physical-device Debug build/install passes; TestFlight and real-device launch/voice QA pending  | 70-80%             |
+| Android wrapper            | Debug APK builds and emulator launch passed; physical install/voice still pending                                                        | 55-65%             |
+| On-device voice logging    | Implemented, unit-tested, parser improved for jersey numbers/STT alternatives, not field-validated                                       | 50-65%             |
+| Store submission readiness | Docs/scaffolding exist, accounts/forms/signing still pending                                                                             | 45-55%             |
+| Overall release posture    | Pre-release integration, not final launch                                                                                                | 65-75%             |
 
 ## Current Git State
 
@@ -239,7 +239,8 @@ Implemented:
 - Stripe webhook Edge Function.
 - Subscription/profile hardening migration.
 - Entitlement gating in the app.
-- Free match cap behavior.
+- Free match cap behavior, including blocking third finished-match saves for free accounts while leaving drafts intact.
+- Supabase free match quota migration to enforce the same 2-match cap at the database boundary after it is applied.
 - Native store mode hiding Stripe UI.
 - Billing verification script.
 - Stripe billing docs.
@@ -281,7 +282,7 @@ npm run billing:check
 
 Still needed before live billing can be considered finished:
 
-- Confirm Supabase Edge Functions are deployed from the intended code.
+- Confirm Supabase Edge Functions are deployed from the intended code, not only reachable.
 - Confirm all Supabase function secrets are set in the target project.
 - Run `npm run billing:check` against the intended Stripe mode.
 - Run at least one test checkout end-to-end.
@@ -289,6 +290,11 @@ Still needed before live billing can be considered finished:
 - Confirm portal opens for subscribed web users.
 - Confirm cancellation flow does not appear in native store mode.
 - Confirm live-mode Stripe products/prices/webhooks before taking real money.
+
+Verified on 2026-06-17:
+
+- `npm run billing:check` passes against the configured Stripe test-mode resources.
+- Live Supabase function URLs are reachable: `create-checkout-session`, `create-portal-session`, and `cancel-subscription` return `200` to unauthenticated CORS preflight requests; `stripe-webhook` returns `400` to an unsigned request as expected.
 
 ## Supabase State
 
@@ -312,6 +318,9 @@ Supabase migrations present:
 - `20260613_stripe_billing_hardening.sql`
 - `20260617_team_scoped_data_and_rls.sql`
 - `20260617_team_scoped_policy_reset.sql`
+- `20260617_account_deletion_rpc.sql`
+- `20260617_account_deletion_rpc_auth_guard.sql`
+- `20260618_free_match_quota.sql`
 
 Edge Functions present:
 
@@ -322,7 +331,8 @@ Edge Functions present:
 
 Still needed / confirm:
 
-- The target Supabase project has every migration applied.
+- The target Supabase project has every future migration applied before relying on the changed behavior.
+- Apply release-required Supabase SQL with `npm run supabase:migration:release-required` when `SUPABASE_DB_URL` is set, or paste the three SQL files in order, then run `npm run team-scope:check:live` and `npm run free-quota:check:live`.
 - Edge Functions are deployed.
 - Secrets are set correctly.
 - Reviewer account works after any database or entitlement changes.
@@ -351,7 +361,7 @@ Implemented:
 - Native store mode hides Stripe checkout buttons.
 - Native store mode hides web billing links.
 - Native store mode hides external payment calls to action.
-- Settings account deletion does not call Stripe cancellation in native store mode.
+- Settings account deletion cancels existing web billing server-side before deleting the account, while native store mode still hides checkout, prices, portal links, and billing-management UI.
 - Pricing and upgrade surfaces are checked by `npm run store:check`.
 
 Still needed:
@@ -373,21 +383,23 @@ Implemented:
 - Microphone and speech recognition usage descriptions are present.
 - Unsigned iOS simulator build passed.
 - Manual launch in iPhone 17 simulator passed.
+- Signed Debug build for paired physical iPhone passed.
+- Synced current web build installed on paired physical iPhone through `devicectl`.
 - Xcode recommended settings were applied.
 
 Current blocker:
 
-- Apple Developer signing and TestFlight flow are not complete.
+- TestFlight/archive flow and automated `devicectl` launch are not complete.
+- `xcrun devicectl device process launch` currently times out waiting for CoreDeviceService, even though install succeeds.
 
 Still needed:
 
-- Apple Developer account/team setup.
-- Bundle ID and signing config.
+- App Store Connect app record and TestFlight signing/archive setup.
 - Signed archive from Xcode.
 - Upload to App Store Connect.
 - App Privacy answers.
 - Reviewer account verification inside the native build.
-- Physical-device microphone and on-device speech test.
+- Manual physical-device launch, microphone permission, and on-device speech test.
 - Confirm no Stripe/payment UI appears in the iOS store build.
 
 Useful commands:
@@ -405,7 +417,7 @@ Implemented:
 - Package name is `ie.pitchnote.app`.
 - Launch URL is `https://www.pitchnote.ie/?store_build=android`.
 - JDK 21 and Android SDK were configured locally.
-- `npm run native:android:build` passed.
+- `npm run native:android:build` passed on 2026-06-18 through `scripts/run-android-gradle.mjs`, which discovers local JDK 21 and `/Users/ultanbreslin/Library/Android/sdk` without manual shell exports.
 - Debug APK was built.
 - Debug APK previously installed and launched on the `Pitchnote_API_36` emulator.
 - The emulator was later removed to recover disk space.
@@ -418,11 +430,10 @@ android/app/build/outputs/apk/debug/app-debug.apk
 
 Current known physical-device state:
 
-- User said an Android phone should be connected.
-- ADB did not show a device.
-- Restarting ADB did not show a device.
-- macOS USB scan did not show an Android/phone-like USB device.
-- Most likely causes are cable, phone locked, USB mode, developer options, USB debugging, or the debugging authorization prompt.
+- `/Users/ultanbreslin/Library/Android/sdk/platform-tools/adb devices` runs outside the sandbox.
+- As of 2026-06-18 it shows no attached Android devices.
+- `adb` is not on the default shell `PATH`; use the full SDK path above or add platform-tools to `PATH`.
+- Most likely causes are no phone connected, cable, phone locked, USB mode, developer options, USB debugging, or the debugging authorization prompt.
 
 Still needed:
 
@@ -600,7 +611,7 @@ CSV metadata includes:
 Still needed:
 
 - Install on a real Android phone.
-- Install/run on a real iPhone when signing allows.
+- Manually launch the installed iPhone build and grant microphone/speech permissions.
 - Put device in airplane mode.
 - Confirm offline indicator.
 - Confirm offline STT is actually available.
@@ -668,7 +679,7 @@ Verified on 2026-06-17:
 
 ## Verification Already Known
 
-Current checks passing on 2026-06-17:
+Current checks passing on 2026-06-18:
 
 - `npm run release:check`
 - `npm run test`
@@ -679,15 +690,21 @@ Current checks passing on 2026-06-17:
 - `npm run store:verify-reviewer`
 - `npm run team-scope:check:live`
 - `npm run native:doctor`
+- `npm run native:android:build`
+- `npm run native:ios:sync`
+- `xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath /private/tmp/pitchnote-ios-derived CODE_SIGNING_ALLOWED=NO build`
 - `npm run billing:check`
+- `npm run account:delete:check:live`
 
 Known test count:
 
-- Voice/parser and app regression suite is currently 34 passing tests.
+- Voice/parser and app regression suite is currently 36 passing tests.
 
 Current known failing check:
 
-- `npm run store:check:live` fails only on live URL fetches because `pitchnote.ie` returns `NXDOMAIN`.
+- `npm run store:check:live` fails only on live URL fetches because `whois pitchnote.ie` returns `Not found` and the domain returns `NXDOMAIN`.
+- `npm run team-scope:check:live` now reaches Supabase but fails because live `matches` does not accept `onConflict=id,user_id`; apply `20260617_team_scoped_data_and_rls.sql` and `20260617_team_scoped_policy_reset.sql`, then rerun it.
+- `npm run free-quota:check:live` also requires the team-scoped match key first, then `supabase/migrations/20260618_free_match_quota.sql`.
 
 Known warnings:
 
@@ -703,7 +720,8 @@ Important not-yet-verified items:
 - Android real microphone voice accuracy.
 - iOS physical-device voice accuracy.
 - Real pitch accuracy.
-- Live Stripe mode.
+- Live Stripe mode; current `npm run billing:check` is passing against configured Stripe test-mode resources.
+- Live free-quota database enforcement after applying `supabase/migrations/20260618_free_match_quota.sql`; the verifier currently proves the live DB is not enforcing this yet.
 - Store submission review.
 
 ## Quality Baseline
@@ -757,31 +775,33 @@ npm run store:check:live
 npm run store:verify-reviewer
 ```
 
-Current live-domain blocker on 2026-06-17: `pitchnote.ie` returns `NXDOMAIN`, and `pitchnote.ie` / `www.pitchnote.ie` return no A records, so `npm run store:check:live` cannot pass until DNS is configured.
+Current live-domain blocker on 2026-06-18: `whois pitchnote.ie` returns `Not found`; `pitchnote.ie` and `www.pitchnote.ie` return `NXDOMAIN`, which is expected while the domain is not yet bought/activated. Keep release config on `https://www.pitchnote.ie/`; `npm run store:check:live` cannot pass until the domain is registered or activated and DNS/hosting records are configured.
 
 ## Immediate Next Steps
 
 Recommended order:
 
-1. Fix DNS for `pitchnote.ie` and `www.pitchnote.ie`, then rerun `npm run store:check:live`.
-2. Once DNS resolves, run `npm run release:check:live` to cover local gates, live URL checks, live-domain checks, billing config, and team-scoped RLS.
-3. Deploy/verify Supabase Edge Functions and Stripe secrets in the intended live environment.
-4. Run test checkout and webhook verification.
-5. Finish the Android physical-device connection.
-6. Build with `PUBLIC_ENABLE_VOICE_TEST=1`, then install `android/app/build/outputs/apk/debug/app-debug.apk` on the real Android phone.
-7. Open `/app/voice-test` on the phone.
-8. Put the phone in airplane mode.
-9. Confirm the harness shows offline/airplane mode.
-10. Confirm STT either works offline or fails with the documented unavailable behavior.
-11. Record at least 50 voice samples.
-12. Export CSV.
-13. Review accuracy before changing thresholds or vocabulary.
-14. Decide whether black/red cards, 45s, and sideline balls stay tap-only for v1 or become real schema work.
-15. Confirm seeded reviewer data appears in native store mode.
-16. Confirm free account limits, locked feature messaging, and no native purchase paths on real devices.
-17. Resolve whether the unpushed commits should be pushed as-is or split further.
-18. Push approved work to `main`, not `Voice-Changes`.
-19. Start App Store / Play Store signing and metadata work.
+1. Apply release-required Supabase SQL with `npm run supabase:migration:release-required` when `SUPABASE_DB_URL` is set, or paste the three SQL files in order, then run `npm run team-scope:check:live` and `npm run free-quota:check:live`.
+2. Register or activate `pitchnote.ie`, configure `pitchnote.ie` and `www.pitchnote.ie` DNS/hosting records, then rerun `npm run store:check:live`.
+3. Once DNS resolves, run `npm run release:check:live` to cover local gates, live URL checks, live-domain checks, billing config, team-scoped RLS, account-deletion verification, and free-quota verification.
+4. Deploy/verify Supabase Edge Functions and Stripe secrets in the intended live environment.
+5. Run test checkout and webhook verification.
+6. Finish the Android physical-device connection.
+7. Build with `PUBLIC_ENABLE_VOICE_TEST=1`, then install `android/app/build/outputs/apk/debug/app-debug.apk` on the real Android phone.
+8. Open `/app/voice-test` on the phone.
+9. Put the phone in airplane mode.
+10. Confirm the harness shows offline/airplane mode.
+11. Confirm STT either works offline or fails with the documented unavailable behavior.
+12. Record at least 50 voice samples.
+13. Export CSV.
+14. Review accuracy before changing thresholds or vocabulary.
+15. Decide whether black/red cards, 45s, and sideline balls stay tap-only for v1 or become real schema work.
+16. Manually launch the installed iPhone Debug build or use Xcode Run, then verify microphone and speech permission prompts.
+17. Confirm seeded reviewer data appears in native store mode.
+18. Confirm free account limits, locked feature messaging, and no native purchase paths on real devices.
+19. Resolve whether the unpushed commits should be pushed as-is or split further.
+20. Push approved work to `main`, not `Voice-Changes`.
+21. Start App Store / Play Store signing and metadata work.
 
 ## Android Phone Connection Checklist
 

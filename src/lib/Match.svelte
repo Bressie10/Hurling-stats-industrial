@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { saveSquad, loadSquad, saveMatch, saveDraftMatch, loadDraftMatch, clearDraftMatch, markDraftSaved } from './db.js'
+  import { saveSquad, loadSquad, countFinishedMatches, saveMatch, saveDraftMatch, loadDraftMatch, clearDraftMatch, markDraftSaved } from './db.js'
   import { user } from './auth-store.js'
   import { scheduleAutoSync } from './sync.js'
   import { settingsStore } from './settings-store.js'
@@ -11,6 +11,7 @@
   import { base } from '$app/paths'
   import ConfirmModal from './ConfirmModal.svelte'
   import LiveVoiceLogger from './LiveVoiceLogger.svelte'
+  import { canSaveFinishedMatch, FREE_MATCH_LIMIT } from './entitlements.js'
 
   // ── LIVE SHARING ─────────────────────────────────────────
   let liveSessionId = $state(null)
@@ -506,7 +507,19 @@
     if (isLive) stopLive()
   })
 
+  async function canFinishCurrentMatch() {
+    const savedMatchCount = await countFinishedMatches()
+    if (canSaveFinishedMatch($subscriptionStore, savedMatchCount)) return true
+    showToast(
+      `Free accounts can save ${FREE_MATCH_LIMIT} matches. Delete an old match or use an account with Pro access.`,
+      'info'
+    )
+    return false
+  }
+
   async function finishMatch() {
+    if (finishing) return
+    if (!(await canFinishCurrentMatch())) return
     showFinishConfirm = true
   }
 
@@ -514,6 +527,10 @@
     showFinishConfirm = false
     if (finishing) return
     finishing = true
+    if (!(await canFinishCurrentMatch())) {
+      finishing = false
+      return
+    }
     const wasTimerRunning = timerRunning
     // Freeze the timer cleanly. pauseTimer() rolls the current run-segment
     // into timerAccumulatedMs so that, on error, startTimer() can resume from

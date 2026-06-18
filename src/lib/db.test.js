@@ -3,6 +3,7 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearAllData,
+  countFinishedMatches,
   deleteMatch,
   getDB,
   getLastUserId,
@@ -56,6 +57,17 @@ describe('IndexedDB outbox', () => {
 
     expect(await loadMatches()).toEqual([])
     expect(await getOutboxCount()).toBe(0)
+  })
+
+  it('counts finished matches across every local team scope for account quotas', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    await saveDraftMatch({ opposition: 'Draft Team' })
+    await saveMatch({ id: 101, opposition: 'Personal Match' })
+    await saveMatch({ id: 102, opposition: 'Team Match' }, { teamScope })
+
+    expect(await loadMatches()).toMatchObject([{ id: 101, opposition: 'Personal Match' }])
+    expect(await loadMatches({ teamScope })).toMatchObject([{ id: 102, opposition: 'Team Match' }])
+    expect(await countFinishedMatches()).toBe(2)
   })
 
   it('enqueues full-squad replacement mutations', async () => {

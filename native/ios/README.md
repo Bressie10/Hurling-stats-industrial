@@ -19,6 +19,8 @@ Completed locally:
 - `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` are present in `ios/App/App/Info.plist`.
 - Unsigned simulator build succeeds.
 - Manual launch in the iPhone 17 simulator succeeds.
+- Signed Debug build succeeds for the paired physical iPhone.
+- The synced Debug build installs on the paired iPhone through `xcrun devicectl device install app`.
 
 Next build order:
 
@@ -37,10 +39,13 @@ Next build order:
    npm run native:ios:open
    ```
 
-6. Configure the Apple Developer Team and signing in Xcode.
-7. Archive and upload a TestFlight build.
-8. Test on a real iPhone through TestFlight before App Store submission.
-9. Complete App Store Connect privacy answers and reviewer credentials.
+6. Manually launch the installed Debug build on the paired iPhone, then verify microphone and speech permission prompts.
+7. Configure the App Store Connect app record.
+8. Archive and upload a TestFlight build.
+9. Test on a real iPhone through TestFlight before App Store submission.
+10. Complete App Store Connect privacy answers and reviewer credentials.
+
+Known local caveat: `xcrun devicectl device process launch` currently times out waiting for CoreDeviceService on this Mac, even though `devicectl` install succeeds. Use Xcode's Run button or launch the app manually on the device until CoreDeviceService is healthy.
 
 The first release should stay consumption-only/free-account inside the native app. Do not add web checkout links, Stripe portals, or external purchase CTAs inside the iOS build.
 

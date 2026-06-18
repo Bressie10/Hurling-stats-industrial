@@ -77,8 +77,20 @@ npm run preview  # Preview build
 ```
 PUBLIC_SUPABASE_URL=https://syikhsgovqogzkmmhuis.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<anon key>
+SUPABASE_SERVICE_ROLE_KEY=<service role key for local admin scripts and Edge Functions only>
+SUPABASE_DB_URL=<database URL for local psql migration helpers>
 OPENAI_API_KEY=<server key>
 SIDELINE_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
+SIDELINE_ANSWER_MODEL=gpt-4o-mini
+STRIPE_SECRET_KEY=<Stripe secret key>
+STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
+STRIPE_PORTAL_CONFIGURATION_ID=<Stripe Customer Portal configuration id>
+STRIPE_WEBHOOK_ENDPOINT_ID=<Stripe webhook endpoint id for npm run billing:check>
+STRIPE_PERSONAL_PRICE_ID=<Stripe Personal price id>
+STRIPE_CLUB_PRICE_ID=<Stripe Club price id>
+STRIPE_CLUB_PRO_PRICE_ID=<Stripe Club Pro price id>
+APP_URL=https://www.pitchnote.ie
+ALLOWED_CORS_ORIGINS=<optional comma-separated extra browser origins>
 ```
 
 ---
@@ -302,9 +314,9 @@ supabase functions deploy cancel-subscription --no-verify-jwt
 supabase functions deploy create-portal-session --no-verify-jwt
 ```
 
-**Secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+**Secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PORTAL_CONFIGURATION_ID`, `STRIPE_PERSONAL_PRICE_ID`, `STRIPE_CLUB_PRICE_ID`, `STRIPE_CLUB_PRO_PRICE_ID`, `APP_URL`, optional `ALLOWED_CORS_ORIGINS`
 
-**Going live:** Switch Stripe to live mode → create products/prices → update price IDs in `create-checkout-session` and `stripe-webhook` → update secrets → redeploy.
+**Going live:** Switch Stripe to live mode → create products/prices → set the live price IDs, Customer Portal config, webhook signing secret, and `APP_URL` as Supabase Edge Function secrets → run `npm run billing:check` with the matching `STRIPE_WEBHOOK_ENDPOINT_ID` locally → redeploy. Do not hard-code Stripe price IDs in Edge Function source.
 
 ---
 

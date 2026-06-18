@@ -32,6 +32,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const runId = randomUUID().slice(0, 8)
 const shortRunId = runId.slice(0, 5).toUpperCase()
 const password = `PitchNote-${randomUUID()}!`
+const missingCompositeKeyError = 'there is no unique or exclusion constraint matching'
 const failures = []
 const created = {
   users: [],
@@ -127,6 +128,27 @@ async function expectInsert(client, table, payload, shouldPass, message) {
     return null
   }
   fail(`${message}: ${shouldPass ? error?.message : 'insert unexpectedly succeeded'}`)
+  return data || null
+}
+
+async function expectUpsert(client, table, payload, onConflict, shouldPass, message) {
+  const { data, error } = await client
+    .from(table)
+    .upsert(payload, { onConflict })
+    .select('id')
+    .single()
+  if (shouldPass && !error) {
+    pass(message)
+    return data
+  }
+  if (!shouldPass && error) {
+    pass(message)
+    return null
+  }
+  const detail = error?.message?.includes(missingCompositeKeyError)
+    ? `${error.message}; apply supabase/migrations/20260617_team_scoped_data_and_rls.sql and supabase/migrations/20260617_team_scoped_policy_reset.sql`
+    : error?.message
+  fail(`${message}: ${shouldPass ? detail : 'upsert unexpectedly succeeded'}`)
   return data || null
 }
 
@@ -357,6 +379,21 @@ try {
       ownerMatch,
       true,
       'owner can write own team-scoped match',
+    )
+  ) {
+    trackMatch(ownerMatch)
+  }
+  if (
+    await expectUpsert(
+      owner.client,
+      'matches',
+      {
+        ...ownerMatch,
+        data: { ...ownerMatch.data, opposition: 'RLS Owner Upsert', updated_at: Date.now() },
+      },
+      'id,user_id',
+      true,
+      'owner can sync-upsert existing own team-scoped match by id,user_id',
     )
   ) {
     trackMatch(ownerMatch)

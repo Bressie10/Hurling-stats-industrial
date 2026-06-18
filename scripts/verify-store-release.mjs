@@ -179,6 +179,12 @@ async function checkNativeConfig() {
     'format check script is registered',
   )
   check(
+    pkg?.scripts?.['format:check']?.includes('scripts/verify-stripe-billing.mjs') &&
+      pkg?.scripts?.['format:check']?.includes('scripts/verify-account-deletion-live.mjs') &&
+      pkg?.scripts?.['format:check']?.includes('supabase/functions/**/*.ts'),
+    'format check covers live verifiers and Supabase Edge Functions',
+  )
+  check(
     pkg?.scripts?.['native:config'] === 'node scripts/sync-native-config.mjs',
     'native config script is registered',
   )
@@ -195,14 +201,48 @@ async function checkNativeConfig() {
     'Android Capacitor sync script is registered',
   )
   check(
+    pkg?.scripts?.['native:android:gradle'] === 'node scripts/run-android-gradle.mjs' &&
+      pkg?.scripts?.['native:android:build']?.includes(
+        'npm run native:android:gradle -- assembleDebug',
+      ) &&
+      existsSync(rel('scripts/run-android-gradle.mjs')),
+    'Android build uses the Gradle helper with local JDK discovery',
+  )
+  check(
     pkg?.scripts?.['release:check']?.includes('npm run store:smoke'),
     'local release check includes native store smoke test',
   )
   check(
     pkg?.scripts?.['release:check:live']?.includes('node scripts/verify-live-domain.mjs') &&
       pkg?.scripts?.['release:check:live']?.includes('npm run billing:check') &&
-      pkg?.scripts?.['release:check:live']?.includes('npm run team-scope:check:live'),
-    'live release check includes domain, billing, and team-scope live gates',
+      pkg?.scripts?.['release:check:live']?.includes('npm run team-scope:check:live') &&
+      pkg?.scripts?.['release:check:live']?.includes('npm run account:delete:check:live') &&
+      pkg?.scripts?.['release:check:live']?.includes('npm run free-quota:check:live'),
+    'live release check includes domain, billing, team-scope, account-deletion, and free-quota live gates',
+  )
+  check(
+    pkg?.scripts?.['account:delete:check:live'] === 'node scripts/verify-account-deletion-live.mjs',
+    'account deletion live check script is registered',
+  )
+  check(
+    pkg?.scripts?.['free-quota:check:live'] === 'node scripts/verify-free-match-quota-live.mjs',
+    'free match quota live check script is registered',
+  )
+  check(
+    pkg?.scripts?.['supabase:migration:account-delete-auth-guard'] ===
+      'node scripts/apply-supabase-migration.mjs supabase/migrations/20260617_account_deletion_rpc_auth_guard.sql',
+    'account deletion auth-guard migration apply script is registered',
+  )
+  check(
+    pkg?.scripts?.['supabase:migration:free-match-quota'] ===
+      'node scripts/apply-supabase-migration.mjs supabase/migrations/20260618_free_match_quota.sql',
+    'free match quota migration apply script is registered',
+  )
+  check(
+    pkg?.scripts?.['supabase:migration:release-required'] ===
+      'node scripts/apply-release-supabase-migrations.mjs' &&
+      existsSync(rel('scripts/apply-release-supabase-migrations.mjs')),
+    'ordered release-required Supabase migration apply script is registered',
   )
   check(existsSync(rel('scripts/seed-reviewer-account.mjs')), 'reviewer seed script exists')
   check(
@@ -211,6 +251,27 @@ async function checkNativeConfig() {
   )
   check(existsSync(rel('scripts/sync-native-config.mjs')), 'native config sync script exists')
   check(existsSync(rel('scripts/native-store-doctor.mjs')), 'native doctor script exists')
+  check(
+    existsSync(rel('scripts/verify-account-deletion-live.mjs')),
+    'account deletion live check script exists',
+  )
+  check(
+    existsSync(rel('scripts/verify-free-match-quota-live.mjs')),
+    'free match quota live check script exists',
+  )
+  const migrationApplyHelper = await readText('scripts/apply-supabase-migration.mjs')
+  check(
+    existsSync(rel('scripts/apply-supabase-migration.mjs')) &&
+      migrationApplyHelper.includes("loadDotEnv('.env.local')") &&
+      migrationApplyHelper.includes("loadDotEnv('.env')") &&
+      migrationApplyHelper.includes('SUPABASE_DB_URL') &&
+      migrationApplyHelper.includes('PSQL_BIN') &&
+      migrationApplyHelper.includes('--no-psqlrc') &&
+      migrationApplyHelper.includes('--single-transaction') &&
+      migrationApplyHelper.includes('--set=ON_ERROR_STOP=1') &&
+      migrationApplyHelper.includes('/opt/homebrew/opt/libpq/bin/psql'),
+    'migration apply helper exists, reads local env files, discovers Homebrew psql, and applies SQL safely',
+  )
   check(existsSync(rel('docs/reviewer-testing.md')), 'reviewer testing guide exists')
   check(existsSync(rel('android/app/build.gradle')), 'Android Capacitor project exists')
   check(
@@ -226,6 +287,14 @@ async function checkNativeConfig() {
   check(
     androidBuild.includes('applicationId "ie.pitchnote.app"'),
     'Android applicationId matches shared release config',
+  )
+
+  const androidGradleHelper = await readText('scripts/run-android-gradle.mjs')
+  check(
+    androidGradleHelper.includes('ANDROID_HOME') &&
+      androidGradleHelper.includes('ANDROID_SDK_ROOT') &&
+      androidGradleHelper.includes('Library/Android/sdk'),
+    'Android Gradle helper discovers the local Android SDK',
   )
 
   const androidManifest = await readText('android/app/src/main/AndroidManifest.xml')
@@ -259,6 +328,11 @@ async function checkStoreModeCode() {
 
   const entitlements = await readText('src/lib/entitlements.js')
   check(entitlements.includes('FREE_MATCH_LIMIT = 2'), 'free tier is capped at 2 saved matches')
+  check(
+    entitlements.includes('canSaveFinishedMatch') &&
+      entitlements.includes('savedMatchCount < FREE_MATCH_LIMIT'),
+    'central entitlement policy enforces the free saved-match cap',
+  )
   check(entitlements.includes('proAnalytics'), 'central entitlement policy defines Pro analytics')
   check(
     entitlements.includes('clubManagement'),
@@ -301,14 +375,91 @@ async function checkStoreModeCode() {
     'Settings does not expose an ungated temporary voice test shortcut',
   )
   check(
-    settings.includes('if (!IS_NATIVE_STORE_BUILD)') &&
-      settings.includes("invoke('cancel-subscription')"),
-    'Settings keeps Stripe cancellation behind the web-only guard',
-  )
-  check(
     settings.includes('hasWebBilling = $derived(!IS_NATIVE_STORE_BUILD') &&
       settings.includes("invoke('create-portal-session'"),
     'Settings keeps Stripe portal access behind the web-only guard',
+  )
+
+  const billingCheck = await readText('scripts/verify-stripe-billing.mjs')
+  const billingShared = await readText('supabase/functions/_shared/billing.ts')
+  const corsShared = await readText('supabase/functions/_shared/cors.ts')
+  const checkoutFunction = await readText('supabase/functions/create-checkout-session/index.ts')
+  const portalFunction = await readText('supabase/functions/create-portal-session/index.ts')
+  const cancelFunction = await readText('supabase/functions/cancel-subscription/index.ts')
+  const webhookFunction = await readText('supabase/functions/stripe-webhook/index.ts')
+  check(
+    billingCheck.includes("requireConfiguredEnv('STRIPE_PORTAL_CONFIGURATION_ID')") &&
+      billingCheck.includes("requireConfiguredEnv('STRIPE_WEBHOOK_ENDPOINT_ID')") &&
+      !billingCheck.includes('STRIPE_PORTAL_CONFIGURATION_ID is missing') &&
+      !billingCheck.includes('STRIPE_WEBHOOK_ENDPOINT_ID is missing'),
+    'Stripe billing verifier requires portal and webhook endpoint configuration',
+  )
+  check(
+    billingCheck.includes('payment_method_update') &&
+      billingCheck.includes('subscription_cancel') &&
+      billingCheck.includes('invoice_history'),
+    'Stripe billing verifier checks required Customer Portal features',
+  )
+  check(
+    portalFunction.includes("Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID')") &&
+      portalFunction.includes('Billing portal is not configured') &&
+      portalFunction.includes('configuration: portalConfiguration'),
+    'Customer Portal function requires the configured Stripe portal',
+  )
+  check(
+    billingShared.includes('getAppBaseUrl') &&
+      billingShared.includes('getSameOriginReturnUrl') &&
+      billingShared.includes('APP_URL must use https outside localhost') &&
+      billingShared.includes('isLocalhost') &&
+      checkoutFunction.includes('getAppBaseUrl()') &&
+      !checkoutFunction.includes("req.headers.get('origin')") &&
+      portalFunction.includes('getSameOriginReturnUrl(return_url)') &&
+      !portalFunction.includes("req.headers.get('origin')"),
+    'Stripe billing redirects use configured app origin and same-origin return URLs',
+  )
+  const browserBillingFunctions = [checkoutFunction, portalFunction, cancelFunction]
+  check(
+    browserBillingFunctions.every(
+      (text) =>
+        !text.includes("new Response('Unauthorized', { status: 401 })") &&
+        text.includes("JSON.stringify({ error: 'Unauthorized' })") &&
+        text.includes("headers: { ...corsHeaders, 'Content-Type': 'application/json' }"),
+    ),
+    'Browser-facing billing functions return CORS JSON auth errors',
+  )
+  check(
+    browserBillingFunctions.every((text) => text.includes('getCorsHeaders(req)')) &&
+      corsShared.includes('Access-Control-Allow-Origin') &&
+      !corsShared.includes("'Access-Control-Allow-Origin': '*'") &&
+      corsShared.includes('ALLOWED_CORS_ORIGINS') &&
+      corsShared.includes('capacitor://localhost') &&
+      corsShared.includes('isLocalWebOrigin'),
+    'Browser-facing billing functions use restricted origin-aware CORS',
+  )
+  check(
+    browserBillingFunctions.every(
+      (text) =>
+        text.indexOf("req.headers.get('Authorization')") < text.indexOf('createClient(') &&
+        text.indexOf('supabase.auth.getUser(token)') <
+          text.indexOf("Deno.env.get('STRIPE_SECRET_KEY')") &&
+        text.indexOf('supabase.auth.getUser(token)') < text.indexOf('new Stripe'),
+    ),
+    'Browser-facing billing functions authenticate before creating privileged clients',
+  )
+  check(
+    cancelFunction.includes("Deno.env.get('STRIPE_SECRET_KEY')") &&
+      cancelFunction.indexOf('if (!sub?.stripe_subscription_id)') <
+        cancelFunction.indexOf("Deno.env.get('STRIPE_SECRET_KEY')") &&
+      cancelFunction.indexOf("Deno.env.get('STRIPE_SECRET_KEY')") <
+        cancelFunction.indexOf('new Stripe'),
+    'Subscription cancellation no-ops before requiring Stripe configuration',
+  )
+  check(
+    webhookFunction.includes('authUserExists') &&
+      webhookFunction.includes('supabase.auth.admin.getUserById') &&
+      webhookFunction.includes('Skipping subscription') &&
+      webhookFunction.includes('fallback upsert for deleted auth user'),
+    'Stripe webhook avoids recreating subscription rows for deleted auth users',
   )
 
   const history = await readText('src/lib/History.svelte')
@@ -328,6 +479,21 @@ async function checkStoreModeCode() {
     const text = await readText(file)
     check(text.includes('EntitlementGate'), `${file} is entitlement gated`)
   }
+  const liveRoute = await readText('src/routes/app/live/+page.svelte')
+  check(
+    liveRoute.includes('canUseFeature(subscription, FEATURES.liveSharing)') &&
+      liveRoute.includes(".from('live_sessions')") &&
+      liveRoute.indexOf('canUseFeature(subscription, FEATURES.liveSharing)') <
+        liveRoute.lastIndexOf('loadLiveSession(teamId, currentUser'),
+    'live sharing route checks Club Pro access before live-session lookup',
+  )
+  check(
+    liveRoute.includes('requestKey') &&
+      liveRoute.includes('if (lookupKey !== requestKey) return') &&
+      liveRoute.includes('if (error)') &&
+      liveRoute.includes('showToast(loadError'),
+    'live sharing route handles lookup errors and ignores stale session responses',
+  )
 
   const sideline = await readText('src/lib/SidelineAI.svelte')
   check(
@@ -337,6 +503,12 @@ async function checkStoreModeCode() {
   check(sideline.includes("apiUrl('/api/voice/answer')"), 'Sideline answer endpoint uses apiUrl')
 
   const match = await readText('src/lib/Match.svelte')
+  check(
+    match.includes('canSaveFinishedMatch($subscriptionStore') &&
+      match.includes('countFinishedMatches()') &&
+      match.includes('Free accounts can save'),
+    'finished match save enforces the account-wide free saved-match cap',
+  )
   check(
     match.includes('LiveVoiceLogger') && !match.includes('SidelineAI'),
     'live match screen uses on-device voice logger',
@@ -445,6 +617,34 @@ async function checkTeamScopedSync() {
     'team-scoped policy reset targets all affected tables',
   )
 
+  const freeQuotaMigration = await readText(`${migrationDir}/20260618_free_match_quota.sql`)
+  const freeQuotaVerifier = await readText('scripts/verify-free-match-quota-live.mjs')
+  check(
+    freeQuotaMigration.includes('create or replace function public.has_paid_match_entitlement') &&
+      freeQuotaMigration.includes('create trigger enforce_free_match_quota') &&
+      freeQuotaMigration.includes('after insert on public.matches') &&
+      !freeQuotaMigration.includes('before insert or update on public.matches') &&
+      freeQuotaMigration.includes('existing_count >= 2') &&
+      freeQuotaMigration.includes('public.club_members cm') &&
+      freeQuotaMigration.includes("s.plan in ('personal', 'club', 'club_pro')") &&
+      freeQuotaMigration.includes(
+        'revoke all on function public.has_paid_match_entitlement(uuid) from authenticated',
+      ) &&
+      !freeQuotaMigration.includes(
+        'grant execute on function public.has_paid_match_entitlement(uuid) to authenticated',
+      ),
+    'Supabase migration enforces the free match quota while preserving paid club entitlements without exposing the helper RPC',
+  )
+  check(
+    freeQuotaVerifier.includes('free account can sync-upsert an existing cloud match') &&
+      freeQuotaVerifier.includes('free account cannot sync-upsert a third cloud match') &&
+      freeQuotaVerifier.includes('club coach can save third club-entitled match') &&
+      freeQuotaVerifier.includes('expectedError: quotaError') &&
+      freeQuotaVerifier.includes("mode: 'upsert'") &&
+      freeQuotaVerifier.includes('supabase/migrations/20260618_free_match_quota.sql'),
+    'live free match quota checker covers free sync upserts, paid club access, and actionable SQL failure output',
+  )
+
   const sync = await readText('src/lib/sync.js')
   const serviceWorker = await readText('src/service-worker.js')
   const seedReviewer = await readText('scripts/seed-reviewer-account.mjs')
@@ -470,6 +670,9 @@ async function checkTeamScopedSync() {
   )
   check(
     liveTeamScope.includes('.upsert(payload, { onConflict })') &&
+      liveTeamScope.includes(
+        'owner can sync-upsert existing own team-scoped match by id,user_id',
+      ) &&
       liveTeamScope.includes('subscriptionUserIds: []') &&
       liveTeamScope.includes("delete().in('user_id', created.subscriptionUserIds)") &&
       liveTeamScope.includes('profileIds: []') &&
@@ -511,6 +714,72 @@ async function checkTeamScopedSync() {
     teamScopeTest.includes('no active team is available') &&
       teamScopeTest.includes('remember-last-team is disabled'),
     'team picker selection rules are covered by unit tests',
+  )
+}
+
+async function checkAccountDeletion() {
+  const migration = await readText('supabase/migrations/20260617_account_deletion_rpc.sql')
+  const authGuardMigration = await readText(
+    'supabase/migrations/20260617_account_deletion_rpc_auth_guard.sql',
+  )
+  const settings = await readText('src/lib/Settings.svelte')
+  const liveVerifier = await readText('scripts/verify-account-deletion-live.mjs')
+  check(
+    migration.includes('create or replace function public.delete_own_account()') &&
+      migration.includes('security definer') &&
+      migration.includes('set search_path = pg_catalog') &&
+      migration.includes("coalesce(auth.role(), '') <> 'authenticated'") &&
+      migration.includes("raise exception 'Authentication required'") &&
+      migration.includes('delete from auth.users'),
+    'account deletion RPC rejects anonymous callers and removes the authenticated auth user through a security-definer function',
+  )
+  check(
+    authGuardMigration.includes('create or replace function public.delete_own_account()') &&
+      authGuardMigration.includes('set search_path = pg_catalog') &&
+      authGuardMigration.includes("coalesce(auth.role(), '') <> 'authenticated'") &&
+      authGuardMigration.includes('revoke all on function public.delete_own_account() from anon') &&
+      authGuardMigration.includes(
+        'grant execute on function public.delete_own_account() to authenticated',
+      ),
+    'account deletion follow-up migration explicitly rejects anonymous RPC calls',
+  )
+  check(
+    migration.includes('delete from public.matches where user_id = $1') &&
+      migration.includes('delete from public.squad where user_id = $1') &&
+      migration.includes('delete from public.subscriptions where user_id = $1') &&
+      migration.includes('delete from public.profiles where id = $1'),
+    'account deletion RPC removes user-owned cloud data',
+  )
+  check(
+    migration.includes('revoke all on function public.delete_own_account() from public') &&
+      migration.includes('revoke all on function public.delete_own_account() from anon') &&
+      migration.includes('grant execute on function public.delete_own_account() to authenticated'),
+    'account deletion RPC is executable only by authenticated users',
+  )
+  const deleteAccountStart = settings.indexOf('async function doDeleteAccount')
+  const deleteAccountBlock = settings.slice(
+    deleteAccountStart,
+    settings.indexOf('async function openBillingPortal'),
+  )
+  check(
+    deleteAccountBlock.includes(
+      'throw new Error(`Could not cancel billing: ${cancelErr.message}`)',
+    ) &&
+      deleteAccountBlock.includes('Native builds still do not expose checkout') &&
+      deleteAccountBlock.indexOf("invoke('cancel-subscription')") <
+        deleteAccountBlock.indexOf("supabase.rpc('delete_own_account')") &&
+      deleteAccountBlock.indexOf("supabase.rpc('delete_own_account')") <
+        deleteAccountBlock.indexOf('await clearAllData()'),
+    'Settings cancels billing before server deletion, deletes the server account before wiping local data, and blocks on billing cancellation errors',
+  )
+  check(
+    liveVerifier.includes("anonymous.rpc('delete_own_account')") &&
+      liveVerifier.includes("target.client.rpc('delete_own_account')") &&
+      liveVerifier.includes('admin.auth.admin.getUserById') &&
+      liveVerifier.includes('expectAuthUserMissing(target.id') &&
+      liveVerifier.includes('control auth user remains') &&
+      liveVerifier.includes('admin.auth.admin.deleteUser(userId)'),
+    'account deletion live verifier checks auth, cloud cleanup, and control account safety',
   )
 }
 
@@ -588,6 +857,7 @@ await checkManifest()
 await checkNativeConfig()
 await checkStoreModeCode()
 await checkTeamScopedSync()
+await checkAccountDeletion()
 checkRoutes()
 await checkAssetLinksState()
 if (live) await checkLiveProduction()

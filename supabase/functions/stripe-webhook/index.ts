@@ -28,8 +28,18 @@ Deno.serve(async (req) => {
   })
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
+
+  async function authUserExists(userId: string) {
+    const { data, error } = await supabase.auth.admin.getUserById(userId)
+    if (error) {
+      const status = (error as { status?: number }).status
+      if (status === 404 || /not found/i.test(error.message)) return false
+      throw new Error(`Auth user lookup failed: ${error.message}`)
+    }
+    return Boolean(data?.user)
+  }
 
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new Response('Missing signature', { status: 400 })
@@ -40,18 +50,21 @@ Deno.serve(async (req) => {
     event = await stripe.webhooks.constructEventAsync(
       body,
       signature,
-      Deno.env.get('STRIPE_WEBHOOK_SECRET')!
+      Deno.env.get('STRIPE_WEBHOOK_SECRET')!,
     )
   } catch (e) {
     console.error('Webhook signature verification failed:', e.message)
     return new Response(`Webhook error: ${e.message}`, { status: 400 })
   }
 
-  async function syncSubscription(stripeSub: Stripe.Subscription, options: {
-    userId?: string | null
-    customerId?: string | null
-    status?: string | null
-  } = {}) {
+  async function syncSubscription(
+    stripeSub: Stripe.Subscription,
+    options: {
+      userId?: string | null
+      customerId?: string | null
+      status?: string | null
+    } = {},
+  ) {
     const priceId = getSubscriptionPriceId(stripeSub)
     if (!priceId) throw new Error(`Subscription ${stripeSub.id} has no price`)
 
@@ -70,13 +83,19 @@ Deno.serve(async (req) => {
 
     const userId = options.userId ?? getMetadataUserId(stripeSub)
     if (userId) {
-      const { error } = await supabase.from('subscriptions')
+      if (!(await authUserExists(userId))) {
+        console.warn(`Skipping subscription ${stripeSub.id} sync for deleted auth user ${userId}`)
+        return
+      }
+      const { error } = await supabase
+        .from('subscriptions')
         .upsert({ user_id: userId, ...row }, { onConflict: 'user_id' })
       if (error) throw new Error(`DB upsert failed: ${error.message}`)
       return
     }
 
-    const { error } = await supabase.from('subscriptions')
+    const { error } = await supabase
+      .from('subscriptions')
       .update(row)
       .eq('stripe_subscription_id', stripeSub.id)
     if (error) throw new Error(`DB update failed: ${error.message}`)
@@ -96,12 +115,15 @@ Deno.serve(async (req) => {
         customerId: getCustomerId(session.customer),
       })
 
-    // ── customer.subscription.created / updated ────────────────────────
-    } else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+      // ── customer.subscription.created / updated ────────────────────────
+    } else if (
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated'
+    ) {
       const stripeSub = event.data.object as Stripe.Subscription
       await syncSubscription(stripeSub)
 
-    // ── customer.subscription.deleted ───────────────────────────────────
+      // ── customer.subscription.deleted ───────────────────────────────────
     } else if (event.type === 'customer.subscription.deleted') {
       const stripeSub = event.data.object as Stripe.Subscription
 
@@ -114,7 +136,8 @@ Deno.serve(async (req) => {
         stripe_customer_id: getCustomerId(stripeSub.customer),
         stripe_subscription_id: stripeSub.id,
       }
-      const { data, error } = await supabase.from('subscriptions')
+      const { data, error } = await supabase
+        .from('subscriptions')
         .update(cancelledRow)
         .eq('stripe_subscription_id', stripeSub.id)
         .select('user_id')
@@ -123,14 +146,21 @@ Deno.serve(async (req) => {
       if (!data?.length) {
         const userId = getMetadataUserId(stripeSub)
         if (userId) {
-          const { error: upsertError } = await supabase.from('subscriptions')
+          if (!(await authUserExists(userId))) {
+            console.warn(
+              `Skipping deleted subscription ${stripeSub.id} fallback upsert for deleted auth user ${userId}`,
+            )
+            return
+          }
+          const { error: upsertError } = await supabase
+            .from('subscriptions')
             .upsert({ user_id: userId, ...cancelledRow }, { onConflict: 'user_id' })
           if (upsertError) throw new Error(`DB upsert failed: ${upsertError.message}`)
         }
       }
 
-    // ── invoice.payment_succeeded ───────────────────────────────────────
-    // Keeps period end fresh on every renewal so Pro access never lapses
+      // ── invoice.payment_succeeded ───────────────────────────────────────
+      // Keeps period end fresh on every renewal so Pro access never lapses
     } else if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object as Stripe.Invoice
       const subscriptionId = getInvoiceSubscriptionId(invoice)
@@ -139,10 +169,12 @@ Deno.serve(async (req) => {
       }
 
       const stripeSub = await stripe.subscriptions.retrieve(subscriptionId)
-      await syncSubscription(stripeSub, { status: stripeSub.status === 'past_due' ? 'active' : stripeSub.status })
+      await syncSubscription(stripeSub, {
+        status: stripeSub.status === 'past_due' ? 'active' : stripeSub.status,
+      })
 
-    // ── invoice.payment_failed ──────────────────────────────────────────
-    // Stripe retries automatically; mark past_due so UI reflects it
+      // ── invoice.payment_failed ──────────────────────────────────────────
+      // Stripe retries automatically; mark past_due so UI reflects it
     } else if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as Stripe.Invoice
       const subscriptionId = getInvoiceSubscriptionId(invoice)
@@ -159,6 +191,9 @@ Deno.serve(async (req) => {
     })
   } catch (e) {
     console.error('Webhook handler error:', e)
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: getJsonHeaders() })
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: getJsonHeaders(),
+    })
   }
 })

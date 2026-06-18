@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
+import { homedir } from 'node:os'
 
 let blockers = 0
 let warnings = 0
@@ -57,6 +58,46 @@ function envForJavaHome(javaHome) {
   }
 }
 
+function androidSdkCandidates() {
+  return [
+    process.env.ANDROID_HOME,
+    process.env.ANDROID_SDK_ROOT,
+    path.join(homedir(), 'Library/Android/sdk'),
+    '/opt/android-sdk',
+    '/usr/local/share/android-sdk',
+  ].filter(Boolean)
+}
+
+function findAndroidSdk() {
+  for (const sdkRoot of androidSdkCandidates()) {
+    if (
+      existsSync(path.join(sdkRoot, 'platforms')) &&
+      existsSync(path.join(sdkRoot, 'platform-tools'))
+    ) {
+      return sdkRoot
+    }
+  }
+  return process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || ''
+}
+
+function envForAndroid(javaHome, androidHome) {
+  const env = javaHome ? envForJavaHome(javaHome) : { ...process.env }
+  if (!androidHome) return env
+
+  const paths = [
+    path.join(androidHome, 'cmdline-tools/latest/bin'),
+    path.join(androidHome, 'platform-tools'),
+    path.join(androidHome, 'emulator'),
+  ].filter((dir) => existsSync(dir))
+
+  return {
+    ...env,
+    ANDROID_HOME: androidHome,
+    ANDROID_SDK_ROOT: androidHome,
+    PATH: `${paths.join(path.delimiter)}${paths.length ? path.delimiter : ''}${env.PATH || ''}`,
+  }
+}
+
 function javaVersionResult() {
   const systemJava = run('java', ['-version'])
   if (systemJava.status === 0)
@@ -93,12 +134,8 @@ required(
       : javaOutput,
 )
 
-const sdkmanager = run(
-  'sdkmanager',
-  ['--version'],
-  javaHome ? { env: envForJavaHome(javaHome) } : {},
-)
-const androidHome = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || ''
+const androidHome = findAndroidSdk()
+const sdkmanager = run('sdkmanager', ['--version'], { env: envForAndroid(javaHome, androidHome) })
 required(
   'Android SDK tools',
   sdkmanager.status === 0 || Boolean(androidHome),

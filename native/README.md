@@ -31,7 +31,7 @@ Current native status:
 
 - iOS Capacitor project exists under `ios/`, has branded icon/splash assets, includes the microphone usage string, and passes an unsigned simulator build.
 - Next iOS blocker is Apple Developer signing/TestFlight upload from Xcode.
-- Android Capacitor project exists under `android/` and includes the on-device speech recognition plugin. Local debug build, emulator install, and emulator launch passed on 2026-06-14 with JDK 21.
+- Android Capacitor project exists under `android/` and includes the on-device speech recognition plugin. Local debug build passes on 2026-06-18 with helper-discovered JDK 21 and Android SDK paths; earlier emulator install and launch passed on 2026-06-14.
 - Android live voice still needs a physical-device airplane-mode microphone test before it is field-ready.
 
 ## Files

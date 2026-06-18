@@ -79,3 +79,7 @@ export function canUseFeature(subscription, feature) {
   if (feature === FEATURES.liveSharing) return canUseClubPro(subscription)
   return false
 }
+
+export function canSaveFinishedMatch(subscription, savedMatchCount) {
+  return canUsePro(subscription) || savedMatchCount < FREE_MATCH_LIMIT
+}

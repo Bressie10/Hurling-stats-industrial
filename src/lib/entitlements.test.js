@@ -4,6 +4,7 @@ import {
   canUseClubPro,
   canUseFeature,
   canUsePro,
+  canSaveFinishedMatch,
   FEATURES,
   FREE_MATCH_LIMIT,
 } from './entitlements.js'
@@ -36,5 +37,14 @@ describe('entitlements', () => {
     expect(canUseFeature(subscription('personal', 'past_due'), FEATURES.proAnalytics)).toBe(false)
     expect(canUseFeature(subscription('club', 'cancelled'), FEATURES.clubManagement)).toBe(false)
     expect(canUseFeature(subscription('club_pro', 'trialing'), FEATURES.liveSharing)).toBe(true)
+  })
+
+  it('enforces the free saved-match cap before finished match saves', () => {
+    expect(canSaveFinishedMatch(subscription('free'), 0)).toBe(true)
+    expect(canSaveFinishedMatch(subscription('free'), FREE_MATCH_LIMIT - 1)).toBe(true)
+    expect(canSaveFinishedMatch(subscription('free'), FREE_MATCH_LIMIT)).toBe(false)
+    expect(canSaveFinishedMatch(subscription('personal'), FREE_MATCH_LIMIT)).toBe(true)
+    expect(canSaveFinishedMatch(subscription('free', 'active', { isPro: true }), 20)).toBe(true)
+    expect(canSaveFinishedMatch(subscription('personal', 'past_due'), FREE_MATCH_LIMIT)).toBe(false)
   })
 })

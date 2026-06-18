@@ -1,6 +1,6 @@
 # Session Handoff
 
-Last updated: 2026-06-17
+Last updated: 2026-06-18
 
 ## Project State
 
@@ -67,8 +67,9 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `scripts/verify-store-release.mjs` now checks this does not regress
 - Native Settings hardening and cleanup scan were completed:
   - `src/lib/Settings.svelte` imports the native store-build guard
-  - native store builds do not call the Stripe cancellation function during account deletion
-  - Settings account deletion copy now states that plan management is not available inside the native build
+  - native store builds still hide Stripe checkout, pricing, portal, and billing-management UI
+  - Settings account deletion calls the backend cancellation function before server deletion so web-billed users are not left with future renewals after deleting from native
+  - Settings account deletion copy states that purchases and plan changes are not available inside the native build
   - stale unused Settings subscription CSS and an unused subscription import were removed
   - `scripts/verify-store-release.mjs` now includes `Settings.svelte` in the native store-mode checks
   - `src/lib/LiveViewer.svelte` no longer captures initial match data in a Svelte state initializer
@@ -113,7 +114,7 @@ PWABuilder optional warnings are not the release target. The release target is A
 - Stripe-first subscription/paywall planning is now the launch direction:
   - web Stripe remains the paid signup and plan-management channel
   - native iOS/Android builds remain free companion clients with no Stripe checkout, prices, external payment CTAs, or web billing links
-  - the launch free tier is capped at 2 saved matches
+  - the launch free tier is capped at 2 saved finished matches; drafts still work locally, and a third finished-match save is blocked until an older match is deleted or the account has Pro access
   - Personal Pro unlocks unlimited history, analytics routes, Stat Targets, and PDF reports
   - Club unlocks team/club management and join codes
   - Club Pro unlocks live match sharing/viewer mode
@@ -130,6 +131,7 @@ PWABuilder optional warnings are not the release target. The release target is A
   - Match and squad sync mutations carry `teamScope` and `team_id`.
   - Supabase migration `20260617_team_scoped_data_and_rls.sql` adds `team_id` to `matches` and `squad`, changes match cloud conflicts to `(id, user_id)`, adds membership-aware helper functions, tightens `teams`/`live_sessions` RLS, and validates that user-owned match/squad rows are tagged only to teams the user can access.
   - Supabase migration `20260617_team_scoped_policy_reset.sql` must run after it; it removes stale policy variants on the affected tables and recreates the intended policy set.
+  - Supabase migration `20260618_free_match_quota.sql` adds a database trigger for the free 2-match cap so direct Supabase writes and background sync upserts cannot bypass the local app check. Apply the ordered release SQL with `npm run supabase:migration:release-required` when `SUPABASE_DB_URL` is set, or paste the three SQL files into Supabase in order.
 - Voice parser accuracy was tightened:
   - `parseVoiceLog` accepts native STT alternatives and returns `matchSource`/`needsLocation`.
   - Number-word and jersey-number commands such as `point 11`, `goal number fourteen`, and `wide jersey seven` are covered by tests.
@@ -194,10 +196,11 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run store:check:live` passed against `https://www.pitchnote.ie/` at that time.
   - `npm run smoke:voice` passed.
   - Vercel-style `npm run build` passed.
-- Current live DNS status on 2026-06-17:
+- Current live DNS status on 2026-06-18:
   - `npm run store:check:live` fails on live URL fetches.
   - `dig pitchnote.ie A` and `dig www.pitchnote.ie A` return `NXDOMAIN`.
-  - Treat production/live store verification as blocked until DNS is configured and the live check passes again.
+  - `whois pitchnote.ie` returns `Not found`.
+  - This is expected while the domain is not yet bought/activated. Keep release config on `https://www.pitchnote.ie/`, then unblock production/live store verification by registering or activating the domain, configuring DNS/hosting, and rerunning the live check.
 - Service worker verification on 2026-06-12:
   - Production `/pwabuilder-sw.js` returns `200`.
   - Production `/app/match` HTML contains the corrected worker registration.
@@ -234,45 +237,65 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run native:android:build` passed with JDK 21. The debug APK installed and launched on the `Pitchnote_API_36` emulator.
   - The emulator resolves a Google TTS speech recognizer and can launch the system recognizer in airplane mode with `PREFER_OFFLINE=true`, but that does not prove real microphone accuracy.
   - Android voice support must not be called field-ready until offline recognition is verified in airplane mode with real microphone input on a physical Android device.
-- Local verification on 2026-06-17 after voice parser/location and doc updates:
-  - `npm run test` passed: 34 tests across 5 files.
+- Current non-domain verification on 2026-06-18 after free-tier quota, billing, live-sharing, and native checks:
+  - `npm run release:check` passed.
+  - `npm run test` passed: 36 tests across 5 files.
   - `npm run smoke:voice` passed: 48 checks.
   - `npm run lint` passed with no output.
   - `npm run format:check` passed.
   - `npm run store:check` passed.
   - `npm run native:doctor` passed with 0 warnings.
   - `npm run billing:check` passed against Stripe test-mode config.
+  - `npm run store:verify-reviewer` passed for `reviewer@pitchnote.ie` with `personal / active`, 25 squad rows, and 3 match rows.
+  - Supabase billing function URLs are reachable: checkout/portal/cancel CORS preflight returns `200`, and an unsigned webhook request returns `400` as expected.
   - `npm run team-scope:check:live` passed after fixing the verifier's generated team-code collision.
-  - `npm run store:check:live` still fails because `pitchnote.ie` returns `NXDOMAIN`.
+  - `npm run account:delete:check:live` passed on 2026-06-18 after applying `supabase/migrations/20260617_account_deletion_rpc_auth_guard.sql` through the Supabase SQL Editor.
+  - `npm run team-scope:check:live` now reaches Supabase but fails because live `matches` does not accept `onConflict=id,user_id`; apply `supabase/migrations/20260617_team_scoped_data_and_rls.sql` and `supabase/migrations/20260617_team_scoped_policy_reset.sql`, then rerun it.
+  - `supabase/migrations/20260618_free_match_quota.sql` and `npm run free-quota:check:live` are now present. Apply the team-scoped migrations first, then apply the free-quota SQL and rerun the free-quota verifier.
+  - `npm run store:check:live` still fails because `whois pitchnote.ie` returns `Not found` and the domain resolves as `NXDOMAIN`.
+  - Current web build was prepared and synced into the iOS wrapper.
+  - `npm run native:ios:sync` passed.
+  - Unsigned iOS simulator Debug build passed with `xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -derivedDataPath /private/tmp/pitchnote-ios-derived CODE_SIGNING_ALLOWED=NO build`.
+  - Signed Debug build for paired iPhone 12 mini passed with Apple Development signing.
+  - Synced Debug build installed on the paired iPhone with `xcrun devicectl device install app`.
+  - `xcrun devicectl list devices` currently shows paired iPhone 12 mini available and another iPhone unavailable.
+  - Automated `devicectl` launch still times out waiting for CoreDeviceService; manually launch the app on-device or use Xcode Run for the microphone/speech pass.
+  - `npm run native:android:build` passed on 2026-06-18 after the Gradle helper discovered local JDK 21 and `/Users/ultanbreslin/Library/Android/sdk` without manual shell exports.
+  - `/Users/ultanbreslin/Library/Android/sdk/platform-tools/adb devices` reports no attached Android devices.
 
 ## Next Work
 
 Recommended order from here:
 
-1. Configure DNS for `pitchnote.ie` and `www.pitchnote.ie`, then rerun `npm run store:check:live`.
-2. Once DNS resolves, run `npm run release:check:live` to combine local release gates, live URL checks, billing config, and team-scoped RLS verification.
-3. Finish and verify the Stripe-first paywall implementation:
+1. Apply release-required Supabase SQL with `npm run supabase:migration:release-required` when `SUPABASE_DB_URL` is set, or paste the three SQL files in order, then run `npm run team-scope:check:live` and `npm run free-quota:check:live`.
+2. Register or activate `pitchnote.ie`, configure DNS/hosting for `pitchnote.ie` and `www.pitchnote.ie`, then rerun `npm run store:check:live`.
+3. Once DNS resolves, run `npm run release:check:live` to combine local release gates, live URL checks, billing config, team-scoped RLS verification, live account-deletion verification, and free-quota verification.
+4. Finish and verify the Stripe-first paywall implementation:
    - Free can use Match, Squad, Settings, cloud sync, and 2 saved matches
    - Free sees locked states for Player Stats, Team Stats, Timeline, Insights, Targets, older History, Club controls, and Live sharing
    - Personal/Club/Club Pro unlock the expected tiers
    - native store mode still shows no prices, Stripe checkout, upgrade CTAs, or external payment links
-4. Add `support@pitchnote.ie` to App Store Connect and Google Play store metadata when those records are created.
-5. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
-6. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
-7. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, on-device voice logging, 2-match cap, sync restore, and account deletion on real devices.
-8. Open the generated iOS project and configure Apple signing:
+   - native account deletion still cancels existing web billing server-side before deleting the account
+5. Add `support@pitchnote.ie` to App Store Connect and Google Play store metadata when those records are created.
+6. Run `npm run store:verify-reviewer` after any reviewer password or seed change.
+7. Verify the seeded reviewer account on the deployed store-mode URLs, then verify queued offline match/squad mutations drain on the deployed preview/production app.
+8. Create a fresh free account from the store-mode app and verify sign-in, offline match logging, on-device voice logging, 2-match cap, sync restore, and account deletion on real devices.
+9. Continue iOS physical-device and TestFlight work:
    - run `npm run native:ios:open`
-   - select the `App` target
-   - set the Apple Developer Team
+   - manually launch the installed Debug build or use Xcode Run
+   - verify microphone and speech permission prompts on-device
    - keep bundle ID as `ie.pitchnote.app`
    - create/register the App Store Connect app record for the same bundle ID
-   - archive/upload a TestFlight build after signing is valid
-9. Rerun `npm run native:doctor` and resolve any local native-tooling blockers it reports.
-10. Build the Android wrapper as a Capacitor app:
-   - package name `ie.pitchnote.app`
-   - launch URL `https://www.pitchnote.ie/?store_build=android`
-   - sync with `npm run native:android:sync`
-   - generate the real App Bundle (`.aab`) from Android Studio or Gradle once signing is configured
+   - archive/upload a TestFlight build
+10. Rerun `npm run native:doctor` and resolve any local native-tooling blockers it reports.
+11. Continue Android physical-device and Play release work:
+
+- package name `ie.pitchnote.app`
+- launch URL `https://www.pitchnote.ie/?store_build=android`
+- debug build passes with `npm run native:android:build`
+- connect a real Android phone and install `android/app/build/outputs/apk/debug/app-debug.apk`
+- generate the real App Bundle (`.aab`) from Android Studio or Gradle once signing is configured
+
 11. Complete App Store Connect and Play Console forms:
 
 - privacy policy URL: `https://www.pitchnote.ie/privacy`
@@ -300,5 +323,5 @@ Do not add placeholder signing files, local keystores, build artifacts, or fake 
 In a new chat, use:
 
 ```text
-Read docs/session-handoff.md, docs/store-release.md, docs/reviewer-testing.md, and docs/voice-accuracy-testing.md. Main is the approved integration/deployment target, but local `main` is ahead of `origin/main` and the worktree has substantial uncommitted changes, so inspect `git status --short` first. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS and Android now use Capacitor so live voice logging can use on-device speech recognition. Team-scoped data/RLS work is present and `npm run team-scope:check:live` passed on 2026-06-17. Reviewer seeding and verification passed on 2026-06-17. The current hard blocker is DNS: `pitchnote.ie` returns `NXDOMAIN`, so `npm run store:check:live` fails until DNS is configured. Voice logging supports Point, Goal, Wide, Free Won, Turnover Lost, and Yellow Card with jersey-number/name/STT-alternative matching; 45s, sideline balls, and black/red cards are tap-only. Native Settings billing hardening is done and code/docs use support@pitchnote.ie. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, `npm run native:ios:sync` passed, branded iOS icon/splash assets replaced the Capacitor defaults, an unsigned simulator build passed, and manual launch in the iPhone 17 simulator works. Android debug build, emulator install, and emulator launch have passed with JDK 21, but real physical-device offline microphone testing remains required. Run `npm run release:check` before release-critical work and `npm run release:check:live` after DNS resolves.
+Read docs/session-handoff.md, docs/store-release.md, docs/reviewer-testing.md, and docs/voice-accuracy-testing.md. Main is the approved integration/deployment target, but local `main` is ahead of `origin/main` and the worktree has substantial uncommitted changes, so inspect `git status --short` first. Do not push release/PWA work to Voice-Changes. Current direction is Stripe-first web billing with native iOS/Android as free companion clients. Free is capped at 2 saved matches; Personal unlocks analytics/unlimited history; Club unlocks team management; Club Pro unlocks live sharing. Native builds must not show Stripe checkout, prices, external payment CTAs, or web billing links. iOS and Android now use Capacitor so live voice logging can use on-device speech recognition. Team-scoped data/RLS work is present and `npm run team-scope:check:live` passed on 2026-06-17. Reviewer seeding/verification passed on 2026-06-17; account-deletion live verification passed on 2026-06-18 after the SQL Editor auth-guard migration. The current hard blocker is domain ownership/DNS: `whois pitchnote.ie` returns `Not found` and the domain resolves as `NXDOMAIN`, so `npm run store:check:live` fails until the domain is registered or activated and DNS/hosting is configured. Voice logging supports Point, Goal, Wide, Free Won, Turnover Lost, and Yellow Card with jersey-number/name/STT-alternative matching; 45s, sideline balls, and black/red cards are tap-only. Native Settings billing hardening is done and code/docs use support@pitchnote.ie. Reviewer seed/verify tooling exists, sync/outbox regression tests and lint/format baselines exist, root Svelte layout slots were migrated, and Capacitor/native config scripts exist. Full Xcode is installed/selected, `ios/` has been generated, current web assets were synced into iOS, signed Debug build for the paired iPhone 12 mini passed, and the synced Debug build installed on-device through `devicectl`; automated `devicectl` launch times out, so manually launch or use Xcode Run for iPhone microphone/speech QA. Android debug build now passes with helper-discovered JDK 21 and `/Users/ultanbreslin/Library/Android/sdk`; earlier emulator install and launch passed, but `/Users/ultanbreslin/Library/Android/sdk/platform-tools/adb devices` currently shows no attached Android device, so real physical-device offline microphone testing remains required. Run `npm run release:check` before release-critical work and `npm run release:check:live` after DNS resolves.
 ```

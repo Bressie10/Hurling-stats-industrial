@@ -84,6 +84,14 @@ function check(condition, message) {
   if (!condition) throw new Error(message)
 }
 
+function requireConfiguredEnv(name) {
+  const value = requireEnv(name)
+  if (/^(TODO|PLACEHOLDER|REPLACE_ME)$/i.test(value)) {
+    throw new Error(`${name} contains a placeholder value`)
+  }
+  return value
+}
+
 console.log(`Stripe mode: ${isTestMode ? 'test' : 'live or restricted'}`)
 
 for (const plan of PLANS) {
@@ -93,39 +101,41 @@ for (const plan of PLANS) {
   check(price.currency === 'eur', `${plan.label} price currency is ${price.currency}, expected eur`)
   check(
     price.unit_amount === plan.amount,
-    `${plan.label} price amount is ${price.unit_amount}, expected ${plan.amount}`
+    `${plan.label} price amount is ${price.unit_amount}, expected ${plan.amount}`,
   )
   check(price.recurring?.interval === 'month', `${plan.label} price interval is not monthly`)
   check(
     price.lookup_key === plan.lookupKey,
-    `${plan.label} lookup key is ${price.lookup_key}, expected ${plan.lookupKey}`
+    `${plan.label} lookup key is ${price.lookup_key}, expected ${plan.lookupKey}`,
   )
   check(price.product?.active, `${plan.label} product is inactive`)
   check(
     (price.product?.name ?? '').includes(plan.label),
-    `${plan.label} product name does not include plan label`
+    `${plan.label} product name does not include plan label`,
   )
-  console.log(`${plan.key}: ${price.id} ${price.unit_amount} ${price.currency}/${price.recurring.interval}`)
+  console.log(
+    `${plan.key}: ${price.id} ${price.unit_amount} ${price.currency}/${price.recurring.interval}`,
+  )
 }
 
-if (env.STRIPE_PORTAL_CONFIGURATION_ID) {
-  const portal = await stripeGet(`billing_portal/configurations/${env.STRIPE_PORTAL_CONFIGURATION_ID}`)
-  check(portal.active, 'Customer Portal configuration is inactive')
-  console.log(`portal: ${portal.id} active`)
-} else {
-  console.warn('portal: STRIPE_PORTAL_CONFIGURATION_ID is missing')
-}
+const portalId = requireConfiguredEnv('STRIPE_PORTAL_CONFIGURATION_ID')
+const portal = await stripeGet(`billing_portal/configurations/${portalId}`)
+check(portal.active, 'Customer Portal configuration is inactive')
+check(
+  portal.features?.payment_method_update?.enabled,
+  'Customer Portal cannot update payment methods',
+)
+check(portal.features?.subscription_cancel?.enabled, 'Customer Portal cannot cancel subscriptions')
+check(portal.features?.invoice_history?.enabled, 'Customer Portal invoice history is disabled')
+console.log(`portal: ${portal.id} active`)
 
-if (env.STRIPE_WEBHOOK_ENDPOINT_ID) {
-  const webhook = await stripeGet(`webhook_endpoints/${env.STRIPE_WEBHOOK_ENDPOINT_ID}`)
-  check(webhook.status === 'enabled', `Webhook endpoint status is ${webhook.status}`)
-  for (const event of REQUIRED_EVENTS) {
-    check(webhook.enabled_events.includes(event), `Webhook endpoint is missing ${event}`)
-  }
-  console.log(`webhook: ${webhook.id} enabled`)
-} else {
-  console.warn('webhook: STRIPE_WEBHOOK_ENDPOINT_ID is missing')
+const webhookId = requireConfiguredEnv('STRIPE_WEBHOOK_ENDPOINT_ID')
+const webhook = await stripeGet(`webhook_endpoints/${webhookId}`)
+check(webhook.status === 'enabled', `Webhook endpoint status is ${webhook.status}`)
+for (const event of REQUIRED_EVENTS) {
+  check(webhook.enabled_events.includes(event), `Webhook endpoint is missing ${event}`)
 }
+console.log(`webhook: ${webhook.id} enabled`)
 
 check(!!env.STRIPE_WEBHOOK_SECRET, 'STRIPE_WEBHOOK_SECRET is missing')
 console.log('webhook secret: present')
