@@ -74,36 +74,75 @@ function timestamp(daysAgo = 0) {
   return Date.now() - daysAgo * 24 * 60 * 60 * 1000
 }
 
-const squad = [
-  { id: 1, number: 1, name: 'Eoin McGrath', position: 'GK' },
-  { id: 2, number: 2, name: 'Darragh Keane', position: 'FB' },
-  { id: 3, number: 3, name: 'Brian Hayes', position: 'FB' },
-  { id: 4, number: 4, name: 'Conor Ryan', position: 'FB' },
-  { id: 5, number: 5, name: 'Jack O Connell', position: 'HB' },
-  { id: 6, number: 6, name: 'Shane Walsh', position: 'HB' },
-  { id: 7, number: 7, name: 'Liam Burke', position: 'HB' },
-  { id: 8, number: 8, name: 'Cian Murphy', position: 'MF' },
-  { id: 9, number: 9, name: 'Niall Kelly', position: 'MF' },
-  { id: 10, number: 10, name: 'Ronan Daly', position: 'HF' },
-  { id: 11, number: 11, name: 'Padraig Nolan', position: 'HF' },
-  { id: 12, number: 12, name: 'Mark Byrne', position: 'HF' },
-  { id: 13, number: 13, name: 'Sean Collins', position: 'FF' },
-  { id: 14, number: 14, name: 'Tom O Shea', position: 'FF' },
-  { id: 15, number: 15, name: 'Adam Quinn', position: 'FF' },
-  { id: 16, number: 16, name: 'Fergal Moore', position: 'Sub' },
-  { id: 17, number: 17, name: 'Jamie Roche', position: 'Sub' },
-  { id: 18, number: 18, name: 'Cathal Flynn', position: 'Sub' },
-  { id: 19, number: 19, name: 'David Lynch', position: 'Sub' },
-  { id: 20, number: 20, name: 'Luke Brennan', position: 'Sub' },
-  { id: 21, number: 21, name: 'Owen Farrell', position: 'Sub' },
-  { id: 22, number: 22, name: 'Michael Casey', position: 'Sub' },
-  { id: 23, number: 23, name: 'Aaron Foley', position: 'Sub' },
-  { id: 24, number: 24, name: 'Kevin Barry', position: 'Sub' },
-  { id: 25, number: 25, name: 'Noel Griffin', position: 'Sub' },
-].map((player) => ({ ...player, updated_at: timestamp() }))
+function demoPlayerId(number) {
+  return `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`
+}
 
-function playerName(playerId) {
-  return squad.find((player) => player.id === playerId)?.name || `#${playerId}`
+const squad = [
+  { number: 1, name: 'Eoin McGrath', position: 'GK' },
+  { number: 2, name: 'Darragh Keane', position: 'FB' },
+  { number: 3, name: 'Brian Hayes', position: 'FB' },
+  { number: 4, name: 'Conor Ryan', position: 'FB' },
+  { number: 5, name: 'Jack O Connell', position: 'HB' },
+  { number: 6, name: 'Shane Walsh', position: 'HB' },
+  { number: 7, name: 'Liam Burke', position: 'HB' },
+  { number: 8, name: 'Cian Murphy', position: 'MF' },
+  { number: 9, name: 'Niall Kelly', position: 'MF' },
+  { number: 10, name: 'Ronan Daly', position: 'HF' },
+  { number: 11, name: 'Padraig Nolan', position: 'HF' },
+  { number: 12, name: 'Mark Byrne', position: 'HF' },
+  { number: 13, name: 'Sean Collins', position: 'FF' },
+  { number: 14, name: 'Tom O Shea', position: 'FF' },
+  { number: 15, name: 'Adam Quinn', position: 'FF' },
+  { number: 16, name: 'Fergal Moore', position: 'Sub' },
+  { number: 17, name: 'Jamie Roche', position: 'Sub' },
+  { number: 18, name: 'Cathal Flynn', position: 'Sub' },
+  { number: 19, name: 'David Lynch', position: 'Sub' },
+  { number: 20, name: 'Luke Brennan', position: 'Sub' },
+  { number: 21, name: 'Owen Farrell', position: 'Sub' },
+  { number: 22, name: 'Michael Casey', position: 'Sub' },
+  { number: 23, name: 'Aaron Foley', position: 'Sub' },
+  { number: 24, name: 'Kevin Barry', position: 'Sub' },
+  { number: 25, name: 'Noel Griffin', position: 'Sub' },
+].map((player) => ({
+  ...player,
+  id: demoPlayerId(player.number),
+  team_player_id: demoPlayerId(player.number),
+  display_name: player.name,
+  default_number: player.number,
+  status: 'active',
+  updated_at: timestamp(),
+}))
+
+function playerFromFixtureId(playerId) {
+  if (typeof playerId === 'number') return squad.find((player) => player.number === playerId)
+  return squad.find((player) => String(player.id) === String(playerId))
+}
+
+function playerFromName(name) {
+  const normalized = String(name || '')
+    .trim()
+    .toLowerCase()
+  return squad.find((player) => player.name.toLowerCase() === normalized)
+}
+
+function playerName(playerNumber) {
+  return squad.find((player) => player.number === playerNumber)?.name || `#${playerNumber}`
+}
+
+function playerSnapshot(player, teamId = null) {
+  return {
+    id: player.id,
+    team_player_id: player.id,
+    team_id: teamId,
+    name: player.name,
+    display_name: player.name,
+    number: player.number,
+    default_number: player.number,
+    position: player.position,
+    status: player.status,
+    updated_at: player.updated_at,
+  }
 }
 
 function baseStats() {
@@ -121,11 +160,13 @@ function makeLineup() {
 }
 
 function addStat(match, event) {
-  const { playerId, stat } = event
+  const { stat } = event
+  const playerId = playerFromFixtureId(event.playerId)?.id || event.playerId
   if (!match.stats[playerId]) match.stats[playerId] = {}
   match.stats[playerId][stat] = (match.stats[playerId][stat] || 0) + 1
   match.events.push({
     playerId,
+    team_player_id: playerId,
     stat,
     period: event.period,
     time: event.time,
@@ -138,10 +179,13 @@ function addStat(match, event) {
 }
 
 function addOppScore(match, score) {
+  const markerPlayer = score.marker ? playerFromName(score.marker) : null
   match.oppScores.push({
     type: score.type,
     oppPlayerNum: score.oppPlayerNum == null ? null : String(score.oppPlayerNum),
     marker: score.marker ?? null,
+    markerPlayerId: markerPlayer?.id || null,
+    markerSnapshot: markerPlayer ? playerSnapshot(markerPlayer, match.teamId || null) : null,
     time: score.time,
     period: score.period,
   })
@@ -150,9 +194,12 @@ function addOppScore(match, score) {
 }
 
 function addPuckout(match, puckout) {
+  const ourPlayer = puckout.ourPlayer ? playerFromName(puckout.ourPlayer) : null
   match.puckouts.push({
     outcome: puckout.outcome,
     ourPlayer: puckout.ourPlayer,
+    ourPlayerId: ourPlayer?.id || null,
+    ourPlayerSnapshot: ourPlayer ? playerSnapshot(ourPlayer, match.teamId || null) : null,
     oppPlayer: puckout.oppPlayer == null ? null : String(puckout.oppPlayer),
     section: puckout.section,
     time: puckout.time,
@@ -186,8 +233,18 @@ function makeMatch({
     events: [],
     notes,
     customStats: ['Hook', 'Pressure'],
-    players: squad.map((player) => ({ ...player })),
-    subs_log: subsLog,
+    players: squad.map((player) => playerSnapshot(player)),
+    subs_log: subsLog.map((sub) => {
+      const offPlayer = playerFromName(sub.off)
+      const onPlayer = playerFromName(sub.on)
+      return {
+        ...sub,
+        off_player_id: offPlayer?.id || null,
+        on_player_id: onPlayer?.id || null,
+        offSnapshot: offPlayer ? playerSnapshot(offPlayer) : null,
+        onSnapshot: onPlayer ? playerSnapshot(onPlayer) : null,
+      }
+    }),
     puckouts: [],
     oppScores: [],
     lineup: makeLineup(),
@@ -730,10 +787,6 @@ function buildSeedMatches() {
   ]
 }
 
-function squadCloudId(userId, localId) {
-  return `${userId}:${localId}`
-}
-
 async function findUserByEmail(supabase, email) {
   let page = 1
   while (true) {
@@ -773,23 +826,99 @@ async function ensureReviewerUser(supabase, { email, password, resetPassword }) 
   return data.user
 }
 
+async function ensureRow(supabase, table, filters, payload) {
+  let query = supabase.from(table).select('*')
+  for (const [column, value] of Object.entries(filters)) query = query.eq(column, value)
+  const { data: existing, error: selectError } = await query.maybeSingle()
+  if (selectError) throw selectError
+  if (existing) return existing
+
+  const { data, error } = await supabase.from(table).insert(payload).select().single()
+  if (error) throw error
+  return data
+}
+
+async function ensureReviewerTeam(supabase, userId) {
+  const compactUserId = userId.replace(/-/g, '').toUpperCase()
+  const club = await ensureRow(
+    supabase,
+    'clubs',
+    { owner_id: userId, name: 'PitchNote Reviewer Club' },
+    {
+      owner_id: userId,
+      name: 'PitchNote Reviewer Club',
+      code: `RV${compactUserId.slice(0, 4)}`,
+    },
+  )
+
+  const team = await ensureRow(
+    supabase,
+    'teams',
+    { club_id: club.id, name: 'Reviewer Seniors' },
+    {
+      club_id: club.id,
+      name: 'Reviewer Seniors',
+      code: `RS${compactUserId.slice(0, 4)}`,
+    },
+  )
+
+  await ensureRow(
+    supabase,
+    'club_members',
+    { club_id: club.id, user_id: userId },
+    { club_id: club.id, user_id: userId, role: 'owner' },
+  )
+  await ensureRow(
+    supabase,
+    'team_members',
+    { team_id: team.id, user_id: userId },
+    { club_id: club.id, team_id: team.id, user_id: userId, role: 'coach' },
+  )
+
+  return { club, team }
+}
+
+function withTeamSnapshot(match, teamId) {
+  return {
+    ...match,
+    teamId,
+    players: match.players.map((player) => ({ ...player, team_id: teamId })),
+    subs_log: (match.subs_log || []).map((sub) => ({
+      ...sub,
+      offSnapshot: sub.offSnapshot ? { ...sub.offSnapshot, team_id: teamId } : null,
+      onSnapshot: sub.onSnapshot ? { ...sub.onSnapshot, team_id: teamId } : null,
+    })),
+    puckouts: (match.puckouts || []).map((puckout) => ({
+      ...puckout,
+      ourPlayerSnapshot: puckout.ourPlayerSnapshot
+        ? { ...puckout.ourPlayerSnapshot, team_id: teamId }
+        : null,
+    })),
+    oppScores: (match.oppScores || []).map((score) => ({
+      ...score,
+      markerSnapshot: score.markerSnapshot ? { ...score.markerSnapshot, team_id: teamId } : null,
+    })),
+  }
+}
+
 async function upsertReviewerData(supabase, { userId, plan, preserveExisting }) {
-  const matches = buildSeedMatches()
+  const { club, team } = await ensureReviewerTeam(supabase, userId)
+  const matches = buildSeedMatches().map((match) => withTeamSnapshot(match, team.id))
   const matchRows = matches.map((match) => ({
     id: match.id,
     user_id: userId,
+    team_id: team.id,
     data: match,
   }))
-  const squadRows = squad.map((player) => ({
-    id: squadCloudId(userId, player.id),
-    user_id: userId,
-    data: {
-      local_id: player.id,
-      name: player.name,
-      number: player.number,
-      position: player.position,
-      updated_at: player.updated_at,
-    },
+  const teamPlayerRows = squad.map((player) => ({
+    id: player.id,
+    team_id: team.id,
+    display_name: player.name,
+    default_number: player.number,
+    position: player.position,
+    status: player.status,
+    created_by: userId,
+    updated_at: new Date(player.updated_at).toISOString(),
   }))
 
   const { data: existingProfile, error: existingProfileError } = await supabase
@@ -800,12 +929,21 @@ async function upsertReviewerData(supabase, { userId, plan, preserveExisting }) 
   if (existingProfileError) throw existingProfileError
 
   if (!existingProfile?.id) {
-    const { error: profileError } = await supabase.from('profiles').insert({ id: userId })
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({ id: userId, club_id: club.id })
+    if (profileError) throw profileError
+  } else {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ club_id: club.id })
+      .eq('id', userId)
     if (profileError) throw profileError
   }
 
   const subscriptionRow = {
     user_id: userId,
+    club_id: club.id,
     plan,
     status: 'active',
     seat_limit: 1,
@@ -836,33 +974,35 @@ async function upsertReviewerData(supabase, { userId, plan, preserveExisting }) 
   }
 
   if (!preserveExisting) {
-    const { error: deleteSquadError } = await supabase.from('squad').delete().eq('user_id', userId)
-    if (deleteSquadError) throw deleteSquadError
+    const { error: deleteTeamPlayersError } = await supabase
+      .from('team_players')
+      .delete()
+      .eq('team_id', team.id)
+    if (deleteTeamPlayersError) throw deleteTeamPlayersError
   }
 
   if (preserveExisting) {
-    const { error: deleteSeedSquadError } = await supabase
-      .from('squad')
+    const { error: deleteSeedTeamPlayersError } = await supabase
+      .from('team_players')
       .delete()
-      .eq('user_id', userId)
       .in(
         'id',
-        squadRows.map((row) => row.id),
+        teamPlayerRows.map((row) => row.id),
       )
-    if (deleteSeedSquadError) throw deleteSeedSquadError
+    if (deleteSeedTeamPlayersError) throw deleteSeedTeamPlayersError
   }
 
-  const { error: squadError } = await supabase
-    .from('squad')
-    .upsert(squadRows, { onConflict: 'id,user_id' })
-  if (squadError) throw squadError
+  const { error: teamPlayersError } = await supabase
+    .from('team_players')
+    .upsert(teamPlayerRows, { onConflict: 'id' })
+  if (teamPlayersError) throw teamPlayersError
 
   const { error: matchError } = await supabase
     .from('matches')
     .upsert(matchRows, { onConflict: 'id,user_id' })
   if (matchError) throw matchError
 
-  return { matches, squadRows }
+  return { matches, teamPlayerRows }
 }
 
 function printPlan({ email, plan, dryRun, preserveExisting }) {
@@ -870,9 +1010,9 @@ function printPlan({ email, plan, dryRun, preserveExisting }) {
   console.log(`${dryRun ? 'Dry run' : 'Seed'} reviewer account`)
   console.log(`email: ${email}`)
   console.log(`plan: ${plan}`)
-  console.log(`squad players: ${squad.length}`)
+  console.log(`team players: ${squad.length}`)
   console.log(`matches: ${matches.length}`)
-  console.log(`preserve existing squad rows: ${preserveExisting ? 'yes' : 'no'}`)
+  console.log(`preserve existing team player rows: ${preserveExisting ? 'yes' : 'no'}`)
   for (const match of matches) {
     console.log(
       `- ${match.date} vs ${match.opposition}: ${match.score.home.goals}-${String(match.score.home.points).padStart(2, '0')} to ${match.score.away.goals}-${String(match.score.away.points).padStart(2, '0')}`,
@@ -912,7 +1052,7 @@ const seeded = await upsertReviewerData(supabase, {
 
 console.log('\nReviewer seed complete')
 console.log(`user id: ${user.id}`)
-console.log(`seeded squad rows: ${seeded.squadRows.length}`)
+console.log(`seeded team player rows: ${seeded.teamPlayerRows.length}`)
 console.log(`seeded match rows: ${seeded.matches.length}`)
 console.log(
   '\nNext: sign in at https://www.pitchnote.ie/?store_build=ios and confirm History, Player Stats, Team Stats, Timeline, Insights, Squad, and Settings load.',

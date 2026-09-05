@@ -25,7 +25,7 @@ function parseArgs(argv) {
   const options = {
     email: process.env.REVIEWER_EMAIL || DEFAULT_EMAIL,
     password: process.env.REVIEWER_PASSWORD || '',
-    minSquadRows: 25,
+    minTeamPlayerRows: 25,
     minMatchRows: 3
   }
 
@@ -35,8 +35,10 @@ function parseArgs(argv) {
     else if (arg.startsWith('--email=')) options.email = arg.slice('--email='.length)
     else if (arg === '--password') options.password = argv[++i]
     else if (arg.startsWith('--password=')) options.password = arg.slice('--password='.length)
-    else if (arg === '--min-squad-rows') options.minSquadRows = Number(argv[++i])
-    else if (arg.startsWith('--min-squad-rows=')) options.minSquadRows = Number(arg.slice('--min-squad-rows='.length))
+    else if (arg === '--min-team-player-rows') options.minTeamPlayerRows = Number(argv[++i])
+    else if (arg.startsWith('--min-team-player-rows=')) options.minTeamPlayerRows = Number(arg.slice('--min-team-player-rows='.length))
+    else if (arg === '--min-squad-rows') options.minTeamPlayerRows = Number(argv[++i])
+    else if (arg.startsWith('--min-squad-rows=')) options.minTeamPlayerRows = Number(arg.slice('--min-squad-rows='.length))
     else if (arg === '--min-match-rows') options.minMatchRows = Number(argv[++i])
     else if (arg.startsWith('--min-match-rows=')) options.minMatchRows = Number(arg.slice('--min-match-rows='.length))
     else throw new Error(`Unknown option: ${arg}`)
@@ -54,6 +56,14 @@ async function countRows(supabase, table, userId) {
   return count ?? 0
 }
 
+async function countAccessibleRows(supabase, table) {
+  const { count, error } = await supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+  if (error) throw error
+  return count ?? 0
+}
+
 loadDotEnv('.env.local')
 loadDotEnv('.env')
 
@@ -66,7 +76,7 @@ if (!supabaseUrl) throw new Error('Missing PUBLIC_SUPABASE_URL or SUPABASE_URL')
 if (!anonKey) throw new Error('Missing PUBLIC_SUPABASE_ANON_KEY')
 if (!email) throw new Error('Missing reviewer email')
 if (!options.password) throw new Error('Missing REVIEWER_PASSWORD')
-if (!Number.isFinite(options.minSquadRows) || options.minSquadRows < 0) throw new Error('Invalid --min-squad-rows value')
+if (!Number.isFinite(options.minTeamPlayerRows) || options.minTeamPlayerRows < 0) throw new Error('Invalid --min-team-player-rows value')
 if (!Number.isFinite(options.minMatchRows) || options.minMatchRows < 0) throw new Error('Invalid --min-match-rows value')
 
 const supabase = createClient(supabaseUrl, anonKey, {
@@ -82,13 +92,13 @@ if (error) throw new Error(`Reviewer sign-in failed: ${error.message}`)
 const userId = data.user?.id
 if (!userId) throw new Error('Reviewer sign-in did not return a user id')
 
-const [{ data: subscription, error: subError }, squadRows, matchRows] = await Promise.all([
+const [{ data: subscription, error: subError }, teamPlayerRows, matchRows] = await Promise.all([
   supabase
     .from('subscriptions')
     .select('plan, status, custom_features')
     .eq('user_id', userId)
     .maybeSingle(),
-  countRows(supabase, 'squad', userId),
+  countAccessibleRows(supabase, 'team_players'),
   countRows(supabase, 'matches', userId)
 ])
 
@@ -97,8 +107,8 @@ if (!subscription) throw new Error('Reviewer subscription row is missing')
 if (!['active', 'trialing'].includes(subscription.status)) {
   throw new Error(`Reviewer subscription is not active: ${subscription.status}`)
 }
-if (squadRows < options.minSquadRows) {
-  throw new Error(`Reviewer squad has ${squadRows} rows; expected at least ${options.minSquadRows}`)
+if (teamPlayerRows < options.minTeamPlayerRows) {
+  throw new Error(`Reviewer team_players has ${teamPlayerRows} rows; expected at least ${options.minTeamPlayerRows}`)
 }
 if (matchRows < options.minMatchRows) {
   throw new Error(`Reviewer matches has ${matchRows} rows; expected at least ${options.minMatchRows}`)
@@ -110,5 +120,5 @@ console.log('Reviewer account verified')
 console.log(`email: ${email}`)
 console.log(`user id: ${userId}`)
 console.log(`subscription: ${subscription.plan} / ${subscription.status}`)
-console.log(`squad rows: ${squadRows}`)
+console.log(`team player rows: ${teamPlayerRows}`)
 console.log(`match rows: ${matchRows}`)

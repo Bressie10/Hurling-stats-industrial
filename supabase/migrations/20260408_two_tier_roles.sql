@@ -15,13 +15,28 @@ create table if not exists team_members (
 );
 
 -- ── 2. Migrate existing team assignments ─────────────────
--- Anyone who had a team_id on club_members gets a team_members row.
--- ON CONFLICT DO NOTHING is safe to re-run.
-insert into team_members (club_id, team_id, user_id, role)
-select club_id, team_id, user_id, 'coach'
-from   club_members
-where  team_id is not null
-on conflict do nothing;
+-- Older manually-created schemas temporarily stored team assignment on
+-- club_members.team_id. Fresh migration-based schemas may not have that column,
+-- so keep this as a conditional legacy backfill instead of making team_id part
+-- of the club_members model again.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'club_members'
+      and column_name = 'team_id'
+  ) then
+    execute $sql$
+      insert into public.team_members (club_id, team_id, user_id, role)
+      select cm.club_id, cm.team_id, cm.user_id, 'coach'
+      from public.club_members cm
+      where cm.team_id is not null
+      on conflict do nothing
+    $sql$;
+  end if;
+end $$;
 
 -- ── 3. Rename 'member' role → 'coach' on club_members ────
 update club_members set role = 'coach' where role = 'member';

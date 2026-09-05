@@ -18,6 +18,7 @@ import {
   saveSquad,
   setLastUserId,
 } from './db.js'
+import { createRosterPlayer, isUuid } from './team-players.js'
 
 function resetIndexedDb() {
   globalThis.indexedDB = new FDBFactory()
@@ -70,19 +71,81 @@ describe('IndexedDB outbox', () => {
     expect(await countFinishedMatches()).toBe(2)
   })
 
-  it('enqueues full-squad replacement mutations', async () => {
-    await saveSquad([
-      { id: 1, name: 'A Player', number: 1, position: 'GK' },
-      { id: 2, name: 'B Player', number: 2, position: 'FB' },
-    ])
+  it('stores team players with stable UUID identities and enqueues team-player sync', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    await saveSquad(
+      [
+        createRosterPlayer({ name: 'A Player', number: 1, position: 'GK' }),
+        createRosterPlayer({ name: 'B Player', number: 2, position: 'FB' }),
+      ],
+      { teamScope },
+    )
 
-    const squad = await loadSquad()
+    const squad = await loadSquad({ teamScope })
     const [mutation] = await getReadyMutations()
 
     expect(squad.map((player) => player.name)).toEqual(['A Player', 'B Player'])
-    expect(mutation.op).toBe('upsert_squad')
+    expect(squad.every((player) => isUuid(player.id))).toBe(true)
+    expect(mutation.op).toBe('upsert_team_players')
+    expect(mutation.team_id).toBe(teamScope)
     expect(mutation.payload).toHaveLength(2)
     expect(mutation.payload.every((player) => typeof player.updated_at === 'number')).toBe(true)
+  })
+
+  it('allows duplicate player names because identity is the UUID', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const first = createRosterPlayer({ name: 'John Murphy', number: 10, position: 'HF' })
+    const second = createRosterPlayer({ name: 'John Murphy', number: 11, position: 'HF' })
+
+    await saveSquad([first, second], { teamScope })
+
+    const squad = await loadSquad({ teamScope })
+    expect(squad.map((player) => player.name)).toEqual(['John Murphy', 'John Murphy'])
+    expect(new Set(squad.map((player) => player.id)).size).toBe(2)
+  })
+
+  it('keeps player identity stable when name or jersey number changes', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const player = createRosterPlayer({ name: 'Old Name', number: 7, position: 'MF' })
+
+    await saveSquad([player], { teamScope })
+    await saveSquad([{ ...player, name: 'New Name', number: 12 }], { teamScope })
+
+    await expect(loadSquad({ teamScope })).resolves.toMatchObject([
+      { id: player.id, name: 'New Name', number: 12 },
+    ])
+  })
+
+  it('keeps team rosters separated by active team scope', async () => {
+    const teamA = '00000000-0000-4000-8000-000000000001'
+    const teamB = '00000000-0000-4000-8000-000000000002'
+
+    await saveSquad([createRosterPlayer({ name: 'Team A Player', number: 1 })], {
+      teamScope: teamA,
+    })
+    await saveSquad([createRosterPlayer({ name: 'Team B Player', number: 1 })], {
+      teamScope: teamB,
+    })
+
+    await expect(loadSquad({ teamScope: teamA })).resolves.toMatchObject([
+      { name: 'Team A Player' },
+    ])
+    await expect(loadSquad({ teamScope: teamB })).resolves.toMatchObject([
+      { name: 'Team B Player' },
+    ])
+  })
+
+  it('syncs removed players as inactive instead of deleting their identity', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const player = createRosterPlayer({ name: 'Leaving Player', number: 5 })
+    await saveSquad([player], { teamScope })
+    await markMutationDone((await getReadyMutations())[0].id)
+
+    await saveSquad([], { teamScope })
+    const [mutation] = await getReadyMutations()
+
+    expect(await loadSquad({ teamScope })).toEqual([])
+    expect(mutation.payload).toMatchObject([{ id: player.id, status: 'inactive' }])
   })
 
   it('backs off failed mutations without deleting them', async () => {

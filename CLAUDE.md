@@ -125,7 +125,7 @@ All tables have RLS. `custom_features` keys: `isPro`, `isClub`, `isClubPro` (boo
 - Team: `coach` | `player` (multiple teams via multiple `team_members` rows)
 - `activeTeamId` persisted to `localStorage('active-team-id')`
 - `src/lib/team-scope.js` is the source for the active-team localStorage key and personal/team scope normalization.
-- `supabase/migrations/20260617_team_scoped_data_and_rls.sql` adds `team_id` to match/squad cloud rows, changes match cloud conflicts to `(id, user_id)`, tightens teams/live session RLS, and validates that user-owned rows are tagged only to teams the user can access. `supabase/migrations/20260617_team_scoped_policy_reset.sql` must run after it to remove stale policy variants and recreate the intended policy set.
+- `supabase/migrations/20260617000200_team_scoped_data_and_rls.sql` adds `team_id` to match/squad cloud rows, changes match cloud conflicts to `(id, user_id)`, tightens teams/live session RLS, and validates that user-owned rows are tagged only to teams the user can access. `supabase/migrations/20260617000300_team_scoped_policy_reset.sql` must run after it to remove stale policy variants and recreate the intended policy set.
 
 **Code-based joins:** Team joins go through the `join_team_with_code(p_code text)` security-definer RPC. Club-code lookup goes through `find_club_by_code(p_code text)`. Do not reintroduce direct client inserts into `club_members` / `team_members` for self-join flows.
 

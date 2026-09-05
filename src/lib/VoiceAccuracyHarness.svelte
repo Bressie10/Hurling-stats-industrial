@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { loadSquad } from './db.js'
   import { isOnDeviceSpeechAvailable, recognizeOnDeviceSpeech } from './on-device-speech.js'
+  import { playerHasDisplayName, playerIdentity, playerLabel, playerName } from './team-players.js'
   import { VOICE_ACTIONS } from './voice-log-config.js'
   import { buildVoiceVocabulary, parseVoiceLog } from './voice-log-parser.js'
 
@@ -32,7 +33,7 @@
   let expectedStat = $state('')
   let lastSpeechDiagnostics = $state('Not checked')
 
-  let namedPlayers = $derived(players.filter((player) => player?.name?.trim()))
+  let namedPlayers = $derived(players.filter(playerHasDisplayName))
   let latestSample = $derived(samples[0] || null)
   let networkMode = $derived(networkOnline ? 'online' : 'offline')
   let liveTranscript = $derived(
@@ -115,7 +116,9 @@
   }
 
   function expectedPlayerName() {
-    return namedPlayers.find((player) => String(player.id) === String(expectedPlayerId))?.name || ''
+    return playerName(
+      namedPlayers.find((player) => playerIdentity(player) === String(expectedPlayerId)),
+    )
   }
 
   function sampleStatus(sample) {
@@ -434,8 +437,8 @@
         <select bind:value={expectedPlayerId}>
           <option value="">Unset</option>
           {#each namedPlayers as player}
-            <option value={String(player.id)}>
-              {player.number ? `#${player.number} ` : ''}{player.name}
+            <option value={playerIdentity(player)}>
+              {playerLabel(player)}
             </option>
           {/each}
         </select>

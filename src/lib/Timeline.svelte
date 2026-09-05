@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
+  import { findPlayerById } from './team-players.js'
 
   let matches = $state([])
   let selectedMatch = $state(null)
@@ -15,7 +16,7 @@
   })
 
   function getPlayerName(match, playerId) {
-    const p = (match.players || []).find(p => p.id === playerId)
+    const p = findPlayerById(match.players || [], playerId)
     return p ? (p.name || `#${p.number}`) : 'Unknown'
   }
 

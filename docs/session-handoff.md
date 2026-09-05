@@ -129,8 +129,8 @@ PWABuilder optional warnings are not the release target. The release target is A
   - IndexedDB is bumped to v3 with `squad_by_team`; personal legacy squad rows can still load through the old `squad` store.
   - Draft IDs are `draft` for personal scope and `draft:<teamScope>` for team scope.
   - Match and squad sync mutations carry `teamScope` and `team_id`.
-  - Supabase migration `20260617_team_scoped_data_and_rls.sql` adds `team_id` to `matches` and `squad`, changes match cloud conflicts to `(id, user_id)`, adds membership-aware helper functions, tightens `teams`/`live_sessions` RLS, and validates that user-owned match/squad rows are tagged only to teams the user can access.
-  - Supabase migration `20260617_team_scoped_policy_reset.sql` must run after it; it removes stale policy variants on the affected tables and recreates the intended policy set.
+  - Supabase migration `20260617000200_team_scoped_data_and_rls.sql` adds `team_id` to `matches` and `squad`, changes match cloud conflicts to `(id, user_id)`, adds membership-aware helper functions, tightens `teams`/`live_sessions` RLS, and validates that user-owned match/squad rows are tagged only to teams the user can access.
+  - Supabase migration `20260617000300_team_scoped_policy_reset.sql` must run after it; it removes stale policy variants on the affected tables and recreates the intended policy set.
   - Supabase migration `20260618_free_match_quota.sql` adds a database trigger for the free 2-match cap so direct Supabase writes and background sync upserts cannot bypass the local app check. Apply the ordered release SQL with `npm run supabase:migration:release-required` when `SUPABASE_DB_URL` is set, or paste the three SQL files into Supabase in order.
 - Voice parser accuracy was tightened:
   - `parseVoiceLog` accepts native STT alternatives and returns `matchSource`/`needsLocation`.
@@ -249,8 +249,8 @@ PWABuilder optional warnings are not the release target. The release target is A
   - `npm run store:verify-reviewer` passed for `reviewer@pitchnote.ie` with `personal / active`, 25 squad rows, and 3 match rows.
   - Supabase billing function URLs are reachable: checkout/portal/cancel CORS preflight returns `200`, and an unsigned webhook request returns `400` as expected.
   - `npm run team-scope:check:live` passed after fixing the verifier's generated team-code collision.
-  - `npm run account:delete:check:live` passed on 2026-06-18 after applying `supabase/migrations/20260617_account_deletion_rpc_auth_guard.sql` through the Supabase SQL Editor.
-  - `npm run team-scope:check:live` now reaches Supabase but fails because live `matches` does not accept `onConflict=id,user_id`; apply `supabase/migrations/20260617_team_scoped_data_and_rls.sql` and `supabase/migrations/20260617_team_scoped_policy_reset.sql`, then rerun it.
+  - `npm run account:delete:check:live` passed on 2026-06-18 after applying `supabase/migrations/20260617000100_account_deletion_rpc_auth_guard.sql` through the Supabase SQL Editor.
+  - `npm run team-scope:check:live` now reaches Supabase but fails because live `matches` does not accept `onConflict=id,user_id`; apply `supabase/migrations/20260617000200_team_scoped_data_and_rls.sql` and `supabase/migrations/20260617000300_team_scoped_policy_reset.sql`, then rerun it.
   - `supabase/migrations/20260618_free_match_quota.sql` and `npm run free-quota:check:live` are now present. Apply the team-scoped migrations first, then apply the free-quota SQL and rerun the free-quota verifier.
   - `npm run store:check:live` still fails because `whois pitchnote.ie` returns `Not found` and the domain resolves as `NXDOMAIN`.
   - Current web build was prepared and synced into the iOS wrapper.

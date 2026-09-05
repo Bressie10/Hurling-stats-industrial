@@ -10,6 +10,7 @@ import {
   saveMatch,
   saveSquad,
 } from './db.js'
+import { createRosterPlayer } from './team-players.js'
 
 const { mockSupabase, cloudRows, mutationCalls, mutationErrors } = vi.hoisted(() => ({
   mockSupabase: {
@@ -20,7 +21,7 @@ const { mockSupabase, cloudRows, mutationCalls, mutationErrors } = vi.hoisted(()
   },
   cloudRows: {
     matches: [],
-    squad: [],
+    team_players: [],
   },
   mutationCalls: {
     deletes: [],
@@ -70,7 +71,14 @@ function createTableClient(table) {
 
   return {
     select: vi.fn(() => ({
-      eq: vi.fn(() => Promise.resolve({ data: cloudRows[table] ?? [], error: null })),
+      eq: vi.fn((column, value) =>
+        Promise.resolve({
+          data: (cloudRows[table] ?? []).filter((row) => String(row[column]) === String(value)),
+          error: null,
+        }),
+      ),
+      then: (resolve, reject) =>
+        Promise.resolve({ data: cloudRows[table] ?? [], error: null }).then(resolve, reject),
     })),
     delete: vi.fn(deleteBuilder),
     upsert: vi.fn((payload, options) => {
@@ -99,18 +107,16 @@ function cloudMatch(id, updatedAt, overrides = {}) {
   }
 }
 
-function cloudSquad(localId, updatedAt, overrides = {}) {
+function cloudTeamPlayer(id, teamId, updatedAt, overrides = {}) {
   return {
-    id: `user-a:${localId}`,
-    user_id: 'user-a',
-    data: {
-      local_id: localId,
-      name: 'Cloud Player',
-      number: localId,
-      position: 'HF',
-      updated_at: updatedAt,
-      ...overrides,
-    },
+    id,
+    team_id: teamId,
+    display_name: 'Cloud Player',
+    default_number: 7,
+    position: 'HF',
+    status: 'active',
+    updated_at: new Date(updatedAt).toISOString(),
+    ...overrides,
   }
 }
 
@@ -121,15 +127,19 @@ describe('Supabase sync merge', () => {
     mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null }, error: null })
     mockSupabase.from.mockImplementation(createTableClient)
     cloudRows.matches = []
-    cloudRows.squad = []
+    cloudRows.team_players = []
     mutationCalls.deletes = []
     mutationCalls.upserts = []
     mutationErrors.upsert = {}
   })
 
-  it('restores cloud matches and squad into an empty local database', async () => {
+  it('restores cloud matches and shared team players into an empty local database', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const playerId = '00000000-0000-4000-8000-000000000101'
     cloudRows.matches = [cloudMatch('1001', 2000, { opposition: 'Restored Match' })]
-    cloudRows.squad = [cloudSquad(7, 2000, { name: 'Restored Player' })]
+    cloudRows.team_players = [
+      cloudTeamPlayer(playerId, teamScope, 2000, { display_name: 'Restored Player' }),
+    ]
     const { syncFromSupabase } = await import('./sync.js')
 
     await expect(syncFromSupabase('user-a')).resolves.toBe(true)
@@ -137,10 +147,14 @@ describe('Supabase sync merge', () => {
     expect(await loadMatches()).toMatchObject([
       { id: 1001, opposition: 'Restored Match', updated_at: 2000 },
     ])
-    expect(await loadSquad()).toMatchObject([{ id: 7, name: 'Restored Player', updated_at: 2000 }])
+    expect(await loadSquad({ teamScope })).toMatchObject([
+      { id: playerId, name: 'Restored Player', updated_at: 2000 },
+    ])
   })
 
-  it('does not overwrite newer local match and squad data with stale cloud rows', async () => {
+  it('does not overwrite newer local match and team-player data with stale cloud rows', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const playerId = '00000000-0000-4000-8000-000000000103'
     const db = await getDB()
     await db.put('matches', {
       id: 22,
@@ -150,21 +164,31 @@ describe('Supabase sync merge', () => {
       events: [],
       updated_at: 5000,
     })
-    await db.put('squad', {
-      id: 3,
+    await db.put('team_players_by_team', {
+      id: playerId,
+      team_player_id: playerId,
       name: 'New Local Player',
+      display_name: 'New Local Player',
       number: 3,
+      default_number: 3,
       position: 'FB',
+      status: 'active',
+      teamScope,
+      teamId: teamScope,
       updated_at: 5000,
     })
     cloudRows.matches = [cloudMatch('22', 1000, { opposition: 'Stale Cloud Match' })]
-    cloudRows.squad = [cloudSquad(3, 1000, { name: 'Stale Cloud Player' })]
+    cloudRows.team_players = [
+      cloudTeamPlayer(playerId, teamScope, 1000, { display_name: 'Stale Cloud Player' }),
+    ]
     const { syncFromSupabase } = await import('./sync.js')
 
     await expect(syncFromSupabase('user-a')).resolves.toBe(true)
 
     expect(await loadMatches()).toMatchObject([{ id: 22, opposition: 'New Local Match' }])
-    expect(await loadSquad()).toMatchObject([{ id: 3, name: 'New Local Player' }])
+    expect(await loadSquad({ teamScope })).toMatchObject([
+      { id: playerId, name: 'New Local Player' },
+    ])
   })
 
   it('does not overwrite newer local team-scoped matches with stale cloud rows', async () => {
@@ -252,23 +276,48 @@ describe('Supabase sync merge', () => {
     })
   })
 
-  it('syncs an emptied squad by deleting remote squad rows in the same scope', async () => {
-    cloudRows.squad = [
-      cloudSquad(7, 2000, { name: 'Remove One' }),
-      cloudSquad(8, 2000, { name: 'Remove Two' }),
-    ]
-    await saveSquad([])
+  it('syncs a removed player by marking the canonical player inactive', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const player = createRosterPlayer({ name: 'Remove One', number: 7 })
+    await saveSquad([player], { teamScope })
+    const db = await getDB()
+    await db.clear('sync_outbox')
+    await saveSquad([], { teamScope })
     const { syncToSupabase } = await import('./sync.js')
 
     await expect(syncToSupabase('user-a')).resolves.toBe(true)
 
-    expect(mutationCalls.upserts).toHaveLength(0)
-    expect(mutationCalls.deletes).toContainEqual({
-      table: 'squad',
-      filters: [{ column: 'user_id', value: 'user-a' }],
-      column: 'id',
-      values: ['user-a:7', 'user-a:8'],
+    expect(mutationCalls.deletes).toHaveLength(0)
+    expect(mutationCalls.upserts).toContainEqual({
+      table: 'team_players',
+      options: { onConflict: 'id' },
+      payload: [
+        expect.objectContaining({
+          id: player.id,
+          team_id: teamScope,
+          display_name: 'Remove One',
+          status: 'inactive',
+        }),
+      ],
     })
-    expect(await loadSquad()).toEqual([])
+    expect(await loadSquad({ teamScope })).toEqual([])
+  })
+
+  it('lets different users pull the same shared team player ids for one team', async () => {
+    const teamScope = '00000000-0000-4000-8000-000000000001'
+    const playerId = '00000000-0000-4000-8000-000000000201'
+    cloudRows.team_players = [
+      cloudTeamPlayer(playerId, teamScope, 2000, { display_name: 'Shared Player' }),
+    ]
+    const { syncFromSupabase } = await import('./sync.js')
+
+    await expect(syncFromSupabase('coach-a')).resolves.toBe(true)
+    const coachASquad = await loadSquad({ teamScope })
+    await (await getDB()).clear('team_players_by_team')
+    await expect(syncFromSupabase('coach-b')).resolves.toBe(true)
+    const coachBSquad = await loadSquad({ teamScope })
+
+    expect(coachASquad).toMatchObject([{ id: playerId, name: 'Shared Player' }])
+    expect(coachBSquad).toMatchObject([{ id: playerId, name: 'Shared Player' }])
   })
 })

@@ -14,10 +14,16 @@ import {
   BACKGROUND_SYNC_AUTH_KEY,
   BACKGROUND_SYNC_TAG,
   matchToData,
+  msToIso,
   normalizePayloadTeamScope,
-  rowTeamScope,
-  squadCloudId,
 } from '$lib/sync-payloads.js'
+import { sanitizeTeamPlayerUpsertPayload } from '$lib/player-data-privacy.js'
+import {
+  playerHasDisplayName,
+  playerIdentity,
+  playerName,
+  playerNumber,
+} from '$lib/team-players.js'
 
 const CACHE = `gaa-${version}`
 const SHELL = `${base || ''}/`
@@ -188,53 +194,30 @@ async function applyMutationFromServiceWorker(auth, mutation) {
     return
   }
 
-  if (mutation.op === 'upsert_squad') {
+  if (mutation.op === 'upsert_team_players') {
     const teamScope = normalizePayloadTeamScope(mutation.teamScope ?? mutation.team_id)
-    const players = mutation.payload || []
+    const teamId = mutation.team_id ?? (teamScope === 'personal' ? null : teamScope)
+    const players = await sanitizeTeamPlayerUpsertPayload(mutation.payload || [])
+    if (!teamId) return
 
-    if (players.length > 0) {
-      const rows = players.map((player) => ({
-        id: squadCloudId(userId, player.id, teamScope),
-        user_id: userId,
-        team_id: mutation.team_id ?? null,
-        data: {
-          local_id: player.id,
-          name: player.name,
-          number: player.number,
-          position: player.position,
-          teamScope,
-          teamId: mutation.team_id ?? null,
-          updated_at: player.updated_at || 0,
-        },
-      }))
+    const rows = players.filter(playerHasDisplayName).map((player) => ({
+      id: playerIdentity(player),
+      team_id: teamId,
+      display_name: playerName(player).trim(),
+      default_number: playerNumber(player) ?? null,
+      position: player.position ?? null,
+      status: player.status || 'active',
+      joined_at: player.joined_at ?? null,
+      left_at: player.left_at ?? null,
+      updated_at: msToIso(player.updated_at),
+    }))
 
-      await supabaseRest(auth, 'squad', {
+    if (rows.length > 0) {
+      await supabaseRest(auth, 'team_players', {
         method: 'POST',
-        params: { on_conflict: 'id,user_id' },
+        params: { on_conflict: 'id' },
         prefer: 'resolution=merge-duplicates,return=minimal',
         body: rows,
-      })
-    }
-
-    const remote = await supabaseRest(auth, 'squad', {
-      params: {
-        select: 'id,data,team_id',
-        user_id: `eq.${userId}`,
-      },
-    })
-    const keep = new Set(players.map((player) => squadCloudId(userId, player.id, teamScope)))
-    const toDelete = (remote || [])
-      .filter((row) => rowTeamScope(row) === teamScope && !keep.has(String(row.id)))
-      .map((row) => String(row.id))
-
-    if (toDelete.length > 0) {
-      const inList = toDelete.map((id) => `"${id.replace(/"/g, '\\"')}"`).join(',')
-      await supabaseRest(auth, 'squad', {
-        method: 'DELETE',
-        params: {
-          user_id: `eq.${userId}`,
-          id: `in.(${inList})`,
-        },
       })
     }
     return

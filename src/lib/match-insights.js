@@ -1,3 +1,5 @@
+import { findPlayerById, playerIdentity, statsForPlayer } from './team-players.js'
+
 const STAT_LABELS = {
   Point: 'Points scored',
   Goal: 'Goals scored',
@@ -46,7 +48,7 @@ export function getTeamStatTotal(match, stat) {
 }
 
 function getPlayer(match, playerId) {
-  return (match?.players || []).find(p => String(p.id) === String(playerId)) || null
+  return findPlayerById(match?.players || [], playerId)
 }
 
 function getPlayerLabel(match, playerId) {
@@ -267,16 +269,16 @@ function buildScoringRun(match) {
 function buildPlayerImpact(match) {
   return (match?.players || [])
     .map(player => {
-      const stats = match?.stats?.[player.id] || {}
+      const stats = statsForPlayer(match?.stats, player)
       const score = num(stats.Goal) * 3 + num(stats.Point)
       const positive = score + num(stats.Tackle) + num(stats.Block) + num(stats['Turnover Won']) + num(stats['Free Won'])
       const negative = num(stats.Wide) + num(stats['Turnover Lost']) + num(stats['Yellow Card']) + num(stats['Red Card']) * 2
       const involvement = Object.values(stats).reduce((sum, value) => sum + num(value), 0)
       const impact = positive - negative
       return {
-        id: player.id,
+        id: playerIdentity(player),
         number: player.number,
-        name: player.name?.trim() || `#${player.number || player.id}`,
+        name: player.name?.trim() || `#${player.number || playerIdentity(player)}`,
         position: player.position || '',
         score,
         positive,

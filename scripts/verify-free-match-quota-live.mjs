@@ -115,7 +115,7 @@ function trackMatch(payload) {
 
 function explainWriteError(error) {
   if (error?.message?.includes(missingCompositeKeyError)) {
-    return `${error.message}; apply supabase/migrations/20260617_team_scoped_data_and_rls.sql and supabase/migrations/20260617_team_scoped_policy_reset.sql before rerunning live checks`
+    return `${error.message}; apply supabase/migrations/20260617000200_team_scoped_data_and_rls.sql and supabase/migrations/20260617000300_team_scoped_policy_reset.sql before rerunning live checks`
   }
   return error?.message
 }

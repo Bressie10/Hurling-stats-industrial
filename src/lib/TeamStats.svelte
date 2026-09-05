@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { loadMatches } from './db.js'
   import { settingsStore } from './settings-store.js'
+  import { findPlayerById, statsForPlayer } from './team-players.js'
 
   let matches = $state([])
   let selectedMatch = $state(null)
@@ -68,7 +69,7 @@
 
   function getPlayerName(playerId) {
     if (!selectedMatch) return 'Unknown'
-    const p = (selectedMatch.players || []).find(p => p.id === playerId)
+    const p = findPlayerById(selectedMatch.players || [], playerId)
     return p ? (p.name || `#${p.number}`) : 'Unknown'
   }
 
@@ -104,7 +105,7 @@
     let top = null, max = 0
     Object.entries(selectedMatch.stats || {}).forEach(([id, s]) => {
       const score = (s['Point'] || 0) + (s['Goal'] || 0) * 3
-      if (score > max) { max = score; top = { id: parseInt(id), score } }
+      if (score > max) { max = score; top = { id, score } }
     })
     if (!top) return null
     return { name: getPlayerName(top.id), score: top.score }
@@ -115,7 +116,7 @@
     let top = null, max = 0
     Object.entries(selectedMatch.stats || {}).forEach(([id, s]) => {
       const t = s['Tackle'] || 0
-      if (t > max) { max = t; top = { id: parseInt(id), count: t } }
+      if (t > max) { max = t; top = { id, count: t } }
     })
     if (!top || max === 0) return null
     return { name: getPlayerName(top.id), count: top.count }
@@ -363,7 +364,7 @@
           </thead>
           <tbody>
             {#each (selectedMatch.players || []) as player}
-              {@const s = selectedMatch.stats?.[player.id] || {}}
+              {@const s = statsForPlayer(selectedMatch.stats, player)}
               {@const hasStats = Object.values(s).some(v => v > 0)}
               {#if hasStats}
                 <tr>

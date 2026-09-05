@@ -1,3 +1,5 @@
+import { findPlayerById, playerIdentity, statsForPlayer } from './team-players.js'
+
 const STAT_ALIASES = {
   score: 'score',
   scores: 'score',
@@ -232,7 +234,7 @@ export function getRecentEvents(context, { limit = 5 } = {}) {
   const players = context.players || []
 
   return (context.events || []).slice(-max).reverse().map(event => {
-    const player = players.find(p => p.id === event.playerId)
+    const player = findPlayerById(players, event.playerId)
     return {
       time: formatTime(event.time ?? 0),
       period: event.period,
@@ -251,7 +253,7 @@ export function getPlayerStatLeaders(context, { stat = 'score', limit = 5 } = {}
   const rows = (context.players || [])
     .filter(p => p.name?.trim())
     .map(player => {
-      const playerStats = stats[player.id] || {}
+      const playerStats = statsForPlayer(stats, player)
       if (statName === 'score') {
         const goals = playerStats['Goal'] || 0
         const points = playerStats['Point'] || 0
@@ -295,7 +297,7 @@ export function getPlayerImpactLeaders(context, { limit = 5 } = {}) {
   const rows = (context.players || [])
     .filter(player => player.name?.trim())
     .map(player => {
-      const row = context.stats?.[player.id] || {}
+      const row = statsForPlayer(context.stats, player)
       const score = (row['Goal'] || 0) * 3 + (row['Point'] || 0)
       const positive = score + (row['Tackle'] || 0) + (row['Block'] || 0) + (row['Turnover Won'] || 0) + (row['Free Won'] || 0)
       const negative = (row['Wide'] || 0) + (row['Turnover Lost'] || 0) + (row['Yellow Card'] || 0) + ((row['Red Card'] || 0) * 2)
@@ -326,7 +328,7 @@ export function getPlayerQuickStats(context, { playerNumber } = {}) {
   const { player, number, error } = resolvePlayerByNumber(context, playerNumber)
   if (error) return { ok: false, error }
 
-  const playerStats = context.stats?.[player.id] || {}
+  const playerStats = statsForPlayer(context.stats, player)
   const goals = playerStats['Goal'] || 0
   const points = playerStats['Point'] || 0
   const wides = playerStats['Wide'] || 0
@@ -334,7 +336,7 @@ export function getPlayerQuickStats(context, { playerNumber } = {}) {
     .filter(([stat, count]) => !['Goal', 'Point', 'Wide'].includes(stat) && Number(count) > 0)
     .map(([stat, count]) => ({ stat, count }))
   const recentEvents = (context.events || [])
-    .filter(event => event.playerId === player.id)
+    .filter(event => String(event.playerId) === String(playerIdentity(player)))
     .slice(-5)
     .reverse()
     .map(event => ({
@@ -496,7 +498,7 @@ export function buildSidelineAnswerSnapshot(context = {}) {
   const players = (context.players || [])
     .filter(player => player.name?.trim())
     .map(player => {
-      const row = context.stats?.[player.id] || {}
+      const row = statsForPlayer(context.stats, player)
       const visibleStats = nonZeroStats(row)
       const involvement = Object.values(row).reduce((sum, value) => sum + (Number(value) || 0), 0)
       return {

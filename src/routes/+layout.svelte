@@ -9,6 +9,7 @@
   import { subscriptionStore, ensureProfile, loadSubscription } from '$lib/subscription-store.js'
   import { supabase } from '$lib/supabase.js'
   import { canUseClub, canUseFeature, FEATURES } from '$lib/entitlements.js'
+  import { recordLocalGpsAuthContext } from '$lib/gps-auth.js'
   import { shouldPromptForTeamSelection } from '$lib/team-scope.js'
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
@@ -221,6 +222,15 @@
 
           let subVal
           subscriptionStore.subscribe((s) => (subVal = s))()
+          try {
+            await recordLocalGpsAuthContext({
+              userId: u.id,
+              clubId: subVal.clubId,
+              teamIds: (subVal.teams || []).map((team) => team.id),
+            })
+          } catch (e) {
+            console.warn('Local GPS auth context update failed:', e)
+          }
 
           if (canUseClub(subVal) && subVal.isOwner && subVal.clubId && subVal.teams.length === 0) {
             needsTeamSetup = true
@@ -1332,7 +1342,9 @@
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
-      transition: color 0.15s, background 0.18s;
+      transition:
+        color 0.15s,
+        background 0.18s;
       -webkit-tap-highlight-color: transparent;
     }
     .mob-tab svg {

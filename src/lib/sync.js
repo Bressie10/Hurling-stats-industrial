@@ -13,11 +13,13 @@ import {
   BACKGROUND_SYNC_AUTH_KEY,
   BACKGROUND_SYNC_TAG,
   matchToData,
+  msToIso,
   normalizePayloadTeamScope,
   rowTeamScope,
-  squadCloudId,
-  squadLocalIdFromRow,
+  teamPlayerFromRow,
 } from './sync-payloads.js'
+import { sanitizeTeamPlayerUpsertPayload } from './player-data-privacy.js'
+import { playerHasDisplayName, playerIdentity, playerName, playerNumber } from './team-players.js'
 
 // ── Public API ──────────────────────────────────────────────────────────────
 // scheduleAutoSync, syncToSupabase, syncFromSupabase, deleteMatchFromCloud
@@ -181,48 +183,27 @@ async function applyMutation(userId, m) {
     return
   }
 
-  if (m.op === 'upsert_squad') {
+  if (m.op === 'upsert_team_players') {
     const teamScope = normalizePayloadTeamScope(m.teamScope ?? m.team_id)
-    const players = m.payload || []
+    const teamId = m.team_id ?? (teamScope === 'personal' ? null : teamScope)
+    const players = await sanitizeTeamPlayerUpsertPayload(m.payload || [])
+    if (!teamId) return
 
-    if (players.length > 0) {
-      const rows = players.map((p) => ({
-        id: squadCloudId(userId, p.id, teamScope),
-        user_id: userId,
-        team_id: m.team_id ?? null,
-        data: {
-          local_id: p.id,
-          name: p.name,
-          number: p.number,
-          position: p.position,
-          teamScope,
-          teamId: m.team_id ?? null,
-          updated_at: p.updated_at || 0,
-        },
-      }))
-      const { error } = await supabase.from('squad').upsert(rows, { onConflict: 'id,user_id' })
+    const rows = players.filter(playerHasDisplayName).map((p) => ({
+      id: playerIdentity(p),
+      team_id: teamId,
+      display_name: playerName(p).trim(),
+      default_number: playerNumber(p) ?? null,
+      position: p.position ?? null,
+      status: p.status || 'active',
+      joined_at: p.joined_at ?? null,
+      left_at: p.left_at ?? null,
+      updated_at: msToIso(p.updated_at),
+    }))
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from('team_players').upsert(rows, { onConflict: 'id' })
       if (error) throw error
-    }
-
-    // Reconcile deletions: anything in cloud but not in our roster is gone.
-    const { data: remote, error: selErr } = await supabase
-      .from('squad')
-      .select('id,data,team_id')
-      .eq('user_id', userId)
-    if (selErr) throw selErr
-    if (remote) {
-      const keep = new Set(players.map((p) => squadCloudId(userId, p.id, teamScope)))
-      const toDelete = remote
-        .filter((r) => rowTeamScope(r) === teamScope && !keep.has(String(r.id)))
-        .map((r) => r.id)
-      if (toDelete.length > 0) {
-        const { error } = await supabase
-          .from('squad')
-          .delete()
-          .eq('user_id', userId)
-          .in('id', toDelete)
-        if (error) throw error
-      }
     }
     return
   }
@@ -261,12 +242,12 @@ async function pullFromCloud(userId) {
   if (pulling) return false
   pulling = true
   try {
-    const [matchRes, squadRes] = await Promise.all([
+    const [matchRes, teamPlayersRes] = await Promise.all([
       supabase.from('matches').select('*').eq('user_id', userId),
-      supabase.from('squad').select('*').eq('user_id', userId),
+      supabase.from('team_players').select('*'),
     ])
     if (matchRes.error) throw matchRes.error
-    if (squadRes.error) throw squadRes.error
+    if (teamPlayersRes.error) throw teamPlayersRes.error
 
     const db = await getDB()
 
@@ -312,14 +293,13 @@ async function pullFromCloud(userId) {
       await tx.done
     }
 
-    // Squad: roster-level updated_at (max over players). Cloud wins when
+    // Team players: roster-level updated_at (max over players). Cloud wins when
     // strictly newer, OR when local is empty and cloud has data — that second
-    // clause is what restores squads after a sign-out wipe on legacy rows
-    // (which have no data.updated_at and would otherwise tie at 0 forever).
+    // clause is what restores rosters after a sign-out wipe.
     // Local edits aren't squashed; they sit in the outbox until the next drain.
-    if (squadRes.data) {
+    if (teamPlayersRes.data) {
       const byScope = new Map()
-      for (const row of squadRes.data) {
+      for (const row of teamPlayersRes.data) {
         const scope = rowTeamScope(row)
         if (!byScope.has(scope)) byScope.set(scope, [])
         byScope.get(scope).push(row)
@@ -328,21 +308,11 @@ async function pullFromCloud(userId) {
       for (const [teamScope, rows] of byScope) {
         const localSquad = await loadSquad({ teamScope })
         const localMax = localSquad.reduce((m, p) => Math.max(m, p.updated_at || 0), 0)
-        const cloudMax = rows.reduce((m, r) => Math.max(m, r.data?.updated_at || 0), 0)
+        const cloudPlayers = rows.map((row) => teamPlayerFromRow(row, teamScope))
+        const cloudMax = cloudPlayers.reduce((m, p) => Math.max(m, p.updated_at || 0), 0)
         const localEmpty = localSquad.length === 0
         if (rows.length > 0 && (localEmpty || cloudMax > localMax)) {
-          await replaceSquadForScope(
-            rows.map((row) => ({
-              id: squadLocalIdFromRow(row),
-              name: row.data?.name,
-              number: row.data?.number,
-              position: row.data?.position,
-              teamScope,
-              teamId: row.data?.teamId ?? row.team_id ?? null,
-              updated_at: row.data?.updated_at || 0,
-            })),
-            teamScope,
-          )
+          await replaceSquadForScope(cloudPlayers, teamScope)
         }
       }
     }

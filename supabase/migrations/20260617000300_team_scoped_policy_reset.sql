@@ -3,7 +3,7 @@
 -- The first team-scope migration drops known policy names. Some environments
 -- can still have older policies under different names, so this migration
 -- removes every policy on the affected tables before recreating the intended
--- policy set. This must run after 20260617_team_scoped_data_and_rls.sql because
+-- policy set. This must run after 20260617000200_team_scoped_data_and_rls.sql because
 -- the recreated match/squad policies reference the team_id columns added there.
 
 create or replace function public.is_club_admin(p_club_id uuid)

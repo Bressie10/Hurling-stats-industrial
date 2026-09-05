@@ -2,12 +2,13 @@
   import { onMount, onDestroy } from 'svelte'
   import { loadMatches, loadSquad } from './db.js'
   import { Chart, registerables } from 'chart.js'
+  import { playerIdentity, playerLabel, statsForPlayer } from './team-players.js'
 
   Chart.register(...registerables)
 
   let matches = $state([])
-  let squadNames = $state(new Set())
-  let selectedPlayerName = $state(null)
+  let squad = $state([])
+  let selectedPlayerId = $state(null)
   let compareMode = $state(false)
   let matchA = $state(null)
   let matchB = $state(null)
@@ -18,34 +19,33 @@
     'Turnover Won','Turnover Lost','Free Won'
   ]
 
-  function normalizeName(name) {
-    return String(name || '').trim().toLowerCase()
-  }
-
   onMount(async () => {
-    const [loadedMatches, squad] = await Promise.all([loadMatches(), loadSquad()])
+    const [loadedMatches, loadedSquad] = await Promise.all([loadMatches(), loadSquad()])
     matches = loadedMatches.sort((a, b) => new Date(b.date) - new Date(a.date))
-    squadNames = new Set((squad || []).map(p => normalizeName(p.name)).filter(Boolean))
+    squad = loadedSquad || []
   })
 
   onDestroy(() => destroyChart())
 
   let allPlayers = $derived((() => {
     const map = {}
+    squad.forEach(p => {
+      const id = playerIdentity(p)
+      if (id) map[id] = { ...p, id }
+    })
     matches.forEach(m => {
       ;(m.players || []).forEach(p => {
-        const name = p.name?.trim()
-        const key = normalizeName(name)
-        if (!name) return
-        if (!map[key]) map[key] = { ...p, name }
+        const id = playerIdentity(p)
+        if (!id) return
+        if (!map[id]) map[id] = { ...p, id }
       })
     })
     return Object.values(map)
-      .filter(p => squadNames.has(normalizeName(p.name)))
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      .filter(p => playerLabel(p) !== 'Unknown')
+      .sort((a, b) => playerLabel(a).localeCompare(playerLabel(b)))
   })())
 
-  let selectedPlayer = $derived(allPlayers.find(p => normalizeName(p.name) === normalizeName(selectedPlayerName)) || null)
+  let selectedPlayer = $derived(allPlayers.find(p => playerIdentity(p) === String(selectedPlayerId)) || null)
 
   let playerStatKeys = $derived((() => {
     const keys = new Set(DEFAULT_STAT_KEYS)
@@ -58,51 +58,46 @@
     return [...keys]
   })())
 
-  function getPlayerIdInMatch(match, name) {
-    const wanted = normalizeName(name)
-    const p = (match.players || []).find(p => normalizeName(p.name) === wanted)
-    return p ? p.id : null
+  function getPlayerInMatch(match, id) {
+    return (match.players || []).find(p => playerIdentity(p) === String(id)) || null
   }
 
   let playerMatches = $derived(matches.filter(m =>
-    (m.players || []).some(p => normalizeName(p.name) === normalizeName(selectedPlayerName))
+    selectedPlayerId && (m.stats?.[selectedPlayerId] || getPlayerInMatch(m, selectedPlayerId))
   ))
 
   let aggregateStats = $derived((() => {
-    if (!selectedPlayerName) return {}
+    if (!selectedPlayerId) return {}
     const agg = {}
     playerStatKeys.forEach(k => (agg[k] = 0))
     playerMatches.forEach(m => {
-      const id = getPlayerIdInMatch(m, selectedPlayerName)
-      if (id === null) return
-      const s = m.stats?.[id] || {}
+      const s = m.stats?.[selectedPlayerId] || {}
       playerStatKeys.forEach(k => (agg[k] += s[k] || 0))
     })
     return agg
   })())
 
   let perMatchStats = $derived(playerMatches.map(m => {
-    const id = getPlayerIdInMatch(m, selectedPlayerName)
+    const player = getPlayerInMatch(m, selectedPlayerId)
     return {
       match: m,
-      stats: id !== null ? (m.stats?.[id] || {}) : {}
+      player,
+      stats: statsForPlayer(m.stats, selectedPlayerId)
     }
   }))
 
   let compareA = $derived((() => {
     if (!matchA) return {}
-    const id = getPlayerIdInMatch(matchA, selectedPlayerName)
-    return id !== null ? (matchA.stats?.[id] || {}) : {}
+    return statsForPlayer(matchA.stats, selectedPlayerId)
   })())
 
   let compareB = $derived((() => {
     if (!matchB) return {}
-    const id = getPlayerIdInMatch(matchB, selectedPlayerName)
-    return id !== null ? (matchB.stats?.[id] || {}) : {}
+    return statsForPlayer(matchB.stats, selectedPlayerId)
   })())
 
   let shootingAcc = $derived((() => {
-    if (!selectedPlayerName) return null
+    if (!selectedPlayerId) return null
     const scores = (aggregateStats['Point'] || 0) + (aggregateStats['Goal'] || 0)
     const wides = aggregateStats['Wide'] || 0
     const total = scores + wides
@@ -111,7 +106,7 @@
   })())
 
   $effect(() => {
-    if (canvas && selectedPlayerName && playerMatches.length > 0 && !compareMode) {
+    if (canvas && selectedPlayerId && playerMatches.length > 0 && !compareMode) {
       buildChart()
     } else {
       destroyChart()
@@ -130,9 +125,7 @@
     if (!canvas || playerMatches.length === 0) return
     const labels = [...playerMatches].reverse().map(m => `vs ${m.opposition}`)
     const points = [...playerMatches].reverse().map(m => {
-      const id = getPlayerIdInMatch(m, selectedPlayerName)
-      if (id === null) return 0
-      const s = m.stats?.[id] || {}
+      const s = statsForPlayer(m.stats, selectedPlayerId)
       return (s['Point'] || 0) + (s['Goal'] || 0) * 3
     })
     const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#5A8A00'
@@ -183,14 +176,14 @@
   <div class="selector-row">
     <div class="field-group">
       <label>Select player</label>
-      <select bind:value={selectedPlayerName}>
+      <select bind:value={selectedPlayerId}>
         <option value={null}>— Pick a player —</option>
         {#each allPlayers as p}
-          <option value={p.name}>{p.name}</option>
+          <option value={playerIdentity(p)}>{playerLabel(p)}</option>
         {/each}
       </select>
     </div>
-    {#if selectedPlayerName && playerMatches.length >= 2}
+    {#if selectedPlayerId && playerMatches.length >= 2}
       <div class="field-group">
         <label>&nbsp;</label>
         <button
@@ -203,7 +196,7 @@
   </div>
 
   <!-- EMPTY STATES -->
-  {#if !selectedPlayerName}
+  {#if !selectedPlayerId}
     <div class="empty-state">
       <div class="empty-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -280,10 +273,10 @@
     <!-- PROFILE -->
     <div class="card profile-card">
       <div class="profile-avatar">
-        {(selectedPlayer?.name || 'P').charAt(0).toUpperCase()}
+        {(playerLabel(selectedPlayer) || 'P').charAt(0).toUpperCase()}
       </div>
       <div class="profile-info">
-        <div class="profile-name">{selectedPlayer?.name || 'Unnamed'}</div>
+        <div class="profile-name">{playerLabel(selectedPlayer)}</div>
         <div class="profile-meta">
           {selectedPlayer?.position}
           · {playerMatches.length} match{playerMatches.length !== 1 ? 'es' : ''}

@@ -7,25 +7,40 @@ export function normalizePayloadTeamScope(value) {
   return text || PERSONAL_TEAM_SCOPE
 }
 
-export function squadCloudId(userId, localId, teamScope = PERSONAL_TEAM_SCOPE) {
-  const scope = normalizePayloadTeamScope(teamScope)
-  return scope === PERSONAL_TEAM_SCOPE ? `${userId}:${localId}` : `${userId}:${scope}:${localId}`
-}
-
-export function squadLocalIdFromRow(row) {
-  const localId = row?.data?.local_id ?? row?.id
-  if (typeof localId === 'string' && /^\d+$/.test(localId)) return Number(localId)
-  if (typeof localId === 'string' && localId.includes(':')) {
-    const tail = localId.split(':').at(-1)
-    return /^\d+$/.test(tail) ? Number(tail) : tail
-  }
-  return localId
-}
-
 export function rowTeamScope(row) {
   return normalizePayloadTeamScope(
     row?.data?.teamScope ?? row?.team_scope ?? row?.team_id ?? row?.data?.teamId,
   )
+}
+
+export function timestampToMs(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+export function msToIso(value) {
+  const ms = typeof value === 'number' && Number.isFinite(value) ? value : Date.now()
+  return new Date(ms).toISOString()
+}
+
+export function teamPlayerFromRow(row, teamScope = row?.team_id) {
+  const updatedAt = timestampToMs(row?.updated_at)
+  return {
+    id: row.id,
+    team_player_id: row.id,
+    name: row.display_name,
+    display_name: row.display_name,
+    number: row.default_number,
+    default_number: row.default_number,
+    position: row.position,
+    status: row.status || 'active',
+    joined_at: row.joined_at ?? null,
+    left_at: row.left_at ?? null,
+    teamScope: normalizePayloadTeamScope(teamScope),
+    teamId: row.team_id ?? null,
+    updated_at: updatedAt,
+  }
 }
 
 export function matchToData(m) {

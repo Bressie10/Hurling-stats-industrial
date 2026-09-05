@@ -5,9 +5,9 @@
   import { user } from './auth-store.js'
   import ConfirmModal from './ConfirmModal.svelte'
   import { showToast } from './toast.js'
+  import { createRosterPlayer, playerIdentity } from './team-players.js'
 
   let players = $state([])
-  let nextId = $state(21)
   let saved = $state(false)
   let saving = $state(false)
   let saveError = $state(false)
@@ -64,22 +64,22 @@
   // Rows of position numbers, top to bottom (forwards → GK)
   const PITCH_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]
 
-  const defaultSquad = Array.from({ length: 20 }, (_, i) => ({
-    id: i + 1,
-    name: '',
-    number: i + 1,
-    position: i < 15
-      ? ['Goalkeeper','Right Corner Back','Full Back','Left Corner Back','Right Half Back','Centre Back','Left Half Back','Midfield','Midfield','Right Half Forward','Centre Forward','Left Half Forward','Right Corner Forward','Full Forward','Left Corner Forward'][i]
-      : 'Sub'
-  }))
+  function defaultSquad() {
+    return Array.from({ length: 20 }, (_, i) => createRosterPlayer({
+      name: '',
+      number: i + 1,
+      position: i < 15
+        ? ['Goalkeeper','Right Corner Back','Full Back','Left Corner Back','Right Half Back','Centre Back','Left Half Back','Midfield','Midfield','Right Half Forward','Centre Forward','Left Half Forward','Right Corner Forward','Full Forward','Left Corner Forward'][i]
+        : 'Sub'
+    }))
+  }
 
   onMount(async () => {
     const savedSquad = await loadSquad()
     if (savedSquad && savedSquad.length > 0) {
       players = savedSquad.sort((a, b) => a.number - b.number)
-      nextId = Math.max(...savedSquad.map(p => p.id)) + 1
     } else {
-      players = defaultSquad.map(p => ({ ...p }))
+      players = defaultSquad()
     }
     loading = false
   })
@@ -92,13 +92,13 @@
   }
 
   function addPlayer() {
-    players = [...players, { id: nextId++, name: '', number: nextAvailableNumber(), position: 'Sub' }]
+    players = [...players, createRosterPlayer({ name: '', number: nextAvailableNumber(), position: 'Sub' })]
     markChanged()
   }
 
   function removePlayer(id) {
     if (players.length <= 1) return
-    players = players.filter(p => p.id !== id)
+    players = players.filter(p => playerIdentity(p) !== String(id))
     markChanged()
   }
 
@@ -171,7 +171,6 @@
     showClearDataConfirm = false
     await clearAllData()
     players = []
-    nextId = 1
     saved = false
     showToast('All data cleared.', 'success')
   }
@@ -197,10 +196,10 @@
         p.number = nextAvailableNumber()
       }
     } else {
-      const incoming = players.find(p => p.id === playerId)
+      const incoming = players.find(p => playerIdentity(p) === String(playerId))
       if (!incoming) return
       const existing = slotMap[pitchSlotTarget]
-      if (existing && existing.id !== incoming.id) {
+      if (existing && playerIdentity(existing) !== playerIdentity(incoming)) {
         // Displaced player takes incoming's old number/position
         if (incoming.position === 'Sub' || incoming.number > 15) {
           // Incoming was a sub — displaced player becomes sub with a free number
@@ -225,7 +224,6 @@
   function addNewPlayerToSlot() {
     const name = newPlayerName.trim()
     if (!name) return
-    const newId = nextId++
     const newNum = pitchSlotTarget ? pitchSlotTarget : nextAvailableNumber()
     const newPos = pitchSlotTarget ? SLOT_POSITION[pitchSlotTarget] : 'Sub'
     // If assigning to a slot, displace existing occupant first
@@ -236,7 +234,7 @@
         existing.number = nextAvailableNumber()
       }
     }
-    players = [...players, { id: newId, name, number: newNum, position: newPos }]
+    players = [...players, createRosterPlayer({ name, number: newNum, position: newPos })]
     showPitchModal = false
     addingNewPlayer = false
     newPlayerName = ''
@@ -245,7 +243,7 @@
 
   function removeSubFromPitch(playerId) {
     if (players.length <= 1) return
-    players = players.filter(p => p.id !== playerId)
+    players = players.filter(p => playerIdentity(p) !== String(playerId))
     markChanged()
   }
 

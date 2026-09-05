@@ -230,7 +230,7 @@ async function checkNativeConfig() {
   )
   check(
     pkg?.scripts?.['supabase:migration:account-delete-auth-guard'] ===
-      'node scripts/apply-supabase-migration.mjs supabase/migrations/20260617_account_deletion_rpc_auth_guard.sql',
+      'node scripts/apply-supabase-migration.mjs supabase/migrations/20260617000100_account_deletion_rpc_auth_guard.sql',
     'account deletion auth-guard migration apply script is registered',
   )
   check(
@@ -566,8 +566,9 @@ async function checkStoreModeCode() {
 
 async function checkTeamScopedSync() {
   const migrationDir = 'supabase/migrations'
-  const schemaMigration = '20260617_team_scoped_data_and_rls.sql'
-  const policyResetMigration = '20260617_team_scoped_policy_reset.sql'
+  const schemaMigration = '20260617000200_team_scoped_data_and_rls.sql'
+  const policyResetMigration = '20260617000300_team_scoped_policy_reset.sql'
+  const canonicalPlayersMigration = '20260619_team_players_canonical.sql'
   let migrations = []
   try {
     migrations = await readdir(rel(migrationDir))
@@ -583,12 +584,22 @@ async function checkTeamScopedSync() {
     migrations.includes(policyResetMigration),
     `team-scoped policy reset migration exists: ${policyResetMigration}`,
   )
+  check(
+    migrations.includes(canonicalPlayersMigration),
+    `canonical team-player migration exists: ${canonicalPlayersMigration}`,
+  )
   if (migrations.includes(schemaMigration) && migrations.includes(policyResetMigration)) {
     const ordered = migrations.slice().sort()
     check(
       ordered.indexOf(schemaMigration) < ordered.indexOf(policyResetMigration),
       'team-scoped policy reset migration runs after schema migration',
     )
+    if (migrations.includes(canonicalPlayersMigration)) {
+      check(
+        ordered.indexOf(policyResetMigration) < ordered.indexOf(canonicalPlayersMigration),
+        'canonical team-player migration runs after access helpers are reset',
+      )
+    }
   }
 
   const schema = await readText(`${migrationDir}/${schemaMigration}`)
@@ -615,6 +626,33 @@ async function checkTeamScopedSync() {
   check(
     policyReset.includes("tablename in ('teams', 'live_sessions', 'matches', 'squad')"),
     'team-scoped policy reset targets all affected tables',
+  )
+
+  const canonicalPlayers = await readText(`${migrationDir}/${canonicalPlayersMigration}`)
+  check(
+    canonicalPlayers.includes('create table if not exists public.team_players') &&
+      canonicalPlayers.includes('id uuid primary key') &&
+      canonicalPlayers.includes(
+        'team_id uuid not null references public.teams(id) on delete cascade',
+      ) &&
+      canonicalPlayers.includes('display_name text not null') &&
+      canonicalPlayers.includes("status text not null default 'active'"),
+    'canonical player migration creates team-owned stable player identities',
+  )
+  check(
+    canonicalPlayers.includes('alter table public.team_players enable row level security') &&
+      canonicalPlayers.includes('public.can_access_team(team_id)') &&
+      canonicalPlayers.includes('public.is_club_admin(t.club_id)'),
+    'canonical player migration protects team_players with existing team access helpers',
+  )
+  const playerSync = await readText('src/lib/sync.js')
+  const playerDb = await readText('src/lib/db.js')
+  check(
+    playerSync.includes("op === 'upsert_team_players'") &&
+      playerSync.includes(".from('team_players')") &&
+      playerDb.includes('team_players_by_team') &&
+      playerDb.includes("op: 'upsert_team_players'"),
+    'offline sync writes canonical team_players instead of legacy cloud squad rows',
   )
 
   const freeQuotaMigration = await readText(`${migrationDir}/20260618_free_match_quota.sql`)
@@ -689,7 +727,9 @@ async function checkTeamScopedSync() {
   check(
     liveTeamScope.includes('coach cannot read an unassigned same-club team') &&
       liveTeamScope.includes('coach cannot tag match to unassigned same-club team') &&
-      liveTeamScope.includes('coach cannot tag squad to unassigned same-club team') &&
+      liveTeamScope.includes('coach cannot write player to unassigned same-club team') &&
+      liveTeamScope.includes('club owner can read shared team player rows') &&
+      liveTeamScope.includes('outsider cannot read team player rows') &&
       liveTeamScope.includes('coach cannot start live session for unassigned same-club team'),
     'live team-scope RLS checker blocks same-club unassigned team access',
   )
@@ -718,12 +758,13 @@ async function checkTeamScopedSync() {
 }
 
 async function checkAccountDeletion() {
-  const migration = await readText('supabase/migrations/20260617_account_deletion_rpc.sql')
+  const migration = await readText('supabase/migrations/20260617000000_account_deletion_rpc.sql')
   const authGuardMigration = await readText(
-    'supabase/migrations/20260617_account_deletion_rpc_auth_guard.sql',
+    'supabase/migrations/20260617000100_account_deletion_rpc_auth_guard.sql',
   )
   const settings = await readText('src/lib/Settings.svelte')
   const liveVerifier = await readText('scripts/verify-account-deletion-live.mjs')
+  const canonicalPlayers = await readText('supabase/migrations/20260619_team_players_canonical.sql')
   check(
     migration.includes('create or replace function public.delete_own_account()') &&
       migration.includes('security definer') &&
@@ -749,6 +790,14 @@ async function checkAccountDeletion() {
       migration.includes('delete from public.subscriptions where user_id = $1') &&
       migration.includes('delete from public.profiles where id = $1'),
     'account deletion RPC removes user-owned cloud data',
+  )
+  check(
+    canonicalPlayers.includes(
+      'team_id uuid not null references public.teams(id) on delete cascade',
+    ) &&
+      liveVerifier.includes('target team player rows are deleted with owned team') &&
+      liveVerifier.includes('control team player remains'),
+    'team-owned players are removed through team deletion cascade while unrelated team players remain',
   )
   check(
     migration.includes('revoke all on function public.delete_own_account() from public') &&

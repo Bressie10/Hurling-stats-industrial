@@ -12,6 +12,14 @@
   import ConfirmModal from './ConfirmModal.svelte'
   import LiveVoiceLogger from './LiveVoiceLogger.svelte'
   import { canSaveFinishedMatch, FREE_MATCH_LIMIT } from './entitlements.js'
+  import {
+    createRosterPlayer,
+    findPlayerById,
+    playerIdentity,
+    playerLabel,
+    playerSnapshot,
+    statsForPlayer,
+  } from './team-players.js'
 
   // ── LIVE SHARING ─────────────────────────────────────────
   let liveSessionId = $state(null)
@@ -88,13 +96,13 @@
 
   // ── LINEUP ───────────────────────────────────
   // Auto-populated from squad jersey numbers; saved with match for PDF export
-  let lineup = $state({}) // { [positionNumber: 1-15]: playerId }
+  let lineup = $state({}) // { [positionNumber: 1-15]: team_player_id }
 
   function initLineup() {
     lineup = {}
     players.forEach(p => {
       if (p.name.trim() && p.number >= 1 && p.number <= 15) {
-        lineup[p.number] = p.id
+        lineup[p.number] = playerIdentity(p)
       }
     })
   }
@@ -103,7 +111,7 @@
   let puckouts = $state([])
   let showPuckoutModal = $state(false)
   let puckoutOutcome = $state(null)   // 'won' | 'lost'
-  let puckoutOurPlayer = $state(null) // player name string
+  let puckoutOurPlayer = $state(null) // team_player_id
   let puckoutOppPlayer = $state('')   // text input
 
   // ── OPPOSITION SCORE TRACKING ─────────────────
@@ -112,7 +120,7 @@
   let oppScoreStep = $state(1)        // 1=opp player number, 2=our marker
   let oppScoreType = $state(null)     // 'goal' | 'point'
   let oppScorePlayerNum = $state('')
-  let oppScoreMarker = $state(null)   // player name string
+  let oppScoreMarker = $state(null)   // team_player_id
 
   // ── PUCKOUT SECTION ───────────────────────────
   let puckoutSection = $state(null)  // e.g. 'short-top', 'midfield-bottom'
@@ -132,12 +140,13 @@
     return key.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
   }
 
-  const defaultSquad = Array.from({ length: 20 }, (_, i) => ({
-    id: i + 1,
-    name: '',
-    number: i + 1,
-    position: i < 15 ? ['GK','FB','FB','FB','HB','HB','HB','MF','MF','HF','HF','HF','FF','FF','FF'][i] : 'Sub'
-  }))
+  function defaultSquad() {
+    return Array.from({ length: 20 }, (_, i) => createRosterPlayer({
+      name: '',
+      number: i + 1,
+      position: i < 15 ? ['GK','FB','FB','FB','HB','HB','HB','MF','MF','HF','HF','HF','FF','FF','FF'][i] : 'Sub'
+    }))
+  }
 
   onMount(async () => {
     const saved = await loadSquad()
@@ -145,7 +154,7 @@
       saved.sort((a, b) => a.number - b.number)
       players = saved
     } else {
-      players = defaultSquad.map(p => ({ ...p }))
+      players = defaultSquad()
     }
 
     initLineup()
@@ -231,9 +240,10 @@
     if (!opposition.trim()) { oppositionError = 'Please enter the opposition team name.'; return }
     await saveSquad($state.snapshot(players))
     players.forEach(p => {
-      if (!stats[p.id]) {
-        stats[p.id] = {}
-        allStats.forEach(s => stats[p.id][s] = 0)
+      const id = playerIdentity(p)
+      if (!stats[id]) {
+        stats[id] = {}
+        allStats.forEach(s => stats[id][s] = 0)
       }
     })
     initLineup()
@@ -254,7 +264,7 @@
   let lastEventLabel = $derived((() => {
     if (events.length === 0) return null
     const last = events[events.length - 1]
-    const player = players.find(p => p.id === last.playerId)
+    const player = findPlayerById(players, last.playerId)
     return `${last.stat} — ${player?.name || (player ? '#' + player.number : '#' + last.playerId)}`
   })())
 
@@ -265,7 +275,10 @@
       if (id != null && !ids.includes(id)) ids.push(id)
     }
     return ids
-      .map(id => players.find(p => p.id === id && p.name?.trim()))
+      .map(id => {
+        const player = findPlayerById(players, id)
+        return player?.name?.trim() ? player : null
+      })
       .filter(Boolean)
   })())
 
@@ -302,8 +315,9 @@
     if (!trimmed || allStats.includes(trimmed)) return
     customStats = [...customStats, trimmed]
     players.forEach(p => {
-      if (!stats[p.id]) stats[p.id] = {}
-      stats[p.id][trimmed] = 0
+      const id = playerIdentity(p)
+      if (!stats[id]) stats[id] = {}
+      stats[id][trimmed] = 0
     })
     newCustomStat = ''
     showAddStat = false
@@ -367,10 +381,14 @@
   }
 
   function recordStat(playerId, stat, x = null, y = null, end = null) {
-    if (!stats[playerId]) stats[playerId] = {}
-    stats[playerId][stat] = (stats[playerId][stat] || 0) + 1
+    const id = String(playerId)
+    if (!stats[id]) stats[id] = {}
+    stats[id][stat] = (stats[id][stat] || 0) + 1
     const event = {
-      playerId, stat, period,
+      playerId: id,
+      team_player_id: id,
+      stat,
+      period,
       time: timerSeconds,
       x: x ?? null,
       y: y ?? null,
@@ -479,7 +497,7 @@
         notes,
         customStats,
         events,
-        players: players.map(p => ({ ...p })),
+        players: players.map(playerSnapshot),
         subs_log,
         puckouts,
         oppScores,
@@ -543,7 +561,7 @@
         id: savedMatchId, date: matchDate, opposition, venue, competition,
         period, score: matchScore, stats, notes, customStats, events,
         subs_log, puckouts, oppScores, lineup,
-        players: players.map(p => ({ ...p }))
+        players: players.map(playerSnapshot)
       }))
       // FIX: Poison the draft immediately after saveMatch succeeds.
       // If clearDraftMatch throws or the app crashes before it runs, the _saved
@@ -599,15 +617,19 @@
 
   function makeSub(playerOnId) {
     if (!subOff) return
-    const playerOffData = players.find(p => p.id === subOff)
-    const playerOnData = players.find(p => p.id === playerOnId)
+    const playerOffData = findPlayerById(players, subOff)
+    const playerOnData = findPlayerById(players, playerOnId)
     if (!playerOffData || !playerOnData) return
     const tempPos = playerOffData.position
     playerOffData.position = 'Sub'
     playerOnData.position = tempPos
     subs_log = [...subs_log, {
+      off_player_id: playerIdentity(playerOffData),
+      on_player_id: playerIdentity(playerOnData),
       off: playerOffData.name || `#${playerOffData.number}`,
       on: playerOnData.name || `#${playerOnData.number}`,
+      offSnapshot: playerSnapshot(playerOffData),
+      onSnapshot: playerSnapshot(playerOnData),
       time: timerSeconds,
       period
     }]
@@ -756,9 +778,12 @@
 
   function recordPuckout({ outcome, ourPlayer = null, oppPlayer = null, section = null } = {}) {
     if (!outcome) return
+    const player = ourPlayer ? findPlayerById(players, ourPlayer) : null
     puckouts = [...puckouts, {
       outcome,
-      ourPlayer,
+      ourPlayerId: player ? playerIdentity(player) : null,
+      ourPlayer: player ? playerLabel(player) : null,
+      ourPlayerSnapshot: player ? playerSnapshot(player) : null,
       oppPlayer,
       section,
       time: timerSeconds,
@@ -804,10 +829,13 @@
     if (type === 'point') matchScore.away.points++
     if (type === 'goal') matchScore.away.goals++
     if (includeDetails) {
+      const markerPlayer = marker ? findPlayerById(players, marker) : null
       oppScores = [...oppScores, {
         type,
         oppPlayerNum: oppPlayerNum == null ? null : String(oppPlayerNum).trim() || null,
-        marker,
+        markerPlayerId: markerPlayer ? playerIdentity(markerPlayer) : null,
+        marker: markerPlayer ? playerLabel(markerPlayer) : null,
+        markerSnapshot: markerPlayer ? playerSnapshot(markerPlayer) : null,
         time: timerSeconds,
         period
       }]
@@ -876,7 +904,7 @@
   }
 
   function htEventPlayerLabel(event) {
-    const player = players.find(p => p.id === event.playerId)
+    const player = findPlayerById(players, event.playerId)
     if (!player) return 'Unknown'
     return player.number ? `#${player.number} ${player.name || ''}`.trim() : (player.name || 'Unknown')
   }
@@ -976,7 +1004,7 @@
   let htTopScorer = $derived((() => {
     let best = null, max = 0
     players.filter(p => p.name?.trim()).forEach(p => {
-      const s = stats[p.id] || {}
+      const s = statsForPlayer(stats, p)
       const pts = (s['Goal'] || 0) * 3 + (s['Point'] || 0)
       if (pts > max) { max = pts; best = { name: p.name, goals: s['Goal'] || 0, points: s['Point'] || 0, pts } }
     })
@@ -1216,9 +1244,9 @@
               {#each allStats as stat}
                 <td>
                   <div class="counter">
-                    <button class="mini-dec" onclick={() => decrement(player.id, stat)}>−</button>
-                    <span class="mini-val">{stats[player.id]?.[stat] ?? 0}</span>
-                    <button class="mini-inc" onclick={() => logStat(player.id, stat)}>+</button>
+                    <button class="mini-dec" onclick={() => decrement(playerIdentity(player), stat)}>−</button>
+                    <span class="mini-val">{statsForPlayer(stats, player)?.[stat] ?? 0}</span>
+                    <button class="mini-inc" onclick={() => logStat(playerIdentity(player), stat)}>+</button>
                   </div>
                 </td>
               {/each}
@@ -1238,9 +1266,9 @@
               {#each allStats as stat}
                 <td>
                   <div class="counter">
-                    <button class="mini-dec" onclick={() => decrement(player.id, stat)}>−</button>
-                    <span class="mini-val">{stats[player.id]?.[stat] ?? 0}</span>
-                    <button class="mini-inc" onclick={() => logStat(player.id, stat)}>+</button>
+                    <button class="mini-dec" onclick={() => decrement(playerIdentity(player), stat)}>−</button>
+                    <span class="mini-val">{statsForPlayer(stats, player)?.[stat] ?? 0}</span>
+                    <button class="mini-inc" onclick={() => logStat(playerIdentity(player), stat)}>+</button>
                   </div>
                 </td>
               {/each}
@@ -1272,7 +1300,7 @@
           <div class="modal-section-label">Recent</div>
           <div class="recent-player-row">
             {#each recentEventPlayers as player}
-              <button class="recent-player-btn" onclick={() => logStat(player.id, selectedStat)}>
+              <button class="recent-player-btn" onclick={() => logStat(playerIdentity(player), selectedStat)}>
                 <span>#{player.number}</span>{player.name || 'Player'}
               </button>
             {/each}
@@ -1281,7 +1309,7 @@
         <div class="modal-section-label">Starters</div>
         <div class="player-grid">
           {#each starters as player}
-            <button class="player-btn" onclick={() => logStat(player.id, selectedStat)}>
+            <button class="player-btn" onclick={() => logStat(playerIdentity(player), selectedStat)}>
               <span class="player-num">#{player.number}</span>
               <span class="player-name">{player.name || 'Player'}</span>
             </button>
@@ -1291,7 +1319,7 @@
           <div class="modal-section-label">Subs</div>
           <div class="player-grid">
             {#each subs as player}
-              <button class="player-btn sub" onclick={() => logStat(player.id, selectedStat)}>
+              <button class="player-btn sub" onclick={() => logStat(playerIdentity(player), selectedStat)}>
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name || 'Player'}</span>
               </button>
@@ -1362,7 +1390,7 @@
           <div class="modal-section-label">Who is coming OFF?</div>
           <div class="player-grid">
             {#each starters as player}
-              <button class="player-btn" onclick={() => subOff = player.id}>
+              <button class="player-btn" onclick={() => subOff = playerIdentity(player)}>
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name || 'Player'}</span>
               </button>
@@ -1370,11 +1398,11 @@
           </div>
         {:else}
           <div class="modal-section-label">
-            Who is coming ON? (replacing {players.find(p => p.id === subOff)?.name || 'player'})
+            Who is coming ON? (replacing {findPlayerById(players, subOff)?.name || 'player'})
           </div>
           <div class="player-grid">
             {#each subs as player}
-              <button class="player-btn" onclick={() => makeSub(player.id)}>
+              <button class="player-btn" onclick={() => makeSub(playerIdentity(player))}>
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name || 'Player'}</span>
               </button>
@@ -1516,11 +1544,10 @@
             onclick={() => puckoutOurPlayer = null}
           >Skip</button>
           {#each [...starters, ...subs].filter(p => p.name?.trim()) as player}
-            {@const label = player.name?.trim() || `#${player.number}`}
             <button
               class="compact-player-btn"
-              class:selected-player={puckoutOurPlayer === label}
-              onclick={() => puckoutOurPlayer = label}
+              class:selected-player={puckoutOurPlayer === playerIdentity(player)}
+              onclick={() => puckoutOurPlayer = playerIdentity(player)}
             >
               <span>#{player.number}</span>{player.name?.trim()}
             </button>
@@ -1585,12 +1612,11 @@
           <div class="modal-section-label">Starters</div>
           <div class="player-grid">
             {#each starters as player}
-              {@const label = player.name?.trim() || `#${player.number}`}
-              <button
-                class="player-btn"
-                class:selected-player={oppScoreMarker === label}
-                onclick={() => { oppScoreMarker = label; confirmOppScore() }}
-              >
+                <button
+                  class="player-btn"
+                  class:selected-player={oppScoreMarker === playerIdentity(player)}
+                  onclick={() => { oppScoreMarker = playerIdentity(player); confirmOppScore() }}
+                >
                 <span class="player-num">#{player.number}</span>
                 <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
               </button>
@@ -1600,11 +1626,10 @@
             <div class="modal-section-label">Subs</div>
             <div class="player-grid">
               {#each subs as player}
-                {@const label = player.name?.trim() || `#${player.number}`}
                 <button
                   class="player-btn sub"
-                  class:selected-player={oppScoreMarker === label}
-                  onclick={() => { oppScoreMarker = label; confirmOppScore() }}
+                  class:selected-player={oppScoreMarker === playerIdentity(player)}
+                  onclick={() => { oppScoreMarker = playerIdentity(player); confirmOppScore() }}
                 >
                   <span class="player-num">#{player.number}</span>
                   <span class="player-name">{player.name?.trim() || `Player ${player.number}`}</span>
@@ -2004,8 +2029,8 @@
   {/if}
 
   <!-- ── PLAYER STATS accordion ── -->
-  {#if players.some(p => p.name?.trim() && Object.values(stats[p.id]||{}).some(v=>v>0))}
-    {@const playersWithStats = players.filter(p => p.name?.trim() && Object.values(stats[p.id]||{}).some(v=>v>0))}
+  {#if players.some(p => p.name?.trim() && Object.values(statsForPlayer(stats, p)||{}).some(v=>v>0))}
+    {@const playersWithStats = players.filter(p => p.name?.trim() && Object.values(statsForPlayer(stats, p)||{}).some(v=>v>0))}
     <div class="accordion-card">
       <button class="accordion-header" onclick={() => toggleSection('players')}>
         <div class="accordion-title">
@@ -2036,7 +2061,7 @@
               </thead>
               <tbody>
                 {#each players.filter(p=>p.name?.trim()) as player}
-                  {@const s = stats[player.id] || {}}
+                  {@const s = statsForPlayer(stats, player) || {}}
                   {@const hasStats = Object.values(s).some(v=>v>0)}
                   {#if hasStats}
                     <tr>

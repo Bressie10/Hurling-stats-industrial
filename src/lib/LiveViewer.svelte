@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import { supabase } from './supabase.js'
+  import { findPlayerById, playerLabel, statsForPlayer } from './team-players.js'
 
   const { session, onClose = () => {} } = $props()
 
@@ -52,12 +53,12 @@
     const players = matchData.players || []
     return players
       .map(p => {
-        const s = stats[p.id] || {}
+        const s = statsForPlayer(stats, p)
         const total = Object.values(s).reduce((a, b) => a + b, 0)
         const goals = s['Goal'] || 0
         const points = s['Point'] || 0
         const pts = goals * 3 + points
-        return { name: p.name, total, pts, goals, points }
+        return { name: playerLabel(p), total, pts, goals, points }
       })
       .filter(p => p.total > 0)
       .sort((a, b) => b.pts - a.pts || b.total - a.total)
@@ -139,7 +140,7 @@
     Object.values(stats).forEach(s => Object.keys(s).forEach(k => allStats.add(k)))
     const statKeys = [...allStats]
     return players
-      .map(p => ({ name: p.name, s: stats[p.id] || {} }))
+      .map(p => ({ name: playerLabel(p), s: statsForPlayer(stats, p) }))
       .filter(p => Object.values(p.s).some(v => v > 0))
       .sort((a, b) => {
         const ta = Object.values(a.s).reduce((x,y) => x+y, 0)
@@ -218,7 +219,7 @@
             <div class="event-row">
               <span class="event-time">{ev.time != null ? formatTime(ev.time) : '-'}</span>
               <span class="event-stat">{ev.stat}</span>
-              <span class="event-player">{(matchData.players || []).find(p => String(p.id) === String(ev.playerId))?.name ?? ''}</span>
+              <span class="event-player">{playerLabel(findPlayerById(matchData.players || [], ev.playerId))}</span>
             </div>
           {/each}
         </div>

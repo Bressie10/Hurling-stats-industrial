@@ -51,7 +51,7 @@ Last known branch relationship:
 Important current local state:
 
 - There are uncommitted changes for voice field-test scaffolding, docs, Android/native notes, validation tooling, team-scoped data/sync/RLS, and native config/tooling.
-- The uncommitted changes include the `/app/voice-test` harness, voice accuracy documentation, `src/lib/team-scope.js`, `supabase/migrations/20260617_team_scoped_data_and_rls.sql`, and `supabase/migrations/20260617_team_scoped_policy_reset.sql`.
+- The uncommitted changes include the `/app/voice-test` harness, voice accuracy documentation, `src/lib/team-scope.js`, `supabase/migrations/20260617000200_team_scoped_data_and_rls.sql`, and `supabase/migrations/20260617000300_team_scoped_policy_reset.sql`.
 - Do not assume the local tree is clean.
 - Do not revert unrelated changes without checking first.
 
@@ -172,7 +172,7 @@ Important components:
 Implemented:
 
 - IndexedDB stores local app data.
-- IndexedDB is at v3 in the current workspace and adds `squad_by_team` for team-scoped squads while preserving legacy personal squad reads.
+- IndexedDB is at v6 in the current workspace, with team-scoped squads, canonical `team_players`, GPS local stores, a GPS-specific sync queue, and privacy tombstones while preserving legacy personal squad reads.
 - Local match/squad mutations are added to a sync outbox.
 - Sync outbox drains to Supabase when online.
 - Match/squad sync mutations now carry `teamScope` and `team_id` where an active team exists.
@@ -206,7 +206,7 @@ Key files:
 - `src/lib/team-scope.js`
 - `src/service-worker.js`
 - `static/pwabuilder-sw.js`
-- `supabase/migrations/20260617_team_scoped_data_and_rls.sql`
+- `supabase/migrations/20260617000200_team_scoped_data_and_rls.sql`
 
 Remaining risks:
 
@@ -310,16 +310,16 @@ The repo contains:
 Supabase migrations present:
 
 - `20260404_add_stripe_columns.sql`
-- `20260404_subscription_bulletproof.sql`
+- `20260405_subscription_bulletproof.sql`
 - `20260408_two_tier_roles.sql`
 - `20260409_custom_features.sql`
 - `20260610_squad_composite_key.sql`
 - `20260611_fix_rls_holes.sql`
 - `20260613_stripe_billing_hardening.sql`
-- `20260617_team_scoped_data_and_rls.sql`
-- `20260617_team_scoped_policy_reset.sql`
-- `20260617_account_deletion_rpc.sql`
-- `20260617_account_deletion_rpc_auth_guard.sql`
+- `20260617000200_team_scoped_data_and_rls.sql`
+- `20260617000300_team_scoped_policy_reset.sql`
+- `20260617000000_account_deletion_rpc.sql`
+- `20260617000100_account_deletion_rpc_auth_guard.sql`
 - `20260618_free_match_quota.sql`
 
 Edge Functions present:
@@ -703,7 +703,7 @@ Known test count:
 Current known failing check:
 
 - `npm run store:check:live` fails only on live URL fetches because `whois pitchnote.ie` returns `Not found` and the domain returns `NXDOMAIN`.
-- `npm run team-scope:check:live` now reaches Supabase but fails because live `matches` does not accept `onConflict=id,user_id`; apply `20260617_team_scoped_data_and_rls.sql` and `20260617_team_scoped_policy_reset.sql`, then rerun it.
+- `npm run team-scope:check:live` now reaches Supabase but fails because live `matches` does not accept `onConflict=id,user_id`; apply `20260617000200_team_scoped_data_and_rls.sql` and `20260617000300_team_scoped_policy_reset.sql`, then rerun it.
 - `npm run free-quota:check:live` also requires the team-scoped match key first, then `supabase/migrations/20260618_free_match_quota.sql`.
 
 Known warnings:

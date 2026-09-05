@@ -11,6 +11,7 @@
   import { showToast } from './toast.js'
   import { IS_NATIVE_STORE_BUILD } from './config.js'
   import { FREE_MATCH_LIMIT } from './entitlements.js'
+  import { findPlayerById, statsForPlayer } from './team-players.js'
 
   const { proAccess = false } = $props()
 
@@ -358,7 +359,7 @@
 
       let rIdx = 0
       ;(selectedMatch.players || []).forEach(p => {
-        const s = selectedMatch.stats?.[p.id] || {}
+        const s = statsForPlayer(selectedMatch.stats, p)
         if (!Object.values(s).some(v => v > 0)) return
         const sc = scoringContrib(s)
         drawTableRow(
@@ -584,10 +585,10 @@
     let top = null, max = 0
     Object.entries(m.stats).forEach(([id, s]) => {
       const score = (s['Point'] || 0) + (s['Goal'] || 0) * 3
-      if (score > max) { max = score; top = parseInt(id) }
+      if (score > max) { max = score; top = id }
     })
     if (!top || max === 0) return null
-    const player = m.players.find(p => p.id === top)
+    const player = findPlayerById(m.players, top)
     return player ? `${player.name || `#${player.number}`} (${max}pts)` : null
   }
 
@@ -645,7 +646,7 @@
     ;(selectedMatch.events || [])
       .filter(e => e.stat === 'Point' || e.stat === 'Goal')
       .forEach(e => {
-        const player = selectedMatch.players?.find(p => p.id === e.playerId)
+        const player = findPlayerById(selectedMatch.players || [], e.playerId)
         events.push({ team: 'home', type: e.stat, name: player?.name || `#${player?.number || '?'}`, time: e.time ?? null, period: e.period })
       })
     ;(selectedMatch.oppScores || []).forEach(s => {
@@ -681,7 +682,7 @@
     if (!match?.lineup || !match?.players) return null
     const id = match.lineup[posNum]
     if (!id && id !== 0) return null
-    return match.players.find(p => p.id === id)?.name?.trim() || null
+    return findPlayerById(match.players, id)?.name?.trim() || null
   }
   const HURLING_ROWS = [[13,14,15],[10,11,12],[8,9],[5,6,7],[2,3,4],[1]]
   const POS_LABEL = {1:'GK',2:'RFB',3:'CFB',4:'LFB',5:'RHB',6:'CHB',7:'LHB',8:'RMF',9:'LMF',10:'RHF',11:'CHF',12:'LHF',13:'RFF',14:'CFF',15:'LFF'}
@@ -726,7 +727,7 @@
         if ((s[stat] || 0) > max) { max = s[stat] || 0; topId = id }
       })
       if (!topId || max === 0) return null
-      const player = selectedMatch.players?.find(p => String(p.id) === topId)
+      const player = findPlayerById(selectedMatch.players || [], topId)
       return { stat, name: player?.name || `#${player?.number ?? topId}`, count: max }
     }).filter(Boolean)
   })())
@@ -736,7 +737,7 @@
     return [...selectedMatch.events]
       .sort(compareByPeriodTime)
       .map(e => {
-        const player = selectedMatch.players?.find(p => p.id === e.playerId)
+        const player = findPlayerById(selectedMatch.players || [], e.playerId)
         return { ...e, playerName: player?.name || `#${player?.number || '?'}` }
       })
   })())
@@ -841,7 +842,7 @@
           </thead>
           <tbody>
             {#each (selectedMatch.players || []) as player}
-              {@const s = selectedMatch.stats?.[player.id] || {}}
+              {@const s = statsForPlayer(selectedMatch.stats, player)}
               {@const hasStats = Object.values(s).some(v => v > 0)}
               {#if hasStats}
                 <tr>

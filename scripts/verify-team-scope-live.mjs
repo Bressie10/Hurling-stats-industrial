@@ -40,7 +40,7 @@ const created = {
   teams: [],
   liveSessions: [],
   matchIds: [],
-  squadIds: [],
+  teamPlayerIds: [],
   clubMemberKeys: [],
   teamMemberKeys: [],
   subscriptionUserIds: [],
@@ -146,7 +146,7 @@ async function expectUpsert(client, table, payload, onConflict, shouldPass, mess
     return null
   }
   const detail = error?.message?.includes(missingCompositeKeyError)
-    ? `${error.message}; apply supabase/migrations/20260617_team_scoped_data_and_rls.sql and supabase/migrations/20260617_team_scoped_policy_reset.sql`
+    ? `${error.message}; apply supabase/migrations/20260617000200_team_scoped_data_and_rls.sql and supabase/migrations/20260617000300_team_scoped_policy_reset.sql`
     : error?.message
   fail(`${message}: ${shouldPass ? detail : 'upsert unexpectedly succeeded'}`)
   return data || null
@@ -156,8 +156,8 @@ function trackMatch(payload) {
   created.matchIds.push({ id: payload.id, user_id: payload.user_id })
 }
 
-function trackSquad(payload) {
-  created.squadIds.push({ id: payload.id, user_id: payload.user_id })
+function trackTeamPlayer(payload) {
+  created.teamPlayerIds.push(payload.id)
 }
 
 function trackLiveSession(row) {
@@ -183,9 +183,9 @@ async function cleanup() {
       await admin.from('matches').delete().eq('id', match.id).eq('user_id', match.user_id)
     }
   })
-  await remove('squad', async () => {
-    for (const squad of created.squadIds) {
-      await admin.from('squad').delete().eq('id', squad.id).eq('user_id', squad.user_id)
+  await remove('team_players', async () => {
+    if (created.teamPlayerIds.length) {
+      await admin.from('team_players').delete().in('id', created.teamPlayerIds)
     }
   })
   await remove('team_members', async () => {
@@ -439,52 +439,59 @@ try {
     'user-owned match rows remain private',
   )
 
-  const coachSquad = {
-    id: `${coach.id}:1`,
-    user_id: coach.id,
+  const coachPlayer = {
+    id: randomUUID(),
     team_id: teamA.id,
-    data: { local_id: 1, name: 'RLS Player', number: 1, teamId: teamA.id, updated_at: Date.now() },
+    display_name: 'RLS Player',
+    default_number: 1,
+    position: 'MF',
+    status: 'active',
+    created_by: coach.id,
   }
-  const coachWrongTeamSquad = {
-    id: `${coach.id}:2`,
-    user_id: coach.id,
+  const coachWrongTeamPlayer = {
+    id: randomUUID(),
     team_id: teamB.id,
-    data: {
-      local_id: 2,
-      name: 'RLS Blocked Player',
-      number: 2,
-      teamId: teamB.id,
-      updated_at: Date.now(),
-    },
+    display_name: 'RLS Blocked Player',
+    default_number: 2,
+    position: 'MF',
+    status: 'active',
+    created_by: coach.id,
   }
   if (
     await expectInsert(
       coach.client,
-      'squad',
-      coachSquad,
+      'team_players',
+      coachPlayer,
       true,
-      'coach can write own team-scoped squad',
+      'coach can write assigned-team player',
     )
   ) {
-    trackSquad(coachSquad)
+    trackTeamPlayer(coachPlayer)
   }
   if (
     await expectInsert(
       coach.client,
-      'squad',
-      coachWrongTeamSquad,
+      'team_players',
+      coachWrongTeamPlayer,
       false,
-      'coach cannot tag squad to unassigned same-club team',
+      'coach cannot write player to unassigned same-club team',
     )
   ) {
-    trackSquad(coachWrongTeamSquad)
+    trackTeamPlayer(coachWrongTeamPlayer)
   }
   await expectSelectCount(
     owner.client,
-    'squad',
-    [['id', coachSquad.id]],
+    'team_players',
+    [['id', coachPlayer.id]],
+    1,
+    'club owner can read shared team player rows',
+  )
+  await expectSelectCount(
+    outsider.client,
+    'team_players',
+    [['id', coachPlayer.id]],
     0,
-    'user-owned squad rows remain private',
+    'outsider cannot read team player rows',
   )
 
   const livePayload = {

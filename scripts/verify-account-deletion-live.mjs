@@ -39,7 +39,7 @@ const created = {
   teams: [],
   liveSessions: [],
   matches: [],
-  squad: [],
+  teamPlayers: [],
   teamMembers: [],
   clubMembers: [],
   subscriptionUserIds: [],
@@ -157,20 +157,17 @@ async function seedAccountGraph(user, label) {
   await insert('matches', match)
   created.matches.push({ id: match.id, user_id: user.id })
 
-  const squad = {
-    id: `${user.id}:delete-${runId}`,
-    user_id: user.id,
+  const teamPlayer = {
+    id: randomUUID(),
     team_id: team.id,
-    data: {
-      local_id: 1,
-      name: `Delete ${label} Player`,
-      number: 1,
-      teamId: team.id,
-      updated_at: Date.now(),
-    },
+    display_name: `Delete ${label} Player`,
+    default_number: 1,
+    position: 'MF',
+    status: 'active',
+    created_by: user.id,
   }
-  await insert('squad', squad)
-  created.squad.push({ id: squad.id, user_id: user.id })
+  await insert('team_players', teamPlayer)
+  created.teamPlayers.push(teamPlayer.id)
 
   const live = await insert('live_sessions', {
     team_id: team.id,
@@ -182,7 +179,7 @@ async function seedAccountGraph(user, label) {
   })
   created.liveSessions.push(live.id)
 
-  return { clubId: club.id, teamId: team.id, liveSessionId: live.id, match, squad }
+  return { clubId: club.id, teamId: team.id, liveSessionId: live.id, match, teamPlayer }
 }
 
 async function rowCount(table, filters, select = '*') {
@@ -241,9 +238,9 @@ async function cleanup() {
       await admin.from('matches').delete().eq('id', match.id).eq('user_id', match.user_id)
     }
   })
-  await remove('squad', async () => {
-    for (const squad of created.squad) {
-      await admin.from('squad').delete().eq('id', squad.id).eq('user_id', squad.user_id)
+  await remove('team_players', async () => {
+    if (created.teamPlayers.length) {
+      await admin.from('team_players').delete().in('id', created.teamPlayers)
     }
   })
   await remove('team_members', async () => {
@@ -329,14 +326,11 @@ try {
     'id,user_id',
   )
   await expectCount(
-    'squad',
-    [
-      ['id', targetGraph.squad.id],
-      ['user_id', target.id],
-    ],
+    'team_players',
+    [['id', targetGraph.teamPlayer.id]],
     0,
-    'target squad rows are deleted',
-    'id,user_id',
+    'target team player rows are deleted with owned team',
+    'id',
   )
   await expectCount(
     'live_sessions',
@@ -380,14 +374,11 @@ try {
     'id,user_id',
   )
   await expectCount(
-    'squad',
-    [
-      ['id', controlGraph.squad.id],
-      ['user_id', control.id],
-    ],
+    'team_players',
+    [['id', controlGraph.teamPlayer.id]],
     1,
-    'control squad remains',
-    'id,user_id',
+    'control team player remains',
+    'id',
   )
   await expectCount(
     'live_sessions',

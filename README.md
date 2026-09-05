@@ -52,6 +52,9 @@ Stripe price IDs, portal configuration, and webhook endpoint IDs come from the a
 
 ## Development
 
+Use Node 22 LTS for local development. The Vercel adapter currently supports
+Node 20/22/24, and this repo pins the expected local version in `.nvmrc`.
+
 ```sh
 npm install
 npm run dev
@@ -68,6 +71,7 @@ npm run build
 - IndexedDB stores squad, matches, drafts, device state, and queued sync mutations.
 - Local data is scoped by the active team where available. Personal data uses the `personal` scope; team data carries `teamScope`/`teamId` locally and `team_id` in Supabase.
 - `sync_outbox` mutations are drained to Supabase when online. Supported browsers also register one-shot Background Sync after local writes; unsupported browsers keep using app start, online, foreground, and manual Sync drains.
+- GPS uses separate local stores and `gps_sync_queue` so high-volume raw telemetry does not enter the generic stats outbox. See `docs/gps-architecture.md`.
 - Draft matches are device-local until the match is saved.
 - Signing out attempts to flush the outbox before local data is cleared.
 
@@ -78,7 +82,7 @@ npm run build
 - Supabase Edge Functions handle Stripe checkout, portal, cancellation, and webhooks.
 - Native live voice logging uses on-device speech recognition plus deterministic parser matching, then feeds the same match event function as tap logging. It supports Point, Goal, Wide, Free Won, Turnover Lost, and Yellow Card in the current v1 parser; 45s, sideline balls, and black/red cards remain tap-only.
 - Voice-logged Point/Goal/Wide events can offer an optional post-log pitch location action when pitch-coordinate tracking is enabled, without blocking the initial log.
-- Team-scoped sync uses `team_id` columns on cloud `matches` and `squad` rows plus local `teamScope` metadata; see `supabase/migrations/20260617_team_scoped_data_and_rls.sql` and the follow-up policy reset in `supabase/migrations/20260617_team_scoped_policy_reset.sql`.
+- Team-scoped sync uses `team_id` columns on cloud `matches` and `squad` rows plus local `teamScope` metadata; see `supabase/migrations/20260617000200_team_scoped_data_and_rls.sql` and the follow-up policy reset in `supabase/migrations/20260617000300_team_scoped_policy_reset.sql`.
 - Optional Sideline AI transcription is isolated behind `src/routes/api/voice/transcribe`, and open-ended match questions through `src/routes/api/voice/answer`, so browser clients never receive the server API key. The older OpenAI Realtime routes have been removed to keep match-day cost predictable.
 
 ## Branch And Deployment Targets

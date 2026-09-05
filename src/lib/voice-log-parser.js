@@ -181,7 +181,10 @@ function rosterEntries(roster = []) {
       const number = Number(typeof player === 'string' ? null : player?.number)
       const entry = {
         player,
-        playerId: typeof player === 'string' ? index + 1 : (player?.id ?? index + 1),
+        playerId:
+          typeof player === 'string'
+            ? index + 1
+            : (player?.team_player_id ?? player?.teamPlayerId ?? player?.id ?? index + 1),
         number: Number.isFinite(number) && number > 0 ? number : null,
         name,
         normalizedName,
